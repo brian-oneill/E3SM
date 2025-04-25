@@ -428,3 +428,14 @@ add_omega_test(
     base/TriDiagSolversTest.cpp
     "-n;1"
 )
+
+##########################
+# Vertical loop perf test
+##########################
+
+add_omega_test(
+    VERTICALLOOPPERF_TEST
+    testVertLoopPerf.exe
+    ocn/VertLoopPerfTest.cpp
+    "-n;1"
+)
