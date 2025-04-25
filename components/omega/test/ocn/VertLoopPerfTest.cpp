@@ -29,21 +29,21 @@ class VerticalMesh {
    HostArray1DI4 MaxLevelCellH;
    
    Array1DI4 MaxLevelEdgeTop;
-   HostArray1DI4 MaxLevelEdgeTopH;                                                         
-   
+   HostArray1DI4 MaxLevelEdgeTopH;
+
    Array1DI4 MaxLevelEdgeBot;
    HostArray1DI4 MaxLevelEdgeBotH;                                                         
-   
    Array1DI4 MaxLevelVertexTop;
-   HostArray1DI4 MaxLevelVertexTopH;                                                       
-   
+   HostArray1DI4 MaxLevelVertexTopH;
+
    Array1DI4 MaxLevelVertexBot;
-   HostArray1DI4 MaxLevelVertexBotH;                                                       
-   Array2DReal EdgeMask;
-   HostArray2DReal EdgeMaskH;
+   HostArray1DI4 MaxLevelVertexBotH;
 
    Array2DReal CellMask;
    HostArray2DReal CellMaskH;
+
+   Array2DReal EdgeMask;
+   HostArray2DReal EdgeMaskH;
 
    Array2DReal VertexMask;
    HostArray2DReal VertexMaskH;
@@ -67,8 +67,22 @@ class VerticalMesh {
 
    }
 
-   int setFloor(int nFloor) {
-      
+   int setFloor(int NFloor) {
+
+      OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
+      OMEGA_SCOPE(LocCellMask, CellMask);
+
+      parallelFor(
+          {MyHorzMesh->NCellsSize}, KOKKOS_LAMBDA(int ICell) {
+              LocMaxLevelCell(ICell) = NFloor;
+      });
+      parallelFor(
+          {NCellsSize}, KOKKOS_LAMBDA(int ICell, int K) {
+             LocCellMask(ICell, K) = (K < LocMaxLevelCell(ICell) ? 1. : 0.);
+      });
+
+
+
    }
 
 };
