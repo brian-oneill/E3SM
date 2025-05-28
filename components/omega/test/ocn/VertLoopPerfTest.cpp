@@ -18,6 +18,15 @@
 
 using namespace OMEGA;
 
+//constexpr int OMEGA_TEAMSIZE = 64;
+//constexpr int OMEGA_TEAMSIZE = 32;
+//constexpr int OMEGA_TEAMSIZE = 96;
+//constexpr int OMEGA_TEAMSIZE = 48;
+//constexpr int OMEGA_TEAMSIZE = 100;
+constexpr int OMEGA_TEAMSIZE = 50;
+
+constexpr int NNTracers = 5;
+
 class DivergenceWMask {
  public:
 
@@ -524,7 +533,6 @@ int main(int argc, char *argv[]) {
 
    int RetVal = 0;
 
-//   std::cout << "initialize" << std::endl;
    MPI_Init(&argc, &argv);
    Kokkos::initialize();
    Pacer::initialize(MPI_COMM_WORLD);
@@ -541,10 +549,7 @@ int main(int argc, char *argv[]) {
 
       Real FloorFrac[8] = {0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.};
       for (int Iter = 0; Iter < 8; ++Iter) {
-//         std::cout << " Iter:   " << Iter << std::endl;
          I4 NFloor = NVertLevels * FloorFrac[Iter];
-//         std::cout << "NFloor:  " << NFloor << std::endl;
-//         std::cout << NVertLevels << std::endl;
          RetVal += VertMesh->setFloor(NFloor);
 
 
@@ -571,20 +576,26 @@ int main(int argc, char *argv[]) {
          std::string CellMaskStr = "Cell Mask " + std::to_string(Iter);
          std::string CellMaskStr2 = "Cell Mask2 " + std::to_string(Iter);
          std::string CellHierarchStr = "Cell Hierarchical " + std::to_string(Iter);
+         std::string CellMaskStr3 = "Tracer Cell Mask " + std::to_string(Iter);
+         std::string CellHierarchStr3 = "Tracer Cell Hierarchical " + std::to_string(Iter);
          std::string EdgeMaskStr = "Edge Mask " + std::to_string(Iter);
          std::string EdgeMaskStr2 = "Edge Mask2 " + std::to_string(Iter);
          std::string EdgeHierarchStr = "Edge Hierarchical " + std::to_string(Iter);
+         std::string EdgeMaskStr3 = "Tracer Edge Mask " + std::to_string(Iter);
+         std::string EdgeHierarchStr3 = "Tracer Edge Hierarchical " + std::to_string(Iter);
          std::string VertexMaskStr = "Vertex Mask " + std::to_string(Iter);
          std::string VertexMaskStr2 = "Vertex Mask2 " + std::to_string(Iter);
          std::string VertexHierarchStr = "Vertex Hierarchical " + std::to_string(Iter);
+         std::string VertexMaskStr3 = "Tracer Vertex Mask " + std::to_string(Iter);
+         std::string VertexHierarchStr3 = "Tracer Vertex Hierarchical " + std::to_string(Iter);
 
+         //for (int Rep = 0; Rep < 20; ++Rep) {
          for (int Rep = 0; Rep < 400; ++Rep) {
 
-//            std::cout << "Rep:   " << Rep << std::endl;
+            std::cout << "Cell " << Iter << " " << Rep << std::endl;
             Kokkos::fence();
             Pacer::start(CellMaskStr);
 
-//            std::cout << "cell mask" << std::endl;
             parallelFor(
                 {DefHorzMesh->NCellsOwned, NChunks}, KOKKOS_LAMBDA(int ICell, int K) {
                    DivWith(CellOut, ICell, K, EdgeIn);
@@ -608,15 +619,12 @@ int main(int argc, char *argv[]) {
             Kokkos::fence();
             Pacer::stop(CellMaskStr2);
 
-//            Kokkos::View<int> num_iter("num_iter");
  
             OMEGA_SCOPE(LocMaxLevelCell, VertMesh->MaxLevelCell);
-//            std::cout << "cell hierarch" << std::endl;
-//            std::cout << "expected:  " << DefHorzMesh->NCellsOwned * LocMaxLevelCell(0) << std::endl;
             Kokkos::fence();
             Pacer::start(CellHierarchStr);
 //            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NCellsOwned, Kokkos::AUTO()),
-            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NCellsOwned, NVertLevels),
+            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NCellsOwned, OMEGA_TEAMSIZE),
                                  KOKKOS_LAMBDA(const team_member& team) {
                    const int ICell = team.league_rank();
                    const int KMax = LocMaxLevelCell(ICell);
@@ -624,17 +632,40 @@ int main(int argc, char *argv[]) {
                        Kokkos::TeamThreadRange(team, KMax),
                        [&](const int K) {
                           DivWout(CellOut, ICell, K, EdgeIn);
-//                          std::cout << "  ICell, K:   " << ICell << " " << K << std::endl;
-//                          Kokkos::atomic_add(&num_iter(), 1);
                        });
                 });
-//            int total;
-//            Kokkos::deep_copy(total, num_iter);
-//            std::cout << "sum:  " << total << std::endl;
             Kokkos::fence();
             Pacer::stop(CellHierarchStr);
 
-//            std::cout << "edge mask" << std::endl;
+//            Kokkos::fence();
+//            Pacer::start(CellMaskStr3);
+//
+//            parallelFor(
+//                {NNTracers, DefHorzMesh->NCellsOwned, NChunks}, KOKKOS_LAMBDA(int L, int ICell, int K) {
+//                   DivWith(CellOut, ICell, K, EdgeIn);
+//                });
+//
+//            Kokkos::fence();
+//            Pacer::stop(CellMaskStr3);
+
+//            Kokkos::fence();
+//            Pacer::start(CellHierarchStr3);
+//            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(NNTracers * DefHorzMesh->NCellsOwned, OMEGA_TEAMSIZE),
+//                                 KOKKOS_LAMBDA(const team_member& team) {
+//                   const int L = team.league_rank() / DefHorzMesh->NCellsOwned;
+//                   const int ICell = team.league_rank() % DefHorzMesh->NCellsOwned;
+//                   const int KMax = LocMaxLevelCell(ICell);
+//                   Kokkos::parallel_for(
+//                       Kokkos::TeamThreadRange(team, KMax),
+//                       [&](const int K) {
+//                          DivWout(CellOut, ICell, K, EdgeIn);
+//                       });
+//                });
+//            Kokkos::fence();
+//            Pacer::stop(CellHierarchStr3);
+
+            std::cout << "Edge " << Iter << " " << Rep << std::endl;
+
             Kokkos::fence();
             Pacer::start(EdgeMaskStr);
 
@@ -661,12 +692,11 @@ int main(int argc, char *argv[]) {
             Kokkos::fence();
             Pacer::stop(EdgeMaskStr2);
 
-//            std::cout << "edge hierarch" << std::endl;
             OMEGA_SCOPE(LocMaxLevelEdgeTop, VertMesh->MaxLevelEdgeTop);
             Kokkos::fence();
             Pacer::start(EdgeHierarchStr);
 //            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NEdgesOwned, Kokkos::AUTO()),
-            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NEdgesOwned, NVertLevels),
+            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NEdgesOwned, OMEGA_TEAMSIZE),
                                  KOKKOS_LAMBDA(const team_member& team) {
                    const int IEdge = team.league_rank();
                    const int KMax = LocMaxLevelEdgeTop(IEdge);
@@ -679,8 +709,35 @@ int main(int argc, char *argv[]) {
             Kokkos::fence();
             Pacer::stop(EdgeHierarchStr);
 
+//            Kokkos::fence();
+//            Pacer::start(EdgeMaskStr3);
+//
+//            parallelFor(
+//                {NNTracers, DefHorzMesh->NEdgesOwned, NChunks}, KOKKOS_LAMBDA(int L, int IEdge, int K) {
+//                   GradWith(EdgeOut, IEdge, K, CellIn);
+//            });
+//
+//            Kokkos::fence();
+//            Pacer::stop(EdgeMaskStr3);
 
-//            std::cout << "vertex mask" << std::endl;
+//            Kokkos::fence();
+//            Pacer::start(EdgeHierarchStr3);
+//            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(NNTracers * DefHorzMesh->NEdgesOwned, OMEGA_TEAMSIZE),
+//                                 KOKKOS_LAMBDA(const team_member& team) {
+//                   const int L = team.league_rank() / DefHorzMesh->NEdgesOwned;
+//                   const int IEdge = team.league_rank() % DefHorzMesh->NEdgesOwned;
+//                   const int KMax = LocMaxLevelEdgeTop(IEdge);
+//                   Kokkos::parallel_for(
+//                       Kokkos::TeamThreadRange(team, KMax),
+//                       [&](const int K) {
+//                          GradWout(EdgeOut, IEdge, K, CellIn);
+//                       });
+//                });
+//            Kokkos::fence();
+//            Pacer::stop(EdgeHierarchStr3);
+
+            std::cout << "Vertex " << Iter << " " << Rep << std::endl;
+
             Kokkos::fence();
             Pacer::start(VertexMaskStr);
 
@@ -708,12 +765,10 @@ int main(int argc, char *argv[]) {
             Pacer::stop(VertexMaskStr2);
 
 
-//            std::cout << "vertex hierarch" << std::endl;
             OMEGA_SCOPE(LocMaxLevelVertexTop, VertMesh->MaxLevelVertexTop);
             Kokkos::fence();
             Pacer::start(VertexHierarchStr);
-//            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NVerticesOwned, Kokkos::AUTO()),
-            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NVerticesOwned, NVertLevels),
+            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(DefHorzMesh->NVerticesOwned, OMEGA_TEAMSIZE),
                                  KOKKOS_LAMBDA(const team_member& team) {
                    const int IVertex = team.league_rank();
                    const int KMax = LocMaxLevelVertexTop(IVertex);
@@ -726,10 +781,36 @@ int main(int argc, char *argv[]) {
             Kokkos::fence();
             Pacer::stop(VertexHierarchStr);
 
+//            Kokkos::fence();
+//            Pacer::start(VertexMaskStr3);
+//
+//            parallelFor(
+//                {NNTracers, DefHorzMesh->NVerticesOwned, NChunks}, KOKKOS_LAMBDA(int L, int IVertex, int K) {
+//                   CurlWith(VertOut, IVertex, K, EdgeIn);
+//            });
+//
+//            Kokkos::fence();
+//            Pacer::stop(VertexMaskStr3);
+
+//            Kokkos::fence();
+//            Pacer::start(VertexHierarchStr3);
+//            Kokkos::parallel_for("", Kokkos::TeamPolicy<>(NNTracers, DefHorzMesh->NVerticesOwned, OMEGA_TEAMSIZE),
+//                                 KOKKOS_LAMBDA(const team_member& team) {
+//                   const int L = team.league_rank() / DefHorzMesh->NVerticesOwned;
+//                   const int IVertex = team.league_rank() % DefHorzMesh->NVerticesOwned;
+//                   const int KMax = LocMaxLevelVertexTop(IVertex);
+//                   Kokkos::parallel_for(
+//                       Kokkos::TeamThreadRange(team, KMax),
+//                       [&](const int K) {
+//                          CurlWout(VertOut, IVertex, K, EdgeIn);
+//                       });
+//                });
+//            Kokkos::fence();
+//            Pacer::stop(VertexHierarchStr3);
+
          }
       }
 
-//      std::cout << "finalize" << std::endl;
       HorzMesh::clear();
       Dimension::clear();
       Halo::clear();
