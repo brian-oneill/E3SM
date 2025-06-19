@@ -23,12 +23,13 @@ class VertCoord {
 
  private:
    // Variables from HorzMesh
-   I4 NCellsOwned
+   I4 NCellsOwned;
    I4 NCellsAll;
    I4 NEdgesOwned;
    I4 NEdgesAll;
    I4 NVerticesOwned;
    I4 NVerticesAll;
+   I4 VertexDegree;
    Array2DReal CellsOnEdge;
    Array2DReal CellsOnVertex;
 
@@ -38,26 +39,20 @@ class VertCoord {
    // methods
 
    /// construct a new vertical coordinate object
-   VertCoord(const HorzMesh *Mesh,
-             int NVertLevels,
-             Config *Options
-   );
+   VertCoord(const HorzMesh *Mesh, Config *Options);
 
    // Forbid copy and move construction
    VertCoord(const VertCoord &) = delete;
    VertCoord(VertCoord &&)      = delete;
 
-   void minMaxLevelEdge(const Array1DReal &MinLevelCell,
-                        const Array1DReal &MaxLevelCell);
-   void minMaxLevelVertex(const Array1DReal &MinLevelCell,
-                          const Array1DReal &MaxLevelCell);
-
+   void minMaxLevelEdge();
+   void minMaxLevelVertex();
 
  public:
    I4 NVertLevels;
    I4 NVertLevelsP1;
 
-   // Variables computed 
+   // Variables computed
    Array2DReal PressureInterface;
    Array2DReal PressureMid;
    Array2DReal ZInterface;
@@ -82,7 +77,7 @@ class VertCoord {
    Array2DReal RefLayerThickness;
 
    // Variables from HorzMesh
-   Array2DReal BottomDepth;
+   Array1DReal BottomDepth;
 
    // methods
 
@@ -91,9 +86,7 @@ class VertCoord {
 
    /// Creates a new vertical coordinate object by calling the constructor and
    /// puts it in the AllVertCoords map
-   static VertCoord *create(const std::string &Name,
-                            const HorzMesh *Mesh,
-                            int NVertLevels,
+   static VertCoord *create(const std::string &Name, const HorzMesh *Mesh,
                             Config *Options);
 
    /// Destructor - deallocates all memory and deletes a VertCoord
@@ -102,8 +95,7 @@ class VertCoord {
    static void clear();
 
    /// Remove a VertCoord by name
-   static void erase(std::string InName
-   );
+   static void erase(std::string InName);
 
    /// Retrieve the default VertCoord
    static VertCoord *getDefault();
@@ -116,32 +108,26 @@ class VertCoord {
    void computePressure(const Array2DReal &PressureInterface,
                         const Array2DReal &PressureMid,
                         const Array2DReal &LayerThickness,
-                        const Array1DReal &SurfacePressure
-   );
+                        const Array1DReal &SurfacePressure);
 
    /// Sum the mass thickness time specific volume from the bottom layer up,
    /// starting with the bottom elevation
-   void computeZHeight(const Array2DReal &ZInterface,
-                       const Array2DReal &ZMid,
+   void computeZHeight(const Array2DReal &ZInterface, const Array2DReal &ZMid,
                        const Array2DReal &LayerThickness,
                        const Array2DReal &SpecVol,
-                       const Array2DReal &BottomDepth
-   );
+                       const Array2DReal &BottomDepth);
 
    /// Sum the z height times g, the tidal potential, and self attraction and
    /// loading
    void computeGeopotential(const Array2DReal &GeopotentialMid,
                             const Array2DReal &ZMid,
                             const Array2DReal &TidalPotential,
-                            const Array2DReal &SelfAttractionLoading
-   );
+                            const Array2DReal &SelfAttractionLoading);
 
    /// Determine mass thickness used for the p-star vertical coordinate
    void computePStarThickness(const Array2DReal &LayerThicknessPStar,
                               const Array2DReal &VertCoordMovementWeights,
-                              const Array2DReal &RefLayerThickness
-   );
-
+                              const Array2DReal &RefLayerThickness);
 
 }; // end class VertCoord
 
@@ -149,4 +135,3 @@ class VertCoord {
 
 //===----------------------------------------------------------------------===//
 #endif // defined OMEGA_VERTCOORD_H
-

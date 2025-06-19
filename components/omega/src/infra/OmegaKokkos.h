@@ -69,13 +69,19 @@ template <class T> struct ArrayRank {
    static constexpr bool Is5D = T::rank == 5;
 };
 
-using ExecSpace     = MemSpace::execution_space;
-using HostExecSpace = HostMemSpace::execution_space;
+using ExecSpace       = MemSpace::execution_space;
+using HostExecSpace   = HostMemSpace::execution_space;
 using TeamPolicy      = Kokkos::TeamPolicy<ExecSpace>;
 using TeamMember      = TeamPolicy::member_type;
 using ScratchMemSpace = ExecSpace::scratch_memory_space;
 using Kokkos::MemoryUnmanaged;
 using Kokkos::TeamThreadRange;
+
+#ifdef OMEGA_TARGET_DEVICE
+constexpr int OMEGA_TEAMSIZE = 64;
+#else
+constexpr int OMEGA_TEAMSIZE = 1;
+#endif
 
 // Takes a functor that uses multidimensional indexing
 // and converts it into one that also accepts linear index
