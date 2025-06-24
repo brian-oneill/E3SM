@@ -433,3 +433,14 @@ add_omega_test(
     base/TriDiagSolversTest.cpp
     "-n;1"
 )
+
+################
+# VertCoord test
+################
+
+add_omega_test(
+    VERTCOORD_TEST
+    testVertCoord.exe
+    ocn/VertCoordTest.cpp
+    "-n;8"
+)

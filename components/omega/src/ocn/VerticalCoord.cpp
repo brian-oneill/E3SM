@@ -3,36 +3,76 @@
 //===----------------------------------------------------------------------===//
 
 #include "VerticalCoord.h"
-#include <Kokkos_MinMax.hpp>
+#include "Dimension.h"
+#include "IO.h"
+#include "Logging.h"
+
+#include <iostream>
 
 namespace OMEGA {
 
 VertCoord *VertCoord::DefaultVertCoord = nullptr;
-std::map<std::string, std::unique_ptr<VertCoord>> AllVertCoords;
+std::map<std::string, std::unique_ptr<VertCoord>> VertCoord::AllVertCoords;
 
 //------------------------------------------------------------------------------
 // Initialize default vertical coordinate, requires prior initialization of
 // HorzMesh.
-
-int VertCoord::init() {
+void VertCoord::init() {
 
    int Err = 0;
 
    HorzMesh *DefMesh = HorzMesh::getDefault();
 
+   Decomp *DefDecomp = Decomp::getDefault();
+
    Config *OmegaConfig = Config::getOmegaConfig();
 
-   VertCoord::DefaultVertCoord = create("Default", DefMesh, OmegaConfig);
+   VertCoord::DefaultVertCoord =
+       create("Default", DefMesh, DefDecomp, OmegaConfig);
 
-   return Err;
 } // end init
 
-VertCoord::VertCoord(const HorzMesh *Mesh, Config *Options) {
+VertCoord::VertCoord(const HorzMesh *Mesh, const Decomp *MeshDecomp,
+                     Config *Options) {
+
+   // Retrieve mesh filename from HorzMesh
+   MeshFileName = Mesh->MeshFileName;
+
+   // Set NVertLevels and NVertLevelsP1
+   NVertLevels   = Mesh->NVertLevels;
+   NVertLevelsP1 = NVertLevels + 1;
+
+   // Retrieve mesh variables from HorzMesh
+   NCellsOwned = Mesh->NCellsOwned;
+   NCellsAll   = Mesh->NCellsAll;
+   NCellsSize  = Mesh->NCellsSize;
+
+   NEdgesOwned = Mesh->NEdgesOwned;
+   NEdgesAll   = Mesh->NEdgesAll;
+   NEdgesSize  = Mesh->NEdgesSize;
+
+   NVerticesOwned = Mesh->NVerticesOwned;
+   NVerticesAll   = Mesh->NVerticesAll;
+   NVerticesSize  = Mesh->NVerticesSize;
+   VertexDegree   = Mesh->VertexDegree;
+
+   // Retrieve connectivity arrays from HorzMesh
+   CellsOnEdge   = Mesh->CellsOnEdge;
+   CellsOnVertex = Mesh->CellsOnVertex;
+
+   // Open the mesh file for reading (assume IO has already been initialized)
+   I4 Err;
+   Err = OMEGA::IO::openFile(MeshFileID, MeshFileName, IO::ModeRead);
+
+   readMinMaxCell(MeshDecomp);
+
+   minMaxLevelEdge();
+   minMaxLevelVertex();
 
 } // end constructor
 
 VertCoord *VertCoord::create(const std::string &Name, const HorzMesh *Mesh,
-                             Config *Options) {
+                             const Decomp *MeshDecomp, Config *Options) {
    // Check to see if a VertCoord of the same name already exists and, if so,
    // exit with an error
    if (AllVertCoords.find(Name) != AllVertCoords.end()) {
@@ -44,11 +84,102 @@ VertCoord *VertCoord::create(const std::string &Name, const HorzMesh *Mesh,
 
    // create a new VertCoord on the heap and put it in a map of unique_ptrs,
    // which will manage its lifetime
-   auto *NewVertCoord = new VertCoord(Mesh, Options);
+   auto *NewVertCoord = new VertCoord(Mesh, MeshDecomp, Options);
    AllVertCoords.emplace(Name, NewVertCoord);
 
    return NewVertCoord;
 } // end create
+
+void VertCoord::readMinMaxCell(const Decomp *MeshDecomp) {
+
+   int Err = 0;
+   //   // Create offset and Dimension for NCells
+   //   std::string DimName = "NCells";
+   //   HostArray1DI4 CellOffset("CellOffset", NCellsSize);
+   //   I4 NCellsGlobal = MeshDecomp->NCellsGlobal;
+   //   for (int Cell = 0; Cell < NCellsSize; ++Cell) {
+   //      if (Cell < NCellsOwned) {
+   //         CellOffset(Cell) = MeshDecomp->CellIDH(Cell) - 1;
+   //      } else {
+   //         CellOffset(Cell) = -1;
+   //      }
+   //   }
+   //
+   //   auto NCellsDim = Dimension::create(DimName, NCellsGlobal, NCellsSize,
+   //   CellOffset);
+
+   I4 NDims             = 1;
+   IO::Rearranger Rearr = IO::RearrBox;
+
+   I4 CellDecompI4;
+   std::vector<I4> CellDims{MeshDecomp->NCellsGlobal};
+   std::vector<I4> CellID(NCellsAll);
+   for (int Cell = 0; Cell < NCellsAll; ++Cell) {
+      CellID[Cell] = MeshDecomp->CellIDH(Cell) - 1;
+   }
+   I4 DecErr = IO::createDecomp(CellDecompI4, IO::IOTypeI4, NDims, CellDims,
+                                NCellsAll, CellID, Rearr);
+   if (DecErr != 0) {
+      LOG_CRITICAL("VertCoord: error creating cell IO decomposition");
+      ++Err;
+   }
+
+   HostArray1DI4 TmpArrayH("TmpCellArray", NCellsSize);
+   I4 ArrayID;
+   const std::string MaxNameMPAS = "maxLevelCell";
+   I4 MaxErr = IO::readArray(TmpArrayH.data(), NCellsAll, MaxNameMPAS,
+                             MeshFileID, CellDecompI4, ArrayID);
+
+   //   std::cout << " max err : " << MaxErr << std::endl;
+   //   for (int I = 0; I < NCellsAll; ++I) {
+   //      std::cout << "   " << I << " " << TmpArrayH(I) << std::endl;
+   //
+   //   }
+
+   if (MaxErr != 0) {
+      LOG_WARN("VertCoord: error reading maxLevelCell from mesh file, ",
+               "using Max = NVertLevels - 1");
+      deepCopy(TmpArrayH, NVertLevels - 1);
+   } else {
+      for (int ICell = 0; ICell < NCellsAll; ++ICell) {
+         TmpArrayH(ICell) = TmpArrayH(ICell) - 1;
+      }
+   }
+   TmpArrayH(NCellsAll) = -1;
+
+   MaxLevelCellH = HostArray1DI4("MaxLevelCell", NCellsSize);
+   deepCopy(MaxLevelCellH, TmpArrayH);
+   MaxLevelCell = createDeviceMirrorCopy(MaxLevelCellH);
+
+   const std::string MinNameMPAS = "minLevelCell";
+   I4 MinErr = IO::readArray(TmpArrayH.data(), NCellsAll, MinNameMPAS,
+                             MeshFileID, CellDecompI4, ArrayID);
+
+   //   std::cout << " min err : " << MinErr << std::endl;
+
+   if (MinErr != 0) {
+      LOG_WARN("VertCoord: error reading minLevelCell from mesh file, ",
+               "using Min = 0");
+      deepCopy(TmpArrayH, 0);
+   } else {
+      for (int ICell = 0; ICell < NCellsAll; ++ICell) {
+         TmpArrayH(ICell) = TmpArrayH(ICell) - 1;
+      }
+   }
+   TmpArrayH(NCellsAll) = NVertLevelsP1;
+
+   MinLevelCellH = HostArray1DI4("MinLevelCell", NCellsSize);
+   deepCopy(MinLevelCellH, TmpArrayH);
+   MinLevelCell = createDeviceMirrorCopy(MinLevelCellH);
+
+   //   for (int I = 0; I < NCellsAll; ++I) {
+   //      std::cout << "   " << I << " " << MinLevelCellH(I) << " " <<
+   //      MaxLevelCellH(I) << std::endl;
+   //
+   //   }
+
+   Err = IO::destroyDecomp(CellDecompI4);
+}
 
 //------------------------------------------------------------------------------
 // Destroys a local VertCoord and deallocates all arrays
@@ -73,11 +204,12 @@ void VertCoord::clear() {
 //------------------------------------------------------------------------------
 void VertCoord::minMaxLevelEdge() {
 
-   MinLevelEdgeTop = Array1DI4("MinLevelEdgeTop", NEdgesAll);
-   MinLevelEdgeTop = Array1DI4("MinLevelEdgeTop", NEdgesAll);
-   MaxLevelEdgeBot = Array1DI4("MaxLevelEdgeBot", NEdgesAll);
-   MaxLevelEdgeBot = Array1DI4("MaxLevelEdgeBot", NEdgesAll);
+   MinLevelEdgeTop = Array1DI4("MinLevelEdgeTop", NEdgesSize);
+   MinLevelEdgeBot = Array1DI4("MinLevelEdgeBot", NEdgesSize);
+   MaxLevelEdgeTop = Array1DI4("MaxLevelEdgeTop", NEdgesSize);
+   MaxLevelEdgeBot = Array1DI4("MaxLevelEdgeBot", NEdgesSize);
 
+   OMEGA_SCOPE(LocNVertLevelsP1, NVertLevelsP1);
    OMEGA_SCOPE(LocCellsOnEdge, CellsOnEdge);
    OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
    OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
@@ -87,28 +219,56 @@ void VertCoord::minMaxLevelEdge() {
    OMEGA_SCOPE(LocMaxLevelEdgeBot, MaxLevelEdgeBot);
    parallelFor(
        {NEdgesAll}, KOKKOS_LAMBDA(int IEdge) {
+          I4 Lvl1;
+          I4 Lvl2;
           const I4 ICell1 = LocCellsOnEdge(IEdge, 0);
           const I4 ICell2 = LocCellsOnEdge(IEdge, 1);
-          LocMinLevelEdgeTop(IEdge) =
-              Kokkos::min(LocMinLevelCell(ICell1), LocMinLevelCell(ICell2));
-          LocMinLevelEdgeBot(IEdge) =
-              Kokkos::max(LocMinLevelCell(ICell1), LocMinLevelCell(ICell2));
+          Lvl1            = LocMaxLevelCell(ICell1) == -1 ? LocNVertLevelsP1
+                                                          : LocMinLevelCell(ICell1);
+          Lvl2            = LocMaxLevelCell(ICell2) == -1 ? LocNVertLevelsP1
+                                                          : LocMinLevelCell(ICell2);
+          LocMinLevelEdgeTop(IEdge) = Kokkos::min(Lvl1, Lvl2);
+
+          Lvl1 = LocMaxLevelCell(ICell1) == -1 ? -1 : LocMinLevelCell(ICell1);
+          Lvl2 = LocMaxLevelCell(ICell2) == -1 ? -1 : LocMinLevelCell(ICell2);
+          LocMinLevelEdgeBot(IEdge) = Kokkos::max(Lvl1, Lvl2);
 
           LocMaxLevelEdgeTop(IEdge) =
               Kokkos::min(LocMaxLevelCell(ICell1), LocMaxLevelCell(ICell2));
           LocMaxLevelEdgeBot(IEdge) =
               Kokkos::max(LocMaxLevelCell(ICell1), LocMaxLevelCell(ICell2));
+
+          //          std::cout << IEdge << "   " << DefDecomp->CellIDH(ICell1)
+          //          << "   "; std::cout << DefDecomp->CellIDH(ICell2) << " ";
+          //          std::cout << LocMaxLevelEdgeTop(IEdge) << "   ";
+          //          std::cout << LocMaxLevelEdgeBot(IEdge) << "   ";
+          //          std::cout << LocMinLevelEdgeTop(IEdge) << "   ";
+          //          std::cout << LocMinLevelEdgeBot(IEdge) << std::endl;
        });
+   OMEGA_SCOPE(LocNEdgesAll, NEdgesAll);
+   parallelFor(
+       {1}, KOKKOS_LAMBDA(const int &) {
+          LocMinLevelEdgeTop(LocNEdgesAll) = LocNVertLevelsP1;
+          LocMinLevelEdgeBot(LocNEdgesAll) = LocNVertLevelsP1;
+          LocMaxLevelEdgeTop(LocNEdgesAll) = -1;
+          LocMaxLevelEdgeBot(LocNEdgesAll) = -1;
+       });
+
+   MinLevelEdgeTopH = createHostMirrorCopy(MinLevelEdgeTop);
+   MinLevelEdgeBotH = createHostMirrorCopy(MinLevelEdgeBot);
+   MaxLevelEdgeTopH = createHostMirrorCopy(MaxLevelEdgeTop);
+   MaxLevelEdgeBotH = createHostMirrorCopy(MaxLevelEdgeBot);
 }
 
 //------------------------------------------------------------------------------
 void VertCoord::minMaxLevelVertex() {
 
-   MinLevelVertexTop = Array1DI4("MinLevelVertexTop", NVerticesAll);
-   MinLevelVertexTop = Array1DI4("MinLevelVertexTop", NVerticesAll);
-   MaxLevelVertexBot = Array1DI4("MaxLevelVertexBot", NVerticesAll);
-   MaxLevelVertexBot = Array1DI4("MaxLevelVertexBot", NVerticesAll);
+   MinLevelVertexTop = Array1DI4("MinLevelVertexTop", NVerticesSize);
+   MinLevelVertexBot = Array1DI4("MinLevelVertexBot", NVerticesSize);
+   MaxLevelVertexTop = Array1DI4("MaxLevelVertexTop", NVerticesSize);
+   MaxLevelVertexBot = Array1DI4("MaxLevelVertexBot", NVerticesSize);
 
+   OMEGA_SCOPE(LocNVertLevelsP1, NVertLevelsP1);
    OMEGA_SCOPE(LocVertexDegree, VertexDegree);
    OMEGA_SCOPE(LocCellsOnVertex, CellsOnVertex);
    OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
@@ -119,20 +279,27 @@ void VertCoord::minMaxLevelVertex() {
    OMEGA_SCOPE(LocMaxLevelVertexBot, MaxLevelVertexBot);
    parallelFor(
        {NVerticesAll}, KOKKOS_LAMBDA(int IVertex) {
-          I4 ICell                      = LocCellsOnVertex(IVertex, 0);
-          LocMinLevelVertexBot(IVertex) = LocMinLevelCell(ICell);
+          I4 Lvl;
+          I4 ICell = LocCellsOnVertex(IVertex, 0);
+          Lvl      = LocMaxLevelCell(ICell) == -1 ? -1 : LocMinLevelCell(ICell);
+          LocMinLevelVertexBot(IVertex) = Lvl;
           for (int I = 1; I < LocVertexDegree; ++I) {
-             ICell                         = LocCellsOnVertex(IVertex, I);
-             LocMinLevelVertexBot(IVertex) = Kokkos::max(
-                 LocMinLevelVertexBot(IVertex), LocMinLevelCell(ICell));
+             ICell = LocCellsOnVertex(IVertex, I);
+             Lvl   = LocMaxLevelCell(ICell) == -1 ? -1 : LocMinLevelCell(ICell);
+             LocMinLevelVertexBot(IVertex) =
+                 Kokkos::max(LocMinLevelVertexBot(IVertex), Lvl);
           }
 
-          ICell                         = LocCellsOnVertex(IVertex, 0);
-          LocMinLevelVertexTop(IVertex) = LocMinLevelCell(ICell);
+          ICell = LocCellsOnVertex(IVertex, 0);
+          Lvl   = LocMaxLevelCell(ICell) == -1 ? NVertLevelsP1
+                                               : LocMinLevelCell(ICell);
+          LocMinLevelVertexTop(IVertex) = Lvl;
           for (int I = 1; I < LocVertexDegree; ++I) {
-             ICell                         = LocCellsOnVertex(IVertex, I);
-             LocMinLevelVertexTop(IVertex) = Kokkos::min(
-                 LocMinLevelVertexTop(IVertex), LocMinLevelCell(ICell));
+             ICell = LocCellsOnVertex(IVertex, I);
+             Lvl   = LocMaxLevelCell(ICell) == -1 ? NVertLevelsP1
+                                                  : LocMinLevelCell(ICell);
+             LocMinLevelVertexTop(IVertex) =
+                 Kokkos::min(LocMinLevelVertexTop(IVertex), Lvl);
           }
 
           ICell                         = LocCellsOnVertex(IVertex, 0);
@@ -146,10 +313,25 @@ void VertCoord::minMaxLevelVertex() {
           ICell                         = LocCellsOnVertex(IVertex, 0);
           LocMaxLevelVertexTop(IVertex) = LocMaxLevelCell(ICell);
           for (int I = 1; I < LocVertexDegree; ++I) {
+             ICell                         = LocCellsOnVertex(IVertex, I);
              LocMaxLevelVertexTop(IVertex) = Kokkos::min(
                  MaxLevelVertexTop(IVertex), LocMaxLevelCell(ICell));
           }
        });
+
+   OMEGA_SCOPE(LocNVerticesAll, NVerticesAll);
+   parallelFor(
+       {1}, KOKKOS_LAMBDA(const int &) {
+          LocMinLevelVertexTop(LocNVerticesAll) = LocNVertLevelsP1;
+          LocMinLevelVertexBot(LocNVerticesAll) = LocNVertLevelsP1;
+          LocMaxLevelVertexTop(LocNVerticesAll) = -1;
+          LocMaxLevelVertexBot(LocNVerticesAll) = -1;
+       });
+
+   MinLevelVertexTopH = createHostMirrorCopy(MinLevelVertexTop);
+   MinLevelVertexBotH = createHostMirrorCopy(MinLevelVertexBot);
+   MaxLevelVertexTopH = createHostMirrorCopy(MaxLevelVertexTop);
+   MaxLevelVertexBotH = createHostMirrorCopy(MaxLevelVertexBot);
 }
 
 //------------------------------------------------------------------------------
@@ -208,6 +390,31 @@ void VertCoord::computePStarThickness(
     const Array2DReal &LayerThicknessPStar,
     const Array2DReal &VertCoordMovementWeights,
     const Array2DReal &RefLayerThickness) {}
+
+//------------------------------------------------------------------------------
+// Get default VertCoord
+VertCoord *VertCoord::getDefault() { return VertCoord::DefaultVertCoord; }
+
+//------------------------------------------------------------------------------
+// Get VertCoord by name
+VertCoord *VertCoord::get(const std::string Name ///< [in] Name of VertCoord
+) {
+
+   // look for an instance of this name
+   auto it = AllVertCoords.find(Name);
+
+   // if found, return the VertCoord pointer
+   if (it != AllVertCoords.end()) {
+      return it->second.get();
+
+      // otherwise print error and return null pointer
+   } else {
+      LOG_ERROR("VertCoord::get: Attempt to retrieve non-existant VertCoord:");
+      LOG_ERROR("{} has not been defined or has been removed", Name);
+      return nullptr;
+   }
+
+} // end get VertCoord
 
 } // end namespace OMEGA
 

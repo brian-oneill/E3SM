@@ -11,11 +11,15 @@
 
 #include "Config.h"
 #include "DataTypes.h"
+#include "Decomp.h"
 #include "Error.h"
 #include "HorzMesh.h"
 #include "Logging.h"
 #include "MachEnv.h"
 #include "OmegaKokkos.h"
+
+#include <memory>
+#include <string>
 
 namespace OMEGA {
 
@@ -25,21 +29,29 @@ class VertCoord {
    // Variables from HorzMesh
    I4 NCellsOwned;
    I4 NCellsAll;
+   I4 NCellsSize;
    I4 NEdgesOwned;
    I4 NEdgesAll;
+   I4 NEdgesSize;
    I4 NVerticesOwned;
    I4 NVerticesAll;
+   I4 NVerticesSize;
    I4 VertexDegree;
-   Array2DReal CellsOnEdge;
-   Array2DReal CellsOnVertex;
+   Array2DI4 CellsOnEdge;
+   Array2DI4 CellsOnVertex;
+
+   std::string MeshFileName;
+   int MeshFileID;
 
    static VertCoord *DefaultVertCoord;
    static std::map<std::string, std::unique_ptr<VertCoord>> AllVertCoords;
 
    // methods
 
+   void readMinMaxCell(const Decomp *MeshDecomp);
+
    /// construct a new vertical coordinate object
-   VertCoord(const HorzMesh *Mesh, Config *Options);
+   VertCoord(const HorzMesh *Mesh, const Decomp *MeshDecomp, Config *Options);
 
    // Forbid copy and move construction
    VertCoord(const VertCoord &) = delete;
@@ -60,6 +72,13 @@ class VertCoord {
    Array2DReal GeopotentialMid;
    Array2DReal LayerThicknessPStar;
 
+   HostArray2DReal PressureInterfaceH;
+   HostArray2DReal PressureMidH;
+   HostArray2DReal ZInterfaceH;
+   HostArray2DReal ZMidH;
+   HostArray2DReal GeopotentialMidH;
+   HostArray2DReal LayerThicknessPStarH;
+
    // Vertical loop bounds
    Array1DI4 MinLevelCell;
    Array1DI4 MaxLevelCell;
@@ -72,22 +91,38 @@ class VertCoord {
    Array1DI4 MinLevelVertexBot;
    Array1DI4 MaxLevelVertexBot;
 
+   HostArray1DI4 MinLevelCellH;
+   HostArray1DI4 MaxLevelCellH;
+   HostArray1DI4 MinLevelEdgeTopH;
+   HostArray1DI4 MaxLevelEdgeTopH;
+   HostArray1DI4 MinLevelEdgeBotH;
+   HostArray1DI4 MaxLevelEdgeBotH;
+   HostArray1DI4 MinLevelVertexTopH;
+   HostArray1DI4 MaxLevelVertexTopH;
+   HostArray1DI4 MinLevelVertexBotH;
+   HostArray1DI4 MaxLevelVertexBotH;
+
    // p star coordinate variables
    Array2DReal VertCoordMovementWeights;
    Array2DReal RefLayerThickness;
 
+   HostArray2DReal VertCoordMovementWeightsH;
+   HostArray2DReal RefLayerThicknessH;
+
    // Variables from HorzMesh
    Array1DReal BottomDepth;
+
+   HostArray1DReal BottomDepthH;
 
    // methods
 
    /// Initialize Omega vertical coordinate
-   static int init();
+   static void init();
 
    /// Creates a new vertical coordinate object by calling the constructor and
    /// puts it in the AllVertCoords map
    static VertCoord *create(const std::string &Name, const HorzMesh *Mesh,
-                            Config *Options);
+                            const Decomp *MeshDecomp, Config *Options);
 
    /// Destructor - deallocates all memory and deletes a VertCoord
    ~VertCoord();
