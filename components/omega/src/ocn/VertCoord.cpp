@@ -1,8 +1,8 @@
-//===-- base/VerticalCoord.h - vertical coordinate --------------*- C++ -*-===//
+//===-- base/VertCoord.cpp - vertical coordinate --------------*- C++ -*-===//
 //
 //===----------------------------------------------------------------------===//
 
-#include "VerticalCoord.h"
+#include "VertCoord.h"
 #include "Dimension.h"
 #include "IO.h"
 #include "Logging.h"
@@ -59,6 +59,19 @@ VertCoord::VertCoord(const HorzMesh *Mesh, const Decomp *MeshDecomp,
    // Retrieve connectivity arrays from HorzMesh
    CellsOnEdge   = Mesh->CellsOnEdge;
    CellsOnVertex = Mesh->CellsOnVertex;
+
+   // Allocate device arrays
+   PressureInterface =
+       Array2DReal("PressureInterface", NCellsSize, NVertLevelsP1);
+   PressureMid = Array2DReal("PressureMid", NCellsSize, NVertLevels);
+
+   ZInterface = Array2DReal("ZInterface", NCellsSize, NVertLevelsP1);
+   ZMid       = Array2DReal("ZMid", NCellsSize, NVertLevels);
+
+   PressureInterfaceH = createHostMirrorCopy(PressureInterface);
+   PressureMidH       = createHostMirrorCopy(PressureMid);
+   ZInterfaceH        = createHostMirrorCopy(ZInterface);
+   ZMidH              = createHostMirrorCopy(ZMid);
 
    // Open the mesh file for reading (assume IO has already been initialized)
    I4 Err;
@@ -291,12 +304,12 @@ void VertCoord::minMaxLevelVertex() {
           }
 
           ICell = LocCellsOnVertex(IVertex, 0);
-          Lvl   = LocMaxLevelCell(ICell) == -1 ? NVertLevelsP1
+          Lvl   = LocMaxLevelCell(ICell) == -1 ? LocNVertLevelsP1
                                                : LocMinLevelCell(ICell);
           LocMinLevelVertexTop(IVertex) = Lvl;
           for (int I = 1; I < LocVertexDegree; ++I) {
              ICell = LocCellsOnVertex(IVertex, I);
-             Lvl   = LocMaxLevelCell(ICell) == -1 ? NVertLevelsP1
+             Lvl   = LocMaxLevelCell(ICell) == -1 ? LocNVertLevelsP1
                                                   : LocMinLevelCell(ICell);
              LocMinLevelVertexTop(IVertex) =
                  Kokkos::min(LocMinLevelVertexTop(IVertex), Lvl);
@@ -339,8 +352,8 @@ void VertCoord::computePressure(const Array2DReal &PressureInterface,
                                 const Array2DReal &PressureMid,
                                 const Array2DReal &LayerThickness,
                                 const Array1DReal &SurfacePressure) {
-   Real Gravity = 9.80616;
-   Real Rho0    = 1.0;
+   Real Gravity = 9.80616_Real;
+   Real Rho0    = 1035._Real;
 
    OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
    OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
@@ -369,6 +382,10 @@ void VertCoord::computePressure(const Array2DReal &PressureInterface,
                         0.5_Real * Gravity * Rho0 * LayerThickness(ICell, KLvl);
                  }
               });
+          Member.team_barrier();
+          PressureInterface(ICell, KMax + 1) =
+              PressureInterface(ICell, KMax) +
+              Gravity * Rho0 * LayerThickness(ICell, KMax);
        });
 }
 
@@ -377,13 +394,61 @@ void VertCoord::computeZHeight(const Array2DReal &ZInterface,
                                const Array2DReal &ZMid,
                                const Array2DReal &LayerThickness,
                                const Array2DReal &SpecVol,
-                               const Array2DReal &BottomDepth) {}
+                               const Array1DReal &BottomDepth) {
+
+   Real Rho0 = 1035._Real;
+
+   OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
+   OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
+
+   const auto Policy = TeamPolicy(NCellsAll, OMEGA_TEAMSIZE, 1);
+   Kokkos::parallel_for(
+       "computePressure", Policy, KOKKOS_LAMBDA(const TeamMember &Member) {
+          const I4 ICell = Member.league_rank();
+          const I4 KMin  = LocMinLevelCell(ICell);
+          const I4 KMax  = LocMaxLevelCell(ICell);
+          const I4 Range = KMax - KMin - 1;
+
+          ZInterface(ICell, KMax + 1) = -BottomDepth(ICell);
+          ZMid(ICell, KMax) =
+              -BottomDepth(ICell) + 0.5_Real * Rho0 * SpecVol(ICell, KMax) *
+                                        LayerThickness(ICell, KMax);
+          Kokkos::parallel_scan(
+              TeamThreadRange(Member, Range),
+              [&](int K, Real &Accum, bool IsFinal) {
+                 const I4 KLvl = KMax - K;
+                 Accum +=
+                     ZInterface(ICell, KLvl + 1) +
+                     Rho0 * SpecVol(ICell, KLvl) * LayerThickness(ICell, KLvl);
+                 if (IsFinal) {
+                    ZInterface(ICell, KLvl) = Accum;
+                    ZMid(ICell, KLvl - 1) =
+                        Accum + 0.5_Real * Rho0 * SpecVol(ICell, KLvl - 1) *
+                                    LayerThickness(ICell, KLvl - 1);
+                 }
+              });
+          Member.team_barrier();
+          ZInterface(ICell, KMin) =
+              ZInterface(ICell, KMin + 1) +
+              Rho0 * SpecVol(ICell, KMin) * LayerThickness(ICell, KMin)
+       });
+}
 
 //------------------------------------------------------------------------------
 void VertCoord::computeGeopotential(const Array2DReal &GeopotentialMid,
                                     const Array2DReal &ZMid,
                                     const Array2DReal &TidalPotential,
-                                    const Array2DReal &SelfAttractionLoading) {}
+                                    const Array2DReal &SelfAttractionLoading) {
+
+   Real Gravity = 9.80616_Real;
+
+   OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
+   OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
+
+   //       const I4 ICell                 = Member.league_rank();
+   //       const I4 KMin                  = LocMinLevelCell(ICell);
+   //       const I4 KMax                  = LocMaxLevelCell(ICell);
+}
 
 //------------------------------------------------------------------------------
 void VertCoord::computePStarThickness(

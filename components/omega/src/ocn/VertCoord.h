@@ -150,7 +150,7 @@ class VertCoord {
    void computeZHeight(const Array2DReal &ZInterface, const Array2DReal &ZMid,
                        const Array2DReal &LayerThickness,
                        const Array2DReal &SpecVol,
-                       const Array2DReal &BottomDepth);
+                       const Array1DReal &BottomDepth);
 
    /// Sum the z height times g, the tidal potential, and self attraction and
    /// loading

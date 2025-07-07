@@ -7,6 +7,7 @@
 //
 //===-----------------------------------------------------------------------===/
 
+#include "VertCoord.h"
 #include "DataTypes.h"
 #include "Decomp.h"
 #include "Dimension.h"
@@ -18,7 +19,6 @@
 #include "MachEnv.h"
 #include "OmegaKokkos.h"
 #include "Pacer.h"
-#include "VerticalCoord.h"
 #include "mpi.h"
 
 #include <iostream>
