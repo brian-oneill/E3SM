@@ -95,13 +95,14 @@ int main(int argc, char *argv[]) {
       //         DefVertCoord->MinLevelEdgeBot(I) << std::endl;
       //      }
 
-      for (int I = 0; I < DefMesh->NVerticesSize; ++I) {
-         std::cout << "   " << I << "   " << DefVertCoord->MaxLevelVertexTop(I)
-                   << "   ";
-         std::cout << DefVertCoord->MaxLevelVertexBot(I) << "   ";
-         std::cout << DefVertCoord->MinLevelVertexTop(I) << "   ";
-         std::cout << DefVertCoord->MinLevelVertexBot(I) << std::endl;
-      }
+      //      for (int I = 0; I < DefMesh->NVerticesSize; ++I) {
+      //         std::cout << "   " << I << "   " <<
+      //         DefVertCoord->MaxLevelVertexTop(I)
+      //                   << "   ";
+      //         std::cout << DefVertCoord->MaxLevelVertexBot(I) << "   ";
+      //         std::cout << DefVertCoord->MinLevelVertexTop(I) << "   ";
+      //         std::cout << DefVertCoord->MinLevelVertexBot(I) << std::endl;
+      //      }
 
       // Finalize Omega objects
       VertCoord::clear();

@@ -112,20 +112,6 @@ VertCoord *VertCoord::create(const std::string &Name, const HorzMesh *Mesh,
 void VertCoord::readMinMaxCell(const Decomp *MeshDecomp) {
 
    int Err = 0;
-   //   // Create offset and Dimension for NCells
-   //   std::string DimName = "NCells";
-   //   HostArray1DI4 CellOffset("CellOffset", NCellsSize);
-   //   I4 NCellsGlobal = MeshDecomp->NCellsGlobal;
-   //   for (int Cell = 0; Cell < NCellsSize; ++Cell) {
-   //      if (Cell < NCellsOwned) {
-   //         CellOffset(Cell) = MeshDecomp->CellIDH(Cell) - 1;
-   //      } else {
-   //         CellOffset(Cell) = -1;
-   //      }
-   //   }
-   //
-   //   auto NCellsDim = Dimension::create(DimName, NCellsGlobal, NCellsSize,
-   //   CellOffset);
 
    I4 NDims             = 1;
    IO::Rearranger Rearr = IO::RearrBox;
@@ -146,18 +132,12 @@ void VertCoord::readMinMaxCell(const Decomp *MeshDecomp) {
    HostArray1DI4 TmpArrayH("TmpCellArray", NCellsSize);
    I4 ArrayID;
    const std::string MaxNameMPAS = "maxLevelCell";
-   I4 MaxErr = IO::readArray(TmpArrayH.data(), NCellsAll, MaxNameMPAS,
-                             MeshFileID, CellDecompI4, ArrayID);
+   I4 MaxReadErr = IO::readArray(TmpArrayH.data(), NCellsAll, MaxNameMPAS,
+                                 MeshFileID, CellDecompI4, ArrayID);
 
-   //   std::cout << " max err : " << MaxErr << std::endl;
-   //   for (int I = 0; I < NCellsAll; ++I) {
-   //      std::cout << "   " << I << " " << TmpArrayH(I) << std::endl;
-   //
-   //   }
-
-   if (MaxErr != 0) {
-      LOG_WARN("VertCoord: error reading maxLevelCell from mesh file, ",
-               "using Max = NVertLevels - 1");
+   if (MaxReadErr != 0) {
+      LOG_WARN("VertCoord: error reading maxLevelCell from mesh file, "
+               "using MaxLevelCell = NVertLevels - 1");
       deepCopy(TmpArrayH, NVertLevels - 1);
    } else {
       for (int ICell = 0; ICell < NCellsAll; ++ICell) {
@@ -171,14 +151,12 @@ void VertCoord::readMinMaxCell(const Decomp *MeshDecomp) {
    MaxLevelCell = createDeviceMirrorCopy(MaxLevelCellH);
 
    const std::string MinNameMPAS = "minLevelCell";
-   I4 MinErr = IO::readArray(TmpArrayH.data(), NCellsAll, MinNameMPAS,
-                             MeshFileID, CellDecompI4, ArrayID);
+   I4 MinReadErr = IO::readArray(TmpArrayH.data(), NCellsAll, MinNameMPAS,
+                                 MeshFileID, CellDecompI4, ArrayID);
 
-   //   std::cout << " min err : " << MinErr << std::endl;
-
-   if (MinErr != 0) {
-      LOG_WARN("VertCoord: error reading minLevelCell from mesh file, ",
-               "using Min = 0");
+   if (MinReadErr != 0) {
+      LOG_WARN("VertCoord: error reading minLevelCell from mesh file, "
+               "using MinLevelCell = 0");
       deepCopy(TmpArrayH, 0);
    } else {
       for (int ICell = 0; ICell < NCellsAll; ++ICell) {
@@ -190,12 +168,6 @@ void VertCoord::readMinMaxCell(const Decomp *MeshDecomp) {
    MinLevelCellH = HostArray1DI4("MinLevelCell", NCellsSize);
    deepCopy(MinLevelCellH, TmpArrayH);
    MinLevelCell = createDeviceMirrorCopy(MinLevelCellH);
-
-   //   for (int I = 0; I < NCellsAll; ++I) {
-   //      std::cout << "   " << I << " " << MinLevelCellH(I) << " " <<
-   //      MaxLevelCellH(I) << std::endl;
-   //
-   //   }
 
    Err = IO::destroyDecomp(CellDecompI4);
 }
@@ -256,14 +228,8 @@ void VertCoord::minMaxLevelEdge() {
               Kokkos::min(LocMaxLevelCell(ICell1), LocMaxLevelCell(ICell2));
           LocMaxLevelEdgeBot(IEdge) =
               Kokkos::max(LocMaxLevelCell(ICell1), LocMaxLevelCell(ICell2));
-
-          //          std::cout << IEdge << "   " << DefDecomp->CellIDH(ICell1)
-          //          << "   "; std::cout << DefDecomp->CellIDH(ICell2) << " ";
-          //          std::cout << LocMaxLevelEdgeTop(IEdge) << "   ";
-          //          std::cout << LocMaxLevelEdgeBot(IEdge) << "   ";
-          //          std::cout << LocMinLevelEdgeTop(IEdge) << "   ";
-          //          std::cout << LocMinLevelEdgeBot(IEdge) << std::endl;
        });
+
    OMEGA_SCOPE(LocNEdgesAll, NEdgesAll);
    parallelFor(
        {1}, KOKKOS_LAMBDA(const int &) {
@@ -296,6 +262,7 @@ void VertCoord::minMaxLevelVertex() {
    OMEGA_SCOPE(LocMinLevelVertexBot, MinLevelVertexBot);
    OMEGA_SCOPE(LocMaxLevelVertexTop, MaxLevelVertexTop);
    OMEGA_SCOPE(LocMaxLevelVertexBot, MaxLevelVertexBot);
+
    parallelFor(
        {NVerticesAll}, KOKKOS_LAMBDA(int IVertex) {
           I4 Lvl;
@@ -334,10 +301,9 @@ void VertCoord::minMaxLevelVertex() {
           for (int I = 1; I < LocVertexDegree; ++I) {
              ICell                         = LocCellsOnVertex(IVertex, I);
              LocMaxLevelVertexTop(IVertex) = Kokkos::min(
-                 MaxLevelVertexTop(IVertex), LocMaxLevelCell(ICell));
+                 LocMaxLevelVertexTop(IVertex), LocMaxLevelCell(ICell));
           }
        });
-
    OMEGA_SCOPE(LocNVerticesAll, NVerticesAll);
    parallelFor(
        {1}, KOKKOS_LAMBDA(const int &) {
@@ -368,31 +334,26 @@ void VertCoord::computePressure(const Array2DReal &PressureInterface,
    const auto Policy = TeamPolicy(NCellsAll, OMEGA_TEAMSIZE, 1);
    Kokkos::parallel_for(
        "computePressure", Policy, KOKKOS_LAMBDA(const TeamMember &Member) {
-          const I4 ICell                 = Member.league_rank();
-          const I4 KMin                  = LocMinLevelCell(ICell);
-          const I4 KMax                  = LocMaxLevelCell(ICell);
-          const I4 Range                 = KMax - KMin - 1;
+          const I4 ICell = Member.league_rank();
+          const I4 KMin  = LocMinLevelCell(ICell);
+          const I4 KMax  = LocMaxLevelCell(ICell);
+          const I4 Range = KMax - KMin + 1;
+
           PressureInterface(ICell, KMin) = SurfacePressure(ICell);
-          PressureMid(ICell, KMin) =
-              SurfacePressure(ICell) +
-              0.5_Real * Gravity * Rho0 * LayerThickness(ICell, KMin);
           Kokkos::parallel_scan(
               TeamThreadRange(Member, Range),
               [&](int K, Real &Accum, bool IsFinal) {
-                 const I4 KLvl = K + KMin;
-                 Accum += PressureInterface(ICell, KLvl) +
-                          Gravity * Rho0 * LayerThickness(ICell, KLvl);
+                 const I4 KLvl  = K + KMin;
+                 Real Increment = Gravity * Rho0 * LayerThickness(ICell, KLvl);
+                 Accum += Increment;
+
                  if (IsFinal) {
-                    PressureInterface(ICell, KLvl + 1) = Accum;
-                    PressureMid(ICell, KLvl + 1) =
-                        Accum +
-                        0.5_Real * Gravity * Rho0 * LayerThickness(ICell, KLvl);
+                    PressureInterface(ICell, KLvl + 1) =
+                        SurfacePressure(ICell) + Accum;
+                    PressureMid(ICell, KLvl) =
+                        SurfacePressure(ICell) + Accum - 0.5 * Increment;
                  }
               });
-          Member.team_barrier();
-          PressureInterface(ICell, KMax + 1) =
-              PressureInterface(ICell, KMax) +
-              Gravity * Rho0 * LayerThickness(ICell, KMax);
        });
 }
 
@@ -414,30 +375,21 @@ void VertCoord::computeZHeight(const Array2DReal &ZInterface,
           const I4 ICell = Member.league_rank();
           const I4 KMin  = LocMinLevelCell(ICell);
           const I4 KMax  = LocMaxLevelCell(ICell);
-          const I4 Range = KMax - KMin - 1;
+          const I4 Range = KMax - KMin + 1;
 
           ZInterface(ICell, KMax + 1) = -BottomDepth(ICell);
-          ZMid(ICell, KMax) =
-              -BottomDepth(ICell) + 0.5_Real * Rho0 * SpecVol(ICell, KMax) *
-                                        LayerThickness(ICell, KMax);
           Kokkos::parallel_scan(
               TeamThreadRange(Member, Range),
               [&](int K, Real &Accum, bool IsFinal) {
                  const I4 KLvl = KMax - K;
-                 Accum +=
-                     ZInterface(ICell, KLvl + 1) +
+                 Real DZ =
                      Rho0 * SpecVol(ICell, KLvl) * LayerThickness(ICell, KLvl);
+                 Accum += DZ;
                  if (IsFinal) {
-                    ZInterface(ICell, KLvl) = Accum;
-                    ZMid(ICell, KLvl - 1) =
-                        Accum + 0.5_Real * Rho0 * SpecVol(ICell, KLvl - 1) *
-                                    LayerThickness(ICell, KLvl - 1);
+                    ZInterface(ICell, KLvl) = -BottomDepth(ICell) + Accum;
+                    ZMid(ICell, KLvl) = BottomDepth(ICell) + Accum - 0.5 * DZ;
                  }
               });
-          Member.team_barrier();
-          ZInterface(ICell, KMin) =
-              ZInterface(ICell, KMin + 1) +
-              Rho0 * SpecVol(ICell, KMin) * LayerThickness(ICell, KMin)
        });
 }
 
@@ -452,16 +404,16 @@ void VertCoord::computeGeopotential(const Array2DReal &GeopotentialMid,
    OMEGA_SCOPE(LocMinLevelCell, MinLevelCell);
    OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
 
-   Kokkos::parallel(
+   Kokkos::parallel_for(
        "computeGeopotential", TeamPolicy(NCellsAll, OMEGA_TEAMSIZE),
-       KOKKOS_LAMBDA(const TeamMember &Team) {
+       KOKKOS_LAMBDA(const TeamMember &Member) {
           const I4 ICell   = Member.league_rank();
           const I4 KMin    = LocMinLevelCell(ICell);
           const I4 KMax    = LocMaxLevelCell(ICell);
           const I4 KRange  = KMax - KMin + 1;
           const I4 NChunks = (KRange + VecLength - 1) / VecLength;
           Kokkos::parallel_for(
-              Kokkos::TeamThreadRange(Team, NChunks), [&](const int KChunk) {
+              Kokkos::TeamThreadRange(Member, NChunks), [&](const int KChunk) {
                  const I4 KStart = KMin + KChunk * VecLength;
                  const I4 KEnd   = KStart + VecLength;
 
@@ -490,19 +442,20 @@ void VertCoord::computePStarThickness(
    OMEGA_SCOPE(LocMaxLevelCell, MaxLevelCell);
    OMEGA_SCOPE(LocPressInterf, PressureInterface);
 
-   Kokkos::parallel(
-       "computeGeopotential", TeamPolicy(NCellsAll, OMEGA_TEAMSIZE),
-       KOKKOS_LAMBDA(const TeamMember &Team) {
+   Kokkos::parallel_for(
+       "computePStarThickness", TeamPolicy(NCellsAll, OMEGA_TEAMSIZE),
+       KOKKOS_LAMBDA(const TeamMember &Member) {
           const I4 ICell = Member.league_rank();
           const I4 KMin  = LocMinLevelCell(ICell);
           const I4 KMax  = LocMaxLevelCell(ICell);
 
-          Real Coeff = (LocPressInterf(KMax + 1) - LocPressInterf(KMin)) /
-                       (Gravity * Rho0);
+          Real Coeff =
+              (LocPressInterf(ICell, KMax + 1) - LocPressInterf(ICell, KMin)) /
+              (Gravity * Rho0);
 
           Real SumWh = 0;
           Kokkos::parallel_reduce(
-              Kokkos::TeamThreadRange(Team, KMin, KMax),
+              Kokkos::TeamThreadRange(Member, KMin, KMax),
               [=](const int K, Real &LocalWh) {
                  LocalWh += VertCoordMovementWeights(ICell, K) *
                             RefLayerThickness(ICell, K);
@@ -511,10 +464,9 @@ void VertCoord::computePStarThickness(
 
           const I4 KRange  = KMax - KMin + 1;
           const I4 NChunks = (KRange + VecLength - 1) / VecLength;
-          Member.team_barrier();
 
           Kokkos::parallel_for(
-              Kokkos::TeamThreadRange(Team, NChunks), [&](const int KChunk) {
+              Kokkos::TeamThreadRange(Member, NChunks), [&](const int KChunk) {
                  const I4 KStart = KMin + KChunk * VecLength;
                  const I4 KEnd   = KStart + VecLength;
 
