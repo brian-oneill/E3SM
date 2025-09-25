@@ -24,7 +24,7 @@ VelocityDel2AuxVars::VelocityDel2AuxVars(const std::string &AuxStateSuffix,
       EdgeSignOnCell(Mesh->EdgeSignOnCell), DcEdge(Mesh->DcEdge),
       DvEdge(Mesh->DvEdge), AreaCell(Mesh->AreaCell),
       EdgesOnVertex(Mesh->EdgesOnVertex), CellsOnEdge(Mesh->CellsOnEdge),
-      VerticesOnEdge(Mesh->VerticesOnEdge), EdgeMask(Mesh->EdgeMask),
+      VerticesOnEdge(Mesh->VerticesOnEdge),
       EdgeSignOnVertex(Mesh->EdgeSignOnVertex),
       AreaTriangle(Mesh->AreaTriangle), VertexDegree(Mesh->VertexDegree) {}
 

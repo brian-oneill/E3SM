@@ -44,7 +44,7 @@ class VelocityDel2AuxVars {
          const Real CurlVort =
              -(RelVortVertex(JVertex1, K) - RelVortVertex(JVertex0, K)) *
              InvDvEdge;
-         Del2Edge(IEdge, K) = EdgeMask(IEdge, K) * GradDiv + CurlVort;
+         Del2Edge(IEdge, K) = GradDiv + CurlVort;
       }
    }
 
@@ -126,7 +126,6 @@ class VelocityDel2AuxVars {
    Array2DI4 VerticesOnEdge;
    Array2DReal EdgeSignOnVertex;
    Array1DReal AreaTriangle;
-   Array2DReal EdgeMask;
    I4 VertexDegree;
 };
 

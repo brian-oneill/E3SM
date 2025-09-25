@@ -32,42 +32,40 @@ PotentialVortHAdvOnEdge::PotentialVortHAdvOnEdge(const HorzMesh *Mesh,
     : MinLayerEdgeBot(VCoord->MinLayerEdgeBot),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop),
       NEdgesOnEdge(Mesh->NEdgesOnEdge), EdgesOnEdge(Mesh->EdgesOnEdge),
-      WeightsOnEdge(Mesh->WeightsOnEdge), EdgeMask(Mesh->EdgeMask) {}
+      WeightsOnEdge(Mesh->WeightsOnEdge) {}
 
 KEGradOnEdge::KEGradOnEdge(const HorzMesh *Mesh, const VertCoord *VCoord)
     : MinLayerEdgeBot(VCoord->MinLayerEdgeBot),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop), CellsOnEdge(Mesh->CellsOnEdge),
-      DcEdge(Mesh->DcEdge), EdgeMask(Mesh->EdgeMask) {}
+      DcEdge(Mesh->DcEdge) {}
 
 SSHGradOnEdge::SSHGradOnEdge(const HorzMesh *Mesh, const VertCoord *VCoord)
     : MinLayerEdgeBot(VCoord->MinLayerEdgeBot),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop), CellsOnEdge(Mesh->CellsOnEdge),
-      DcEdge(Mesh->DcEdge), EdgeMask(Mesh->EdgeMask) {}
+      DcEdge(Mesh->DcEdge) {}
 
 VelocityDiffusionOnEdge::VelocityDiffusionOnEdge(const HorzMesh *Mesh,
                                                  const VertCoord *VCoord)
     : MinLayerEdgeBot(VCoord->MinLayerEdgeBot),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop), CellsOnEdge(Mesh->CellsOnEdge),
       VerticesOnEdge(Mesh->VerticesOnEdge), DcEdge(Mesh->DcEdge),
-      DvEdge(Mesh->DvEdge), MeshScalingDel2(Mesh->MeshScalingDel2),
-      EdgeMask(Mesh->EdgeMask) {}
+      DvEdge(Mesh->DvEdge), MeshScalingDel2(Mesh->MeshScalingDel2) {}
 
 VelocityHyperDiffOnEdge::VelocityHyperDiffOnEdge(const HorzMesh *Mesh,
                                                  const VertCoord *VCoord)
     : MinLayerEdgeBot(VCoord->MinLayerEdgeBot),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop), CellsOnEdge(Mesh->CellsOnEdge),
       VerticesOnEdge(Mesh->VerticesOnEdge), DcEdge(Mesh->DcEdge),
-      DvEdge(Mesh->DvEdge), MeshScalingDel4(Mesh->MeshScalingDel4),
-      EdgeMask(Mesh->EdgeMask) {}
+      DvEdge(Mesh->DvEdge), MeshScalingDel4(Mesh->MeshScalingDel4) {}
 
 WindForcingOnEdge::WindForcingOnEdge(const HorzMesh *Mesh)
-    : Enabled(false), EdgeMask(Mesh->EdgeMask) {}
+    : Enabled(false) {}
 
 BottomDragOnEdge::BottomDragOnEdge(const HorzMesh *Mesh,
                                    const VertCoord *VCoord)
     : Enabled(false), Coeff(0), CellsOnEdge(Mesh->CellsOnEdge),
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop),
-      NVertLayers(VCoord->NVertLayers), EdgeMask(Mesh->EdgeMask) {}
+      NVertLayers(VCoord->NVertLayers) {}
 
 TracerHorzAdvOnCell::TracerHorzAdvOnCell(const HorzMesh *Mesh,
                                          const VertCoord *VCoord)
@@ -76,7 +74,7 @@ TracerHorzAdvOnCell::TracerHorzAdvOnCell(const HorzMesh *Mesh,
       MaxLayerEdgeTop(VCoord->MaxLayerEdgeTop),
       NEdgesOnCell(Mesh->NEdgesOnCell), EdgesOnCell(Mesh->EdgesOnCell),
       CellsOnEdge(Mesh->CellsOnEdge), EdgeSignOnCell(Mesh->EdgeSignOnCell),
-      DvEdge(Mesh->DvEdge), AreaCell(Mesh->AreaCell), EdgeMask(Mesh->EdgeMask) {
+      DvEdge(Mesh->DvEdge), AreaCell(Mesh->AreaCell) {
 }
 
 TracerDiffOnCell::TracerDiffOnCell(const HorzMesh *Mesh,
@@ -87,7 +85,7 @@ TracerDiffOnCell::TracerDiffOnCell(const HorzMesh *Mesh,
       NEdgesOnCell(Mesh->NEdgesOnCell), EdgesOnCell(Mesh->EdgesOnCell),
       CellsOnEdge(Mesh->CellsOnEdge), EdgeSignOnCell(Mesh->EdgeSignOnCell),
       DvEdge(Mesh->DvEdge), DcEdge(Mesh->DcEdge), AreaCell(Mesh->AreaCell),
-      MeshScalingDel2(Mesh->MeshScalingDel2), EdgeMask(Mesh->EdgeMask) {}
+      MeshScalingDel2(Mesh->MeshScalingDel2) {}
 
 TracerHyperDiffOnCell::TracerHyperDiffOnCell(const HorzMesh *Mesh,
                                              const VertCoord *VCoord)
@@ -97,7 +95,7 @@ TracerHyperDiffOnCell::TracerHyperDiffOnCell(const HorzMesh *Mesh,
       NEdgesOnCell(Mesh->NEdgesOnCell), EdgesOnCell(Mesh->EdgesOnCell),
       CellsOnEdge(Mesh->CellsOnEdge), EdgeSignOnCell(Mesh->EdgeSignOnCell),
       DvEdge(Mesh->DvEdge), DcEdge(Mesh->DcEdge), AreaCell(Mesh->AreaCell),
-      MeshScalingDel4(Mesh->MeshScalingDel4), EdgeMask(Mesh->EdgeMask) {}
+      MeshScalingDel4(Mesh->MeshScalingDel4) {}
 
 } // end namespace OMEGA
 
