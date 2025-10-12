@@ -29,8 +29,6 @@ enum class EosType {
 /// TEOS10 75-term Polynomial Equation of State
 class Teos10Eos {
  public:
-   Array2DReal SpecVolPCoeffs;
-
    /// constructor declaration
    Teos10Eos(const VertCoord *VCoord);
 
@@ -44,13 +42,13 @@ class Teos10Eos {
                                    const Array2DReal &Pressure,
                                    I4 KDisp) const {
 
-      OMEGA_SCOPE(LocSpecVolPCoeffs, SpecVolPCoeffs);
+      Real SpecVolPCoeffs[6 * VecLength];
       const I4 KStart = KChunk * VecLength;
       for (int KVec = 0; KVec < VecLength; ++KVec) {
          const I4 K = KStart + KVec;
          /// Calculate the local specific volume polynomial pressure
          /// coefficients with cell center values
-         calcPCoeffs(LocSpecVolPCoeffs, KVec, ConservTemp(ICell, K),
+         calcPCoeffs(SpecVolPCoeffs, KVec, ConservTemp(ICell, K),
                      AbsSalinity(ICell, K));
 
          /// Calculate the specific volume at the given pressure
@@ -62,22 +60,23 @@ class Teos10Eos {
             // No displacement
             SpecVol(ICell, K) =
                 calcRefProfile(Pressure(ICell, K)) +
-                calcDelta(LocSpecVolPCoeffs, KVec, Pressure(ICell, K));
+                calcDelta(SpecVolPCoeffs, KVec, Pressure(ICell, K));
          } else {
             // Displacement, use the displaced pressure
             I4 KTmp = Kokkos::min(K + KDisp, NVertLayers - 1);
             KTmp    = Kokkos::max(0, KTmp);
             SpecVol(ICell, K) =
                 calcRefProfile(Pressure(ICell, KTmp)) +
-                calcDelta(LocSpecVolPCoeffs, KVec, Pressure(ICell, KTmp));
+                calcDelta(SpecVolPCoeffs, KVec, Pressure(ICell, KTmp));
          }
       }
    }
 
    /// TEOS-10 helpers
    /// Calculate pressure polynomial coefficients for TEOS-10
-   KOKKOS_FUNCTION void calcPCoeffs(Array2DReal SpecVolPCoeffs, const I4 K,
-                                    const Real Ct, const Real Sa) const {
+   KOKKOS_FUNCTION void calcPCoeffs(Real (&SpecVolPCoeffs)[6 * VecLength],
+                                    const I4 K, const Real Ct,
+                                    const Real Sa) const {
       constexpr Real SAu    = 40.0 * 35.16504 / 35.0;
       constexpr Real CTu    = 40.0;
       constexpr Real DeltaS = 24.0;
@@ -160,18 +159,17 @@ class Teos10Eos {
       constexpr Real V014 = 3.1454099902e-07;
       constexpr Real V005 = 4.2369007180e-09;
 
-      SpecVolPCoeffs(5, K) = V005;
-      SpecVolPCoeffs(4, K) = V014 * Tt + V104 * Ss + V004;
-      SpecVolPCoeffs(3, K) =
+      Real PC5 = V005;
+      Real PC4 = V014 * Tt + V104 * Ss + V004;
+      Real PC3 =
           (V023 * Tt + V113 * Ss + V013) * Tt + (V203 * Ss + V103) * Ss + V003;
-      SpecVolPCoeffs(2, K) =
-          (((V042 * Tt + V132 * Ss + V032) * Tt + (V222 * Ss + V122) * Ss +
-            V022) *
-               Tt +
-           ((V312 * Ss + V212) * Ss + V112) * Ss + V012) *
-              Tt +
-          (((V402 * Ss + V302) * Ss + V202) * Ss + V102) * Ss + V002;
-      SpecVolPCoeffs(1, K) =
+      Real PC2 = (((V042 * Tt + V132 * Ss + V032) * Tt +
+                   (V222 * Ss + V122) * Ss + V022) *
+                      Tt +
+                  ((V312 * Ss + V212) * Ss + V112) * Ss + V012) *
+                     Tt +
+                 (((V402 * Ss + V302) * Ss + V202) * Ss + V102) * Ss + V002;
+      Real PC1 =
           ((((V051 * Tt + V141 * Ss + V041) * Tt + (V231 * Ss + V131) * Ss +
              V031) *
                 Tt +
@@ -181,7 +179,7 @@ class Teos10Eos {
               Tt +
           ((((V501 * Ss + V401) * Ss + V301) * Ss + V201) * Ss + V101) * Ss +
           V001;
-      SpecVolPCoeffs(0, K) =
+      Real PC0 =
           (((((V060 * Tt + V150 * Ss + V050) * Tt + (V240 * Ss + V140) * Ss +
               V040) *
                  Tt +
@@ -197,24 +195,33 @@ class Teos10Eos {
               Ss +
           V000;
 
+      SpecVolPCoeffs[5 + 6 * K] = PC5;
+      SpecVolPCoeffs[4 + 6 * K] = PC4;
+      SpecVolPCoeffs[3 + 6 * K] = PC3;
+      SpecVolPCoeffs[2 + 6 * K] = PC2;
+      SpecVolPCoeffs[1 + 6 * K] = PC1;
+      SpecVolPCoeffs[0 + 6 * K] = PC0;
+
       // could insert a check here (abs(value)> 0 value or <e+33)
    }
 
    /// Evaluate pressure polynomial delta for TEOS-10
-   KOKKOS_FUNCTION Real calcDelta(const Array2DReal &SpecVolPCoeffs, const I4 K,
-                                  const Real P) const {
+   KOKKOS_FUNCTION Real calcDelta(const Real (&SpecVolPCoeffs)[6 * VecLength],
+                                  const I4 K, const Real P) const {
 
       constexpr Real Pu = 1e4;
       Real Pp           = P / Pu;
 
-      Real Delta = ((((SpecVolPCoeffs(5, K) * Pp + SpecVolPCoeffs(4, K)) * Pp +
-                      SpecVolPCoeffs(3, K)) *
+      Real Delta = ((((SpecVolPCoeffs[5 + 6 * K] * Pp +
+                       SpecVolPCoeffs[4 + 6 * K]) *
+                          Pp +
+                      SpecVolPCoeffs[3 + 6 * K]) *
                          Pp +
-                     SpecVolPCoeffs(2, K)) *
+                     SpecVolPCoeffs[2 + 6 * K]) *
                         Pp +
-                    SpecVolPCoeffs(1, K)) *
+                    SpecVolPCoeffs[1 + 6 * K]) *
                        Pp +
-                   SpecVolPCoeffs(0, K);
+                   SpecVolPCoeffs[0 + 6 * K];
       return Delta;
    }
 
@@ -316,7 +323,8 @@ class Teos10BruntVaisalaFreq {
    KOKKOS_FUNCTION Real calcGrav(Real Lat, Real Z) const {
       // Calculate gravity as a function of latitude and depth
       constexpr Real Gamma = 2.26e-7;
-      Real Sin2            = Kokkos::pow(Kokkos::sin(Lat), 2);
+      Real SinLat          = Kokkos::sin(Lat);
+      Real Sin2            = SinLat * SinLat;
       Real Gs =
           9.780327_Real * (1.0_Real + (5.2792e-3 + (2.32e-5 * Sin2)) * Sin2);
       Real Grav = Gs * (1.0_Real - Gamma * Z);

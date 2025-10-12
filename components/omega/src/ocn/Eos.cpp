@@ -15,9 +15,7 @@ namespace OMEGA {
 
 /// Constructor for Teos10Eos
 Teos10Eos::Teos10Eos(const VertCoord *VCoord)
-    : NVertLayers(VCoord->NVertLayers) {
-   SpecVolPCoeffs = Array2DReal("SpecVolPCoeffs", 6, VecLength);
-}
+    : NVertLayers(VCoord->NVertLayers) {}
 
 /// Constructor for LinearEos
 LinearEos::LinearEos() {}
@@ -133,7 +131,7 @@ void Eos::computeSpecVol(const Array2DReal &ConservTemp,
                ComputeSpecVolLinear); /// Local view for linear EOS computation
    OMEGA_SCOPE(LocComputeSpecVolTeos10,
                ComputeSpecVolTeos10); /// Local view for TEOS-10 computation
-   deepCopy(LocSpecVol, 0); /// Initialize local specific volume to zero
+   deepCopy(LocSpecVol, 0.); /// Initialize local specific volume to zero
 
    I4 KDisp = 0; /// No displacement in this case
 
@@ -166,7 +164,7 @@ void Eos::computeSpecVolDisp(const Array2DReal &ConservTemp,
    OMEGA_SCOPE(LocComputeSpecVolTeos10,
                ComputeSpecVolTeos10); /// Local view for TEOS-10 computation
    deepCopy(LocSpecVolDisplaced,
-            0); /// Initialize local specific volume to zero
+            0.); /// Initialize local specific volume to zero
 
    /// Dispatch to the correct EOS calculation
    /// If EosChoice is Linear, the displaced specific
@@ -205,7 +203,7 @@ void Eos::computeBruntVaisalaFreq(const Array2DReal &ConservTemp,
        LocComputeBruntVaisalaFreqTeos10,
        ComputeBruntVaisalaFreqTeos10); /// Local view for TEOS-10 computation
    deepCopy(LocBruntVaisalaFreq,
-            0); /// Initialize local Brunt-Vaisala frequency to zero
+            0.); /// Initialize local Brunt-Vaisala frequency to zero
 
    /// Dispatch to the correct Brunt-Vaisala frequency calculation
    if (EosChoice == EosType::LinearEos) {
