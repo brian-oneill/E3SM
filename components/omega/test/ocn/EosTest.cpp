@@ -15,6 +15,7 @@
 #include "Decomp.h"
 #include "Dimension.h"
 #include "IO.h"
+#include "IOStream.h"
 #include "Logging.h"
 #include "MachEnv.h"
 #include "OceanTestCommon.h"
@@ -82,6 +83,9 @@ void initEosTest(const std::string &mesh) {
 
    /// Initialize decomposition
    Decomp::init(mesh);
+
+   /// Initialize streams
+   IOStream::init();
 
    /// Initialize Halo
    Halo::init();
