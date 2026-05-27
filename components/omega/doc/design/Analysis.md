@@ -1,4 +1,7 @@
+<!--- OMEGA Analysis Module requirements and design ------------------------->
+
 (omega-design-analysis)=
+
 # Analysis
 
 ## 1 Overview
@@ -199,12 +202,12 @@ The main Analysis computational loop executed every time step. Topological sort 
         - $\texttt{Op.Alarm.reset()}$
 
 2. $\texttt{ComputeRecursive}()$
-    - **If** a fresh field has been computed:
+    - **If** a fresh field has already been computed,
     $\texttt{Op.FieldComputed AND Op.LastComputed == TimeStamp}$:
-        - $\texttt{Return}$ // Already computed
-    - **For** each upstream operator this operator depends on
+        - $\texttt{Return}$
+    - **For** each upstream operator this operator depends on,
     $\texttt{UpstreamOp} \in \texttt{Op.Dependencies}$:
-        - Recursively compute up the chain
+        - Recursively compute up the chain,
         $\texttt{ComputeRecursive(UpstreamOp, TimeStamp)}$
     - Compute the operator: $\texttt{Op.compute(TimeStamp)}$
     - Set compute flag and timestamp: 
@@ -215,7 +218,7 @@ The main Analysis computational loop executed every time step. Topological sort 
 
 ### 4.1 Data types and parameters
 
-#### 4.1.1
+#### 4.1.1 Configuration
 
 #### 4.1.2 Classes
 
@@ -262,6 +265,48 @@ class AnalysisOperator {
    bool FieldComputed;
 };
 ```
+
+##### Example derived operator
+**GlobalMaxOp**
+```c++
+class GlobalMaxOp : public AnalysisOperator {
+ public:
+   /// Constructor
+   /// \param[in] Name    Unique name for this operator instance
+   /// \param[in] Options Configuration for this operator
+   GlobalMaxOp(const std::string &Name, const Config &Options);
+
+   /// Destructor
+   ~GlobalMaxOp() override = default;
+
+   /// Initialize operator: validate input, create output field with matching type
+   ///
+   /// \param[in] Options Configuration options
+   /// \param[in] Mesh    Horizontal mesh
+   /// \param[in] VCoord  Vertical coordinate
+   void initialize(const Config *Options,
+                   const HorzMesh *Mesh,
+                   const VertCoord *VCoord) override;
+
+   /// Compute global maximum
+   ///
+   /// Retrieves input field with string of input name and uses globalMaxVal
+   /// to compute the maximum across all MPI ranks. Stores result in output 
+   /// array with the same data type as the input.
+   /// \param[in] ts Current simulation time
+   void compute(const TimeInstant &ts) override;
+
+ private:
+
+   // Member data
+   const HorzMesh *Mesh;                    ///< Horizontal mesh
+   std::string OutputFieldName;             ///< Name of output field
+   
+   /// Output data storage - holds exactly one array type matching input
+   std::variant<Array1DR4, Array1DR8, Array1DI4, Array1DI8> OutputData;
+};
+```
+
 ##### AnalysisOperatorFactory
 Factory for creating AnalysisOperator instances by name. Operators register themselves via $\texttt{REGISTER\_ANALYSIS\_OPERATOR}$ macro. The parser uses the factory to instantiate operator chains from configuration.
 ```c++
@@ -397,3 +442,6 @@ Create configurations with various dependency patterns and verify correct handli
 
 ### 5.5 Test: Parser handling
 Verify that the parser properly handles valid operator chain strings and produces error messages for invalid strings
+
+### 5.6 Integration test: End-to-end global stats
+Test: Complete system test exercising all components from configuration parsing through NetCDF output for global stats.
