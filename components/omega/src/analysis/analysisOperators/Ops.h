@@ -1,1 +1,1 @@
-#include "GlobalMaxOp.h"
+#include "analysisOperators/GlobalMaxOp.h"

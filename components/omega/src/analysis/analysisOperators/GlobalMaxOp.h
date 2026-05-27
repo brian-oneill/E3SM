@@ -32,7 +32,8 @@ class GlobalMaxOp : public AnalysisOperator {
    const VertCoord *VCoord;                 ///< VertCoord
 
    /// Output data storage - holds exactly one array type matching input
-   std::variant<Array1DR4, Array1DR8, Array1DI4, Array1DI8> OutputData;
+   Anlys1DVariant OutputData;
+
 
 };
 

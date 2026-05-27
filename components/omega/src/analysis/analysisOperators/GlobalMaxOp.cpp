@@ -3,6 +3,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "analysisOperators/GlobalMaxOp.h"
+#include <limits>
 
 namespace OMEGA {
 
@@ -53,36 +54,51 @@ void GlobalMaxOp::initialize(const Config *Options,
                 InputNames[0]);
    }
    
+   ArrayDataType inputType = InputField->getType();
+
    // Allocate output array (single value per rank, but we'll only use rank 0)
    OutputData = Array1DReal("GlobalMax_" + InstanceName, 1);
-//   Kokkos::deep_copy(OutputData, -std::numeric_limits<Real>::max());
-//
-//   // Create and register output field in Field registry
-//   // Global max is a scalar, so dimensions are (1)
-//   std::vector<std::string> DimNames = {"scalar"};
-//   std::vector<I4> DimLengths = {1};
-//   
-//   Err = Field::create(
-//       OutputFieldName,           // Field name
-//       "Global maximum of " + InputNames[0], // Description
-//       "same as input",          // Units (inherited from input)
-//       "same as input",          // Standard name
-//       0.0,                      // Min valid value
-//       std::numeric_limits<Real>::max(), // Max valid value
-//       -std::numeric_limits<Real>::max(), // Fill value
-//       DimNames,                 // Dimension names
-//       DimLengths,               // Dimension lengths
-//       OutputData                // Data array
-//   );
-//   
-//   if (Err != 0) {
-//      LOG_ERROR("GlobalMaxOp::initialize: Failed to create output field '{}'",
-//                OutputFieldName);
-//      return;
-//   }
-//   
-//   LOG_INFO("GlobalMaxOp: Initialized operator '{}' for input '{}'",
-//            InstanceName, InputNames[0]);
+
+   switch(inputType) {
+       case ArrayDataType::R4:
+           OutputData = Array1DR4(InstanceName + "_out_array", 1);
+           break;
+       case ArrayDataType::R8:
+           OutputData = Array1DR8(InstanceName + "_out_array", 1);
+           break;
+       case ArrayDataType::I4:
+           OutputData = Array1DI4(InstanceName + "_out_array", 1);
+           break;
+       case ArrayDataType::I8:
+           OutputData = Array1DI8(InstanceName + "_out_array", 1);
+           break;
+       default:
+           ABORT_ERROR("GlobalMaxOp::initialize: Unknown or unsupported array type");
+   }
+
+   std::vector<std::string> DimNames(1);
+   DimNames[0] = "Scalar"
+   auto ScalarDim = Dimension::create(DimNames[0], 1);
+
+(
+
+   auto OutputField = Field::create(
+       OutputFieldName,           // Field name
+       "Global maximum of " + InputNames[0], // Description
+       "",                     // Units (inherited from input)
+       "",                     // Standard name
+       0,                      // Min valid value
+       std::numeric_limits<Real>::max(), // Max valid value
+       -std::numeric_limits<Real>::max(), // Fill value
+       DimNames,                 // Dimension names
+       DimLengths                // Dimension lengths
+   );
+   
+   if (Err != 0) {
+      LOG_ERROR("GlobalMaxOp::initialize: Failed to create output field '{}'",
+                OutputFieldName);
+      return;
+   }
 }
 
 
