@@ -1,5 +1,7 @@
 #include "AnalysisOperator.h"
 
+namespace OMEGA {
+
 std::string AnalysisOperator::getOperatorType() const {
    return OperatorTypeName;
 }
@@ -15,3 +17,4 @@ std::vector<std::string> AnalysisOperator::getOutputFieldNames() const {
 }
 
 
+} // end namespace OMEGA

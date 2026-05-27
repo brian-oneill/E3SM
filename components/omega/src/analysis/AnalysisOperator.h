@@ -14,6 +14,8 @@
 #include <string>
 #include <variant>
 
+namespace OMEGA {
+
 class AnalysisOperator {
  public:
    virtual ~AnalysisOperator() = default;
@@ -52,5 +54,6 @@ class AnalysisOperator {
    bool FieldComputed;
 };
 
+}
 
 #endif
