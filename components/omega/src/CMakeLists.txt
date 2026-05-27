@@ -6,6 +6,7 @@ add_library(OmegaLibFlags INTERFACE)
 target_include_directories(
     OmegaLibFlags
     INTERFACE
+    ${OMEGA_SOURCE_DIR}/src/analysis
     ${OMEGA_SOURCE_DIR}/src/base
     ${OMEGA_SOURCE_DIR}/src/infra
     ${OMEGA_SOURCE_DIR}/src/ocn

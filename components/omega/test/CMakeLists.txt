@@ -516,3 +516,15 @@ add_omega_test(
     ocn/VertAdvTest.cpp
     "-n;1"
 )
+
+
+##################
+# Analysis test
+##################
+
+add_omega_test(
+    ANALYSIS_TEST
+    testAnalysis.exe
+    analysis/AnalysisTest.cpp
+    "-n;8"
+)
