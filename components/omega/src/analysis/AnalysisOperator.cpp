@@ -2,19 +2,27 @@
 
 namespace OMEGA {
 
-std::string AnalysisOperator::getOperatorType() const {
+const std::string AnalysisOperator::getOperatorType() {
    return OperatorTypeName;
 }
 
-std::string AnalysisOperator::getName() const { return InstanceName; }
+const std::string AnalysisOperator::getName() { return InstanceName; }
 
-std::vector<std::string> AnalysisOperator::getInputFieldNames() const {
+const std::vector<std::string> AnalysisOperator::getInputFieldNames() {
    return InputNames;
 }
 
-std::vector<std::string> AnalysisOperator::getOutputFieldNames() const {
+const std::vector<std::string> AnalysisOperator::getOutputFieldNames() {
    return OutputNames;
 }
 
+bool AnalysisOperator::isCacheValid(const TimeInstant &TimeStamp) {
+   bool IsValid = false;
+   if (FieldComputed && LastComputed == TimeStamp) {
+      IsValid = true;
+   }
+
+   return IsValid;
+}
 
 } // end namespace OMEGA

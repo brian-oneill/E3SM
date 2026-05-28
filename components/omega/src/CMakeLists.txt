@@ -73,7 +73,7 @@ if(GKlib_FOUND)
 endif()
 
 # Add source files for the library
-file(GLOB_RECURSE _LIBSRC_FILES infra/*.cpp base/*.cpp ocn/*.cpp timeStepping/*.cpp)
+file(GLOB_RECURSE _LIBSRC_FILES analysis/*.cpp infra/*.cpp base/*.cpp ocn/*.cpp timeStepping/*.cpp)
 
 add_library(${OMEGA_LIB_NAME} ${_LIBSRC_FILES})
 
