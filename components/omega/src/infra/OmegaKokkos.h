@@ -21,6 +21,76 @@ namespace OMEGA {
 
 #define OMEGA_SCOPE(a, b) auto &a = b
 
+template<typename T> struct Array1D;
+template<> struct Array1D<I4> { using type = Array1DI4; };
+template<> struct Array1D<I8> { using type = Array1DI8; };
+template<> struct Array1D<R4> { using type = Array1DR4; };
+template<> struct Array1D<R8> { using type = Array1DR8; };
+
+template<typename T> struct Array2D;
+template<> struct Array2D<I4> { using type = Array2DI4; };
+template<> struct Array2D<I8> { using type = Array2DI8; };
+template<> struct Array2D<R4> { using type = Array2DR4; };
+template<> struct Array2D<R8> { using type = Array2DR8; };
+
+template<typename T> struct Array3D;
+template<> struct Array3D<I4> { using type = Array3DI4; };
+template<> struct Array3D<I8> { using type = Array3DI8; };
+template<> struct Array3D<R4> { using type = Array3DR4; };
+template<> struct Array3D<R8> { using type = Array3DR8; };
+
+template<typename T> struct Array4D;
+template<> struct Array4D<I4> { using type = Array4DI4; };
+template<> struct Array4D<I8> { using type = Array4DI8; };
+template<> struct Array4D<R4> { using type = Array4DR4; };
+template<> struct Array4D<R8> { using type = Array4DR8; };
+
+template<int Rank> struct ArrayI4;
+template<> struct ArrayI4<1> { using type = Array1DI4; };
+template<> struct ArrayI4<2> { using type = Array2DI4; };
+template<> struct ArrayI4<3> { using type = Array3DI4; };
+template<> struct ArrayI4<4> { using type = Array4DI4; };
+
+template<int Rank> struct ArrayI8;
+template<> struct ArrayI8<1> { using type = Array1DI8; };
+template<> struct ArrayI8<2> { using type = Array2DI8; };
+template<> struct ArrayI8<3> { using type = Array3DI8; };
+template<> struct ArrayI8<4> { using type = Array4DI8; };
+
+template<int Rank> struct ArrayR4;
+template<> struct ArrayR4<1> { using type = Array1DR4; };
+template<> struct ArrayR4<2> { using type = Array2DR4; };
+template<> struct ArrayR4<3> { using type = Array3DR4; };
+template<> struct ArrayR4<4> { using type = Array4DR4; };
+
+template<int Rank> struct ArrayR8;
+template<> struct ArrayR8<1> { using type = Array1DR8; };
+template<> struct ArrayR8<2> { using type = Array2DR8; };
+template<> struct ArrayR8<3> { using type = Array3DR8; };
+template<> struct ArrayR8<4> { using type = Array4DR8; };
+
+template<int Rank, typename TT> struct Array_t;
+template<> struct Array_t<1, I4> { using type = Array1DI4; };
+template<> struct Array_t<1, I8> { using type = Array1DI8; };
+template<> struct Array_t<1, R4> { using type = Array1DR4; };
+template<> struct Array_t<1, R8> { using type = Array1DR8; };
+
+template<> struct Array_t<2, I4> { using type = Array2DI4; };
+template<> struct Array_t<2, I8> { using type = Array2DI8; };
+template<> struct Array_t<2, R4> { using type = Array2DR4; };
+template<> struct Array_t<2, R8> { using type = Array2DR8; };
+
+template<> struct Array_t<3, I4> { using type = Array3DI4; };
+template<> struct Array_t<3, I8> { using type = Array3DI8; };
+template<> struct Array_t<3, R4> { using type = Array3DR4; };
+template<> struct Array_t<3, R8> { using type = Array3DR8; };
+
+template<> struct Array_t<4, I4> { using type = Array4DI4; };
+template<> struct Array_t<4, I8> { using type = Array4DI8; };
+template<> struct Array_t<4, R4> { using type = Array4DR4; };
+template<> struct Array_t<4, R8> { using type = Array4DR8; };
+
+
 using ExecSpace     = MemSpace::execution_space;
 using HostExecSpace = HostMemSpace::execution_space;
 

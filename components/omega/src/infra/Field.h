@@ -389,6 +389,26 @@ class Field {
       return ThisField->getDataArray<T>();
    };
 
+//   template <typename T>
+//   static T
+//   getFieldDataArray2(const std::string &FieldName ///< [in] name of Field
+//   ) {
+//
+//      // Check to see if field is defined
+//      if (!exists(FieldName))
+//         ABORT_ERROR("Field: Attempted to get data failed, {} does not exist",
+//                     FieldName);
+//
+//      // Retrieve the field by name
+//      auto ThisField = AllFields[FieldName];
+//
+//      const I4 NDims = ThisField->getNumDims();
+//
+//      // Retrieve the data
+//      return ThisField->getDataArray<typename Array<T>::type>();
+//   };
+//
+
    //---------------------------------------------------------------------------
    // Field Group is a friend class so it can access field list
    friend class FieldGroup;
