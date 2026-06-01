@@ -3,13 +3,18 @@
 //===-----------------------------------------------------------------------===/
 
 #include "Analysis.h"
+#include "AuxiliaryState.h"
 #include "Decomp.h"
+#include "Field.h"
 #include "Halo.h"
 #include "HorzMesh.h"
 #include "IO.h"
 #include "IOStream.h"
 #include "Logging.h"
+#include "OceanState.h"
 #include "Pacer.h"
+#include "PGrad.h"
+#include "Tendencies.h"
 #include "TimeStepper.h"
 #include "Tracers.h"
 #include "VertAdv.h"
@@ -23,6 +28,7 @@ using namespace OMEGA;
 void initAnalysisTest() {
 
    I4 Err;
+   Error Err1;
 
    MachEnv::init(MPI_COMM_WORLD);
    MachEnv *DefEnv  = MachEnv::getDefault();
@@ -38,6 +44,9 @@ void initAnalysisTest() {
    // First step of time stepper initialization needed for IOstream
    TimeStepper::init1();
 
+   TimeStepper *DefStepper = TimeStepper::getDefault();
+   Clock *ModelClock       = DefStepper->getClock();
+
    // Initialize the IO system
    IO::init(DefComm);
 
@@ -45,7 +54,10 @@ void initAnalysisTest() {
    Decomp::init();
 
    // Initialize streams
-   IOStream::init();
+   IOStream::init(ModelClock);
+
+   // Initialize Field infrastructure
+   Field::init(ModelClock);
 
    // Initialize the default halo
    Err = Halo::init();
@@ -61,15 +73,49 @@ void initAnalysisTest() {
    // Initialize tracers
    Tracers::init();
 
+   // Initialize Aux State variables
+   AuxiliaryState::init();
+
+   // Initialize pressure gradient
+   PressureGrad::init();
+
+   // Create tendencies
+   Tendencies::init();
+
    // Initialize the default vertical advection
    VertAdv::init();
+
+   // Finish time stepper initialization
+   TimeStepper::init2();
+
+   // Create a default ocean state
+   Err = OceanState::init();
+   if (Err != 0)
+      ABORT_ERROR("ocnInit: Error initializing default state");
+
+   // Now that all fields have been defined, validate all the streams
+   // contents
+   bool StreamsValid = IOStream::validateAll();
+   if (!StreamsValid)
+      ABORT_ERROR("ocnInit: Error validating IO Streams");
+
+   // Read the state variables from the initial state stream
+   Metadata ReqMeta; // no global metadata needed for init state read
+   Err1 = IOStream::read("InitialState", ModelClock, ReqMeta);
+   CHECK_ERROR_ABORT(Err1, "ocnInit: Error reading initial state from stream");
+
+
 
 }
 
 void finalizeAnalysisTest() {
 
    IOStream::finalize();
+   OceanState::clear();
    Tracers::clear();
+   AuxiliaryState::clear();
+   PressureGrad::clear();
+   Tendencies::clear();
    VertAdv::clear();
    VertCoord::clear();
    TimeStepper::clear();
@@ -101,12 +147,35 @@ int main(int argc, char *argv[]) {
 
       auto OmegaConfig = Config::getOmegaConfig();
 
-      GlobalMaxOp<Real> GlobMaxOp("PseudoThickness_max", *OmegaConfig);
-
       TimeInstant TStamp;
+
+      GlobalMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);
+
+      GlobMaxOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
       GlobMaxOp.compute(TStamp);
 
+      std::cout << GlobMaxOp.getVal() << std::endl;
+
+      GlobalMinOp<Real> GlobMinOp("PseudoThickness", *OmegaConfig);
+
+      GlobMinOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
+      GlobMinOp.compute(TStamp);
+
+      std::cout << GlobMinOp.getVal() << std::endl;
+
+//      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
+//
+//      GlobMeanOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+//
+//      GlobMeanOp.compute(TStamp);
+//
+//      std::cout << GlobMeanOp.getVal() << std::endl;
+
       finalizeAnalysisTest();
+
+
    }
 
    Pacer::finalize();

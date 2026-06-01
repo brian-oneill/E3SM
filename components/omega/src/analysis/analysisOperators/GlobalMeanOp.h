@@ -1,5 +1,5 @@
-#ifndef OMEGA_GLOBALMAXOP_H
-#define OMEGA_GLOBALMAXOP_H
+#ifndef OMEGA_GLOBALSUMOP_H
+#define OMEGA_GLOBALSUMOP_H
 
 //===----------------------------------------------------------------------===//
 ///
@@ -11,17 +11,17 @@
 namespace OMEGA {
 
 template<typename TT>
-class GlobalMaxOp : public AnalysisOperator {
+class GlobalMeanOp : public AnalysisOperator {
  public:
 
-   GlobalMaxOp(const std::string &Name, const Config &Options) {
+   GlobalMeanOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
-      OperatorTypeName = "global_max";
+      OperatorTypeName = "global_sum";
 
       InputNames = {"PseudoThickness"};
 
-      std::string OutputFieldName = InstanceName + "_global_max";
+      std::string OutputFieldName = InstanceName + "_global_sum";
       OutputNames = {OutputFieldName};
 
       // Initialize tracking variables
@@ -30,7 +30,7 @@ class GlobalMaxOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMaxOp() override = default;
+   ~GlobalMeanOp() override = default;
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
@@ -50,7 +50,7 @@ class GlobalMaxOp : public AnalysisOperator {
 
       auto OutputField = Field::create(
          OutputNames[0],
-         "Global maximum of " + InputNames[0], // Description
+         "Global sum of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
          -std::numeric_limits<TT>::max() / 10,// Min valid value
@@ -66,13 +66,33 @@ class GlobalMaxOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      dispatchFieldArray(*InputField, ComputeGlobalMax{Comm, GlobalMax});
+      std::vector<std::string> InputDimNames;
 
-      deepCopy(OutputData, GlobalMax);
+      InputField->getDimNames(InputDimNames);
+
+      I4 NDims = InputDimNames.size();
+
+      Array2DReal MaskArray;
+
+      std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
+
+      if (IndexSpaceName == "NCells") {
+         MaskArray = VCoord->CellMask;
+      } else if (IndexSpaceName == "NEdges") {
+         MaskArray = VCoord->EdgeMask;
+      } else if (IndexSpaceName == "NVertices") {
+         MaskArray = VCoord->VertexMask;
+      } else {
+         ABORT_ERROR("");
+      }
+
+      dispatchFieldArray(*InputField, ComputeGlobalMean{Comm, MaskArray, GlobalMean});
+
+      deepCopy(OutputData, GlobalMean);
 
    }
 
-   TT getVal() {return GlobalMax;}
+   TT getVal() {return GlobalMean;}
 
  private:
 
@@ -85,26 +105,30 @@ class GlobalMaxOp : public AnalysisOperator {
    /// matching input
    typename Array1D<TT>::type OutputData;
 
-   TT GlobalMax;
+   TT GlobalMean;
 
-   struct ComputeGlobalMax {
+   struct ComputeGlobalMean {
       MPI_Comm Comm;
-      TT &GlobMax;
+      Array2DReal MaskArray;
+      TT &GlobMean;
    
       template <typename ArrayT>
       void operator()(ArrayT InputData) const {
          using ValueT = typename ArrayT::non_const_value_type;
    
          if constexpr (!std::is_same_v<ValueT, TT>) {
-            ABORT_ERROR("GlobalMaxOp: input field scalar type does not match "
+            ABORT_ERROR("GlobalMinOp: input field scalar type does not match "
                         "operator scalar type");
-         } else {
-            GlobMax = globalMaxVal(InputData, Comm);
          }
+         TT ValSum = globalSum(InputData, Comm);
+//         auto MaskSum = globalSum(MaskArray, Comm);
+
+         GlobMean = ValSum;
       }
-};
+   };
 
 };
 
-} // namespace OMEGA
+} // end namespace OMEGA
+
 #endif

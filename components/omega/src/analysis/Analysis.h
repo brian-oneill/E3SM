@@ -18,6 +18,7 @@
 #include "Field.h"
 #include "HorzMesh.h"
 #include "Logging.h"
+#include "OmegaDispatch.h"
 #include "TimeMgr.h"
 #include "VertCoord.h"
 

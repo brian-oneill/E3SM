@@ -16,6 +16,7 @@
 #include "OmegaKokkos.h"
 
 #include <limits>
+#include <iostream>
 
 namespace OMEGA {
 
@@ -638,6 +639,7 @@ void VertCoord::setStreamArrays(const bool ReadStream, Halo *MeshHalo) {
        {NCellsAll}, KOKKOS_LAMBDA(int ICell) {
           LocMinLayerCell(ICell) -= 1;
           LocMaxLayerCell(ICell) -= 1;
+//	  std::cout << ICell << " " << LocMinLayerCell(ICell) << " " << LocMaxLayerCell(ICell) << std::endl;
        });
 
    // Exchange halos since stream only reads owned cells
@@ -884,7 +886,9 @@ void VertCoord::setMasks() {
 
           parallelForInner(
               Team, Range{KMin, KMax},
-              INNER_LAMBDA(int K) { LocCellMask(ICell, K) = 1._Real; });
+              INNER_LAMBDA(int K) { LocCellMask(ICell, K) = 1._Real; 
+//              std::cout << ICell << " " << K << " " << LocCellMask(ICell, K) << std::endl;
+	      });
        });
 
    CellMaskH = createHostMirrorCopy(CellMask);
