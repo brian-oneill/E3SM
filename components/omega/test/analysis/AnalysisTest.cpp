@@ -164,33 +164,41 @@ int main(int argc, char *argv[]) {
 
       TimeInstant TStamp;
 
-      GlobalMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);
+//      GlobalMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);
+//
+//      GlobMaxOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+//
+//      GlobMaxOp.compute(TStamp);
+//
+//      std::cout << GlobMaxOp.getVal() << std::endl;
 
-      GlobMaxOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+      auto GlobMaxOp = AnalysisOpFactory::createOp("global_max_R8", "PseudoThickness", *OmegaConfig);
 
-      GlobMaxOp.compute(TStamp);
+      GlobMaxOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
 
-      std::cout << GlobMaxOp.getVal() << std::endl;
+      GlobMaxOp->compute(TStamp);
 
-      GlobalMinOp<Real> GlobMinOp("PseudoThickness", *OmegaConfig);
+//      std::cout << GlobMaxOp->getVal() << std::endl;
 
-      GlobMinOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-
-      GlobMinOp.compute(TStamp);
-
-      std::cout << GlobMinOp.getVal() << std::endl;
-
-      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
-
-      GlobMeanOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-
-      GlobMeanOp.compute(TStamp);
-
-      std::cout << GlobMeanOp.getVal() << std::endl;
-
-      finalizeAnalysisTest();
-
-      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
+//      GlobalMinOp<Real> GlobMinOp("PseudoThickness", *OmegaConfig);
+//
+//      GlobMinOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+//
+//      GlobMinOp.compute(TStamp);
+//
+//      std::cout << GlobMinOp.getVal() << std::endl;
+//
+//      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
+//
+//      GlobMeanOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+//
+//      GlobMeanOp.compute(TStamp);
+//
+//      std::cout << GlobMeanOp.getVal() << std::endl;
+//
+//      finalizeAnalysisTest();
+//
+//      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
 
 
    }
