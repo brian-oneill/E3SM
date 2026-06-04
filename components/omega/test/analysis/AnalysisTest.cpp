@@ -162,6 +162,8 @@ int main(int argc, char *argv[]) {
 
       auto OmegaConfig = Config::getOmegaConfig();
 
+      Analysis::init();
+
       TimeInstant TStamp;
 
 //      GlobalMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);
@@ -171,12 +173,17 @@ int main(int argc, char *argv[]) {
 //      GlobMaxOp.compute(TStamp);
 //
 //      std::cout << GlobMaxOp.getVal() << std::endl;
+//      std::cout << AnalysisOpFactory::hasOperator("global_max_R8") << " " << AnalysisOpFactory::hasOperator("global_max") << std::endl;
 
       auto GlobMaxOp = AnalysisOpFactory::createOp("global_max_R8", "PseudoThickness", *OmegaConfig);
 
       GlobMaxOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
 
       GlobMaxOp->compute(TStamp);
+
+      auto GlobMaxArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_global_max");
+
+      std::cout << GlobMaxArray(0) << std::endl;
 
 //      std::cout << GlobMaxOp->getVal() << std::endl;
 
@@ -196,10 +203,10 @@ int main(int argc, char *argv[]) {
 //
 //      std::cout << GlobMeanOp.getVal() << std::endl;
 //
-//      finalizeAnalysisTest();
 //
 //      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
 
+      finalizeAnalysisTest();
 
    }
 

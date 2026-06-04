@@ -3,10 +3,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Analysis.h"
-#include "analysisOperators/Ops.h"
  
 namespace OMEGA {
 
+void Analysis::init(){
+   registerAllAnalysisOperators();
+}
 
 } // end namespace OMEGA
 

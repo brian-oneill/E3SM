@@ -27,6 +27,10 @@
 
 namespace OMEGA {
 
+class Analysis {
+ public:
+   static void init();
+};
 
 } // namespace OMEGA
 //===----------------------------------------------------------------------===//

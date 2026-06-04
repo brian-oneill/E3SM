@@ -1,4 +1,5 @@
 #include "AnalysisOpFactory.h"
+#include <iostream>
 
 namespace OMEGA {
 
@@ -7,22 +8,29 @@ std::map<std::string, AnalysisOpFactory::CreatorFunc> AnalysisOpFactory::Registr
 void AnalysisOpFactory::registerOperator(const std::string& Type, 
                                           CreatorFunc creator) {
 
+   auto &Reg = registry();
+
+   std::cout << "REGISTER: Operator '" << Type << "' registered\n";
+
    // Check for duplicate registration
-   if (Registry.find(Type) != Registry.end()) {
+   if (Reg.find(Type) != Reg.end()) {
       ABORT_ERROR(
          "AnalysisOpFactory: Operator type {} is already registered", Type);
    }
 
-  Registry[Type] = creator;
+  Reg[Type] = creator;
 }
 
 std::unique_ptr<AnalysisOperator> 
 AnalysisOpFactory::createOp(const std::string& Type,
                           const std::string& Name,
                           const Config& Cfg) {
-   auto it = Registry.find(Type);
+
+   auto &Reg = registry();
+
+   auto it = Reg.find(Type);
    
-   if (it == Registry.end()) {
+   if (it == Reg.end()) {
 //      // Build helpful error message with suggestions
 //      std::ostringstream oss;
 //      oss << "DiagOperatorFactory: Unknown operator type '" << type << "'.\n";
@@ -39,6 +47,11 @@ AnalysisOpFactory::createOp(const std::string& Type,
    
    // Call the registered creator function
    return it->second(Name, Cfg);
+}
+
+bool AnalysisOpFactory::hasOperator(const std::string& Type) {
+   auto &Reg = registry();
+   return Reg.find(Type) != Reg.end();
 }
 
 }

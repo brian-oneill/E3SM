@@ -20,8 +20,10 @@ class GlobalMaxOp : public AnalysisOperator {
       OperatorTypeName = "global_max";
 
       InputNames = {"PseudoThickness"};
+      InstanceName = Name;
 
       std::string OutputFieldName = InstanceName + "_global_max";
+      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
       // Initialize tracking variables

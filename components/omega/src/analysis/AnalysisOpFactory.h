@@ -30,6 +30,11 @@ class AnalysisOpFactory{
  private:
    // Static map of registered operators
    static std::map<std::string, CreatorFunc> Registry;
+   // Meyer's Singleton: guaranteed to be initialized before use
+   static std::map<std::string, CreatorFunc>& registry() {
+      static std::map<std::string, CreatorFunc> s_registry;
+      return s_registry;
+   }
 
 };
 
@@ -44,7 +49,7 @@ class AnalysisOpFactory{
 #define REGISTER_DIAG_OPERATOR(Type, Name) \
   namespace { \
     static bool registered_##Type = []() { \
-      OMEGA::AnalysisOpFactory::registerOperator(Name, \
+      ::OMEGA::AnalysisOpFactory::registerOperator(Name, \
         [](const std::string& n, const ::OMEGA::Config& c) { \
           return std::make_unique<Type>(n, c); \
         }); \
