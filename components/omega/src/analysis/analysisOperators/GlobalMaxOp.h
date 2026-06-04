@@ -30,7 +30,10 @@ class GlobalMaxOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMaxOp() override = default;
+   ~GlobalMaxOp() override {
+      if (Field::exists(OutputNames[0]))
+         Field::destroy(OutputNames[0]);
+   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
@@ -59,6 +62,8 @@ class GlobalMaxOp : public AnalysisOperator {
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
+
+   OutputField->template attachData<typename Array1D<TT>::type>(OutputData);
 
    }
 
@@ -107,4 +112,5 @@ class GlobalMaxOp : public AnalysisOperator {
 };
 
 } // namespace OMEGA
+
 #endif

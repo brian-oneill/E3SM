@@ -9,11 +9,11 @@
 #include "HorzMesh.h"
 #include "Logging.h"
 #include "MachEnv.h"
+#include "OmegaDispatch.h"
 #include "TimeMgr.h"
 #include "VertCoord.h"
 
 #include <string>
-#include <variant>
 
 namespace OMEGA {
 
