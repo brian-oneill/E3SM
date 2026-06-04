@@ -36,6 +36,8 @@ using std::complex;
 #include "Error.h"
 #include "OmegaKokkos.h"
 
+#include <iostream>
+
 namespace OMEGA {
 
 static bool R8SumNotInitialized = true;
@@ -499,6 +501,10 @@ globalSum(const Kokkos::View<T, ML, MS> Array, ///< [in] array to be summed
           const MPI_Comm Comm,                 ///< [in] MPI Communicator
           const std::vector<I4> *IndxRange = nullptr ///< [in] index range
 ) {
+   // initialize reproducible MPI_SUMDD operator
+   if (R8SumNotInitialized)
+      globalSumInit();
+
    // Get array and layout information
    bool IsHost = isReduceArrayOnHost(Array);
    std::vector<I8> Strides(5, 0);
@@ -803,6 +809,10 @@ globalSum(const Kokkos::View<T, ML, MS> Arr1, // [in] first  array in product
           const MPI_Comm Comm,                // [in] MPI Communicator
           const std::vector<I4> *IndxRange = nullptr ///< [in] opt index range
 ) {
+   // initialize reproducible MPI_SUMDD operator
+   if (R8SumNotInitialized)
+      globalSumInit();
+
    // Some error checks
    OMEGA_REQUIRE(Arr1.rank == Arr2.rank,
                  "globalSum (R8 Array product): Arrays must have same rank");
@@ -1781,6 +1791,284 @@ globalMaxVal(const Kokkos::View<T, ML, MS> Arr1, ///< [in] 1st array in product
       ABORT_ERROR("MPI Error in GlobalMaxVal for R8 array product");
 
    return GlobalMax;
+}
+
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    R8>
+globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
+                   const Kokkos::View<T2, ML2, MS2> Arr2,
+                   const MPI_Comm Comm,
+                   const std::vector<I4> *IndxRange = nullptr) {
+   
+   // initialize reproducible MPI_SUMDD operator
+   if (R8SumNotInitialized)
+      globalSumInit();
+
+   using Scalar2 = typename Kokkos::View<T2, ML2, MS2>::value_type;
+   
+   // Error checks
+   OMEGA_REQUIRE(Arr2.rank == 1 || Arr2.rank == 2,
+                 "globalSumBroadcast: Arr2 must be 1D or 2D");
+   OMEGA_REQUIRE(Arr1.rank >= Arr2.rank,
+                 "globalSumBroadcast: Arr1 rank must be >= Arr2 rank");
+   
+   // Verify dimension matching
+   if (Arr2.rank == 1) {
+       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+                     "globalSumBroadcast: Horizontal dimensions must match");
+   } else { // Arr2.rank == 2
+       OMEGA_REQUIRE(Arr1.rank >= 2,
+                     "globalSumBroadcast: Arr1 must be at least 2D when Arr2 is 2D");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 2) == Arr2.extent(0),
+                     "globalSumBroadcast: Horizontal dimensions must match");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 1) == Arr2.extent(1),
+                     "globalSumBroadcast: Vertical dimensions must match");
+   }
+   
+   bool IsHost = isReduceArrayOnHost(Arr1);
+   std::vector<I8> Strides1(5, 0);
+   std::vector<I4> IRange(10, 0);
+   getReduceArrayInfo(IRange, Strides1, Arr1, IndxRange);
+   
+   // Compute Arr2 strides
+   I8 Stride2H = (Arr2.rank == 1) ? 1 : Arr2.extent(1);
+   I8 Stride2V = 1;
+   
+   complex<double> DDTmp(0.0, 0.0);
+   
+   if (IsHost) {
+      for (I4 I = IRange[0]; I <= IRange[1]; ++I) {
+         for (I4 J = IRange[2]; J <= IRange[3]; ++J) {
+            for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
+               for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
+                  for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
+                     
+                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                                   K * Strides1[2] + L * Strides1[3] +
+                                   M * Strides1[4];
+                     
+                     size_t addr2 = 0;
+                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     
+                     if (Arr2.rank == 1) {
+                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         addr2 = indices[horizIdx1];
+                     } else {
+                         int horizIdx = indices[Arr1.rank - 2];
+                         int vertIdx = indices[Arr1.rank - 1];
+                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                     }
+                     
+                     R8 ProdTmp = Arr1.data()[addr1] * static_cast<R8>(Arr2.data()[addr2]);
+                     sumDDLocal(DDTmp, ProdTmp);
+                  }
+               }
+            }
+         }
+      }
+   } else {
+      R8 LocalSum = 0.0;
+      
+      const int arr1Rank = Arr1.rank;
+      const int arr2Rank = Arr2.rank;
+      
+      Kokkos::parallel_reduce("globalSumBroadcast_product",
+         Kokkos::RangePolicy<>(0, Arr1.size()),
+         KOKKOS_LAMBDA(const int flat_idx, R8& lsum) {
+            int remaining = flat_idx;
+            int horizIdx = 0;
+            int vertIdx = 0;
+            
+            if (arr1Rank == 1) {
+               horizIdx = flat_idx;
+            } else if (arr1Rank == 2) {
+               horizIdx = flat_idx / Arr1.extent(1);
+               vertIdx = flat_idx % Arr1.extent(1);
+            } else {
+               int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
+                                               Arr1.extent(arr1Rank - 1));
+               horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
+               vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
+            }
+            
+            int arr2_idx = 0;
+            if (arr2Rank == 1) {
+               arr2_idx = horizIdx;
+            } else {
+               arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
+            }
+            
+            lsum += Arr1.data()[flat_idx] * static_cast<R8>(Arr2.data()[arr2_idx]);
+         }, LocalSum);
+      
+      DDTmp = complex<double>(LocalSum, 0.0);
+   }
+   
+   // Compute final sum by adding local sums from each MPI task
+   complex<double> GlobalTmp(0.0, 0.0);
+   int Err = MPI_Allreduce(&DDTmp, &GlobalTmp, 1, MPI_C_DOUBLE_COMPLEX,
+                           MPI_SUMDD, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalSumBroadcast: Error in MPI_Allreduce");
+   
+   R8 GlobalSum = real(GlobalTmp);
+   return GlobalSum;
+}
+
+///-----------------------------------------------------------------------------
+/// Finds the local minimum of a Kokkos array product with broadcasting
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    void>
+localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                  const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
+                  const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                  R8 &LocalMinVal,                        ///< [out] local min
+                  const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   using Scalar2 = typename Kokkos::View<T2, ML2, MS2>::value_type;
+   
+   // Error checks
+   OMEGA_REQUIRE(Arr2.rank == 1 || Arr2.rank == 2,
+                 "localMinBroadcast: Arr2 must be 1D or 2D");
+   OMEGA_REQUIRE(Arr1.rank >= Arr2.rank,
+                 "localMinBroadcast: Arr1 rank must be >= Arr2 rank");
+   
+   // Verify dimension matching
+   if (Arr2.rank == 1) {
+       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+                     "localMinBroadcast: Horizontal dimensions must match");
+   } else { // Arr2.rank == 2
+       OMEGA_REQUIRE(Arr1.rank >= 2,
+                     "localMinBroadcast: Arr1 must be at least 2D when Arr2 is 2D");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 2) == Arr2.extent(0),
+                     "localMinBroadcast: Horizontal dimensions must match");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 1) == Arr2.extent(1),
+                     "localMinBroadcast: Vertical dimensions must match");
+   }
+   
+   // Get array and layout information
+   bool IsHost = isReduceArrayOnHost(Arr1);
+   std::vector<I8> Strides1(5, 0);
+   std::vector<I4> IRange(10, 0);
+   getReduceArrayInfo(IRange, Strides1, Arr1, IndxRange);
+   
+   // Compute Arr2 strides
+   I8 Stride2H = (Arr2.rank == 1) ? 1 : Arr2.extent(1);
+   I8 Stride2V = 1;
+   
+   // Compute local minimum on host or device
+   R8 LocalMin = std::numeric_limits<R8>::max();
+   
+   if (IsHost) {
+      for (I4 I = IRange[0]; I <= IRange[1]; ++I) {
+         for (I4 J = IRange[2]; J <= IRange[3]; ++J) {
+            for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
+               for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
+                  for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
+                     
+                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                                   K * Strides1[2] + L * Strides1[3] +
+                                   M * Strides1[4];
+                     
+                     size_t addr2 = 0;
+                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     
+                     if (Arr2.rank == 1) {
+                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         addr2 = indices[horizIdx1];
+                     } else {
+                         int horizIdx = indices[Arr1.rank - 2];
+                         int vertIdx = indices[Arr1.rank - 1];
+                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                     }
+                     
+                     R8 MaskVal = static_cast<R8>(Arr2.data()[addr2]);
+                     if (MaskVal != 0.0) {
+                        R8 TestVal = Arr1.data()[addr1] * MaskVal;
+                        if (TestVal < LocalMin)
+                           LocalMin = TestVal;
+                     }
+//                     std::cout << I+1 << " " << J+1 << " " << Arr1.data()[addr1] << " " << MaskVal << " " << LocalMin << std::endl;
+                  }
+               }
+            }
+         }
+      }
+   } else { // on device
+      const int arr1Rank = Arr1.rank;
+      const int arr2Rank = Arr2.rank;
+      
+      Kokkos::parallel_reduce("localMinBroadcast_product",
+         Kokkos::RangePolicy<>(0, Arr1.size()),
+         KOKKOS_LAMBDA(const int flat_idx, R8& lmin) {
+            int horizIdx = 0;
+            int vertIdx = 0;
+            
+            if (arr1Rank == 1) {
+               horizIdx = flat_idx;
+            } else if (arr1Rank == 2) {
+               horizIdx = flat_idx / Arr1.extent(1);
+               vertIdx = flat_idx % Arr1.extent(1);
+            } else {
+               int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
+                                               Arr1.extent(arr1Rank - 1));
+               horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
+               vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
+            }
+            
+            int arr2_idx = 0;
+            if (arr2Rank == 1) {
+               arr2_idx = horizIdx;
+            } else {
+               arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
+            }
+            
+            R8 MaskVal = static_cast<R8>(Arr2.data()[arr2_idx]);
+            if (MaskVal != 0.0) {
+               R8 TestVal = Arr1.data()[flat_idx] * MaskVal;
+               lmin = Kokkos::min(TestVal, lmin);
+            }
+         }, Kokkos::Min<R8>(LocalMin));
+   }
+   
+   LocalMinVal = LocalMin;
+   return;
+}
+
+///-----------------------------------------------------------------------------
+/// Global minimum of Kokkos array product with broadcasting (R8 interface)
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    R8>
+globalWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                   const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
+                   const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                   const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local min (also performs error checks)
+   R8 LocalMin;
+   localWeightedMin(Arr1, Arr2, Comm, LocalMin, IndxRange);
+
+   // Compute final minimum across MPI tasks
+   R8 GlobalMin;
+   int Err = MPI_Allreduce(&LocalMin, &GlobalMin, 1, MPI_DOUBLE, MPI_MIN, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMinBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMin;
 }
 
 //------------------------------------------------------------------------------

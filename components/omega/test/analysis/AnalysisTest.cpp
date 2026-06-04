@@ -105,6 +105,21 @@ void initAnalysisTest() {
    CHECK_ERROR_ABORT(Err1, "ocnInit: Error reading initial state from stream");
 
 
+   OceanState *DefState = OceanState::getDefault();
+   DefState->exchangeHalo(0);
+
+   AuxiliaryState *DefAuxState = AuxiliaryState::getDefault();
+   DefAuxState->exchangeHalo();
+
+//   auto DefMesh = HorzMesh::getDefault();
+//   auto DefVCoord = VertCoord::getDefault();
+//   auto PsThick = DefState->getPseudoThickness(0);
+//   for (int I = DefMesh->NCellsOwned; I < DefMesh->NCellsAll; ++I) {
+//      for (int K = 0; K < DefVCoord->NVertLayers; ++K) {
+//         std::cout << I << " " << K << " " << PsThick(I, K) << std::endl;
+//      }
+//   }
+
 
 }
 
@@ -165,15 +180,17 @@ int main(int argc, char *argv[]) {
 
       std::cout << GlobMinOp.getVal() << std::endl;
 
-//      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
-//
-//      GlobMeanOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-//
-//      GlobMeanOp.compute(TStamp);
-//
-//      std::cout << GlobMeanOp.getVal() << std::endl;
+      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
+
+      GlobMeanOp.initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
+      GlobMeanOp.compute(TStamp);
+
+      std::cout << GlobMeanOp.getVal() << std::endl;
 
       finalizeAnalysisTest();
+
+      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
 
 
    }

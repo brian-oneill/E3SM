@@ -120,7 +120,7 @@ class GlobalMinOp : public AnalysisOperator {
             ABORT_ERROR("GlobalMinOp: input field scalar type does not match "
                         "operator scalar type");
          } else {
-            GlobMin = globalMinVal(InputData, Comm, MaskArray);
+            GlobMin = globalWeightedMin(InputData, MaskArray, Comm);
          }
       }
    };

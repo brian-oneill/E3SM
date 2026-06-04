@@ -23,90 +23,96 @@
 namespace OMEGA {
 
 #define OMEGA_FIELD_ARRAY_TYPES(X)                                      \
-                                                                        \
-   /* Device I4 */                                                      \
-   X(ArrayDataType::I4, 1, ArrayMemLoc::Device, Array1DI4)              \
-   X(ArrayDataType::I4, 2, ArrayMemLoc::Device, Array2DI4)              \
-   X(ArrayDataType::I4, 3, ArrayMemLoc::Device, Array3DI4)              \
-   X(ArrayDataType::I4, 4, ArrayMemLoc::Device, Array4DI4)              \
-   X(ArrayDataType::I4, 5, ArrayMemLoc::Device, Array5DI4)              \
-                                                                        \
-   /* Device I8 */                                                      \
-   X(ArrayDataType::I8, 1, ArrayMemLoc::Device, Array1DI8)              \
-   X(ArrayDataType::I8, 2, ArrayMemLoc::Device, Array2DI8)              \
-   X(ArrayDataType::I8, 3, ArrayMemLoc::Device, Array3DI8)              \
-   X(ArrayDataType::I8, 4, ArrayMemLoc::Device, Array4DI8)              \
-   X(ArrayDataType::I8, 5, ArrayMemLoc::Device, Array5DI8)              \
-                                                                        \
-   /* Device R4 */                                                      \
-   X(ArrayDataType::R4, 1, ArrayMemLoc::Device, Array1DR4)              \
-   X(ArrayDataType::R4, 2, ArrayMemLoc::Device, Array2DR4)              \
-   X(ArrayDataType::R4, 3, ArrayMemLoc::Device, Array3DR4)              \
-   X(ArrayDataType::R4, 4, ArrayMemLoc::Device, Array4DR4)              \
-   X(ArrayDataType::R4, 5, ArrayMemLoc::Device, Array5DR4)              \
-                                                                        \
-   /* Device R8 */                                                      \
-   X(ArrayDataType::R8, 1, ArrayMemLoc::Device, Array1DR8)              \
-   X(ArrayDataType::R8, 2, ArrayMemLoc::Device, Array2DR8)              \
-   X(ArrayDataType::R8, 3, ArrayMemLoc::Device, Array3DR8)              \
-   X(ArrayDataType::R8, 4, ArrayMemLoc::Device, Array4DR8)              \
-   X(ArrayDataType::R8, 5, ArrayMemLoc::Device, Array5DR8)              \
-                                                                        \
-   /* Host I4 */                                                        \
-   X(ArrayDataType::I4, 1, ArrayMemLoc::Host, HostArray1DI4)            \
-   X(ArrayDataType::I4, 2, ArrayMemLoc::Host, HostArray2DI4)            \
-   X(ArrayDataType::I4, 3, ArrayMemLoc::Host, HostArray3DI4)            \
-   X(ArrayDataType::I4, 4, ArrayMemLoc::Host, HostArray4DI4)            \
-   X(ArrayDataType::I4, 5, ArrayMemLoc::Host, HostArray5DI4)            \
-                                                                        \
-   /* Host I8 */                                                        \
-   X(ArrayDataType::I8, 1, ArrayMemLoc::Host, HostArray1DI8)            \
-   X(ArrayDataType::I8, 2, ArrayMemLoc::Host, HostArray2DI8)            \
-   X(ArrayDataType::I8, 3, ArrayMemLoc::Host, HostArray3DI8)            \
-   X(ArrayDataType::I8, 4, ArrayMemLoc::Host, HostArray4DI8)            \
-   X(ArrayDataType::I8, 5, ArrayMemLoc::Host, HostArray5DI8)            \
-                                                                        \
-   /* Host R4 */                                                        \
-   X(ArrayDataType::R4, 1, ArrayMemLoc::Host, HostArray1DR4)            \
-   X(ArrayDataType::R4, 2, ArrayMemLoc::Host, HostArray2DR4)            \
-   X(ArrayDataType::R4, 3, ArrayMemLoc::Host, HostArray3DR4)            \
-   X(ArrayDataType::R4, 4, ArrayMemLoc::Host, HostArray4DR4)            \
-   X(ArrayDataType::R4, 5, ArrayMemLoc::Host, HostArray5DR4)            \
-                                                                        \
-   /* Host R8 */                                                        \
-   X(ArrayDataType::R8, 1, ArrayMemLoc::Host, HostArray1DR8)            \
-   X(ArrayDataType::R8, 2, ArrayMemLoc::Host, HostArray2DR8)            \
-   X(ArrayDataType::R8, 3, ArrayMemLoc::Host, HostArray3DR8)            \
-   X(ArrayDataType::R8, 4, ArrayMemLoc::Host, HostArray4DR8)            \
-   X(ArrayDataType::R8, 5, ArrayMemLoc::Host, HostArray5DR8)            \
-                                                                        \
-   /* Both I4: same aliases as Array... */                              \
-   X(ArrayDataType::I4, 1, ArrayMemLoc::Both, Array1DI4)                \
-   X(ArrayDataType::I4, 2, ArrayMemLoc::Both, Array2DI4)                \
-   X(ArrayDataType::I4, 3, ArrayMemLoc::Both, Array3DI4)                \
-   X(ArrayDataType::I4, 4, ArrayMemLoc::Both, Array4DI4)                \
-   X(ArrayDataType::I4, 5, ArrayMemLoc::Both, Array5DI4)                \
-                                                                        \
-   /* Both I8: same aliases as Array... */                              \
-   X(ArrayDataType::I8, 1, ArrayMemLoc::Both, Array1DI8)                \
-   X(ArrayDataType::I8, 2, ArrayMemLoc::Both, Array2DI8)                \
-   X(ArrayDataType::I8, 3, ArrayMemLoc::Both, Array3DI8)                \
-   X(ArrayDataType::I8, 4, ArrayMemLoc::Both, Array4DI8)                \
-   X(ArrayDataType::I8, 5, ArrayMemLoc::Both, Array5DI8)                \
-                                                                        \
-   /* Both R4: same aliases as Array... */                              \
-   X(ArrayDataType::R4, 1, ArrayMemLoc::Both, Array1DR4)                \
-   X(ArrayDataType::R4, 2, ArrayMemLoc::Both, Array2DR4)                \
-   X(ArrayDataType::R4, 3, ArrayMemLoc::Both, Array3DR4)                \
-   X(ArrayDataType::R4, 4, ArrayMemLoc::Both, Array4DR4)                \
-   X(ArrayDataType::R4, 5, ArrayMemLoc::Both, Array5DR4)                \
-                                                                        \
    /* Both R8: same aliases as Array... */                              \
    X(ArrayDataType::R8, 1, ArrayMemLoc::Both, Array1DR8)                \
    X(ArrayDataType::R8, 2, ArrayMemLoc::Both, Array2DR8)                \
    X(ArrayDataType::R8, 3, ArrayMemLoc::Both, Array3DR8)                \
    X(ArrayDataType::R8, 4, ArrayMemLoc::Both, Array4DR8)                \
    X(ArrayDataType::R8, 5, ArrayMemLoc::Both, Array5DR8)
+//                                                                        \
+//   /* Device I4 */                                                      \
+//   X(ArrayDataType::I4, 1, ArrayMemLoc::Device, Array1DI4)              \
+//   X(ArrayDataType::I4, 2, ArrayMemLoc::Device, Array2DI4)              \
+//   X(ArrayDataType::I4, 3, ArrayMemLoc::Device, Array3DI4)              \
+//   X(ArrayDataType::I4, 4, ArrayMemLoc::Device, Array4DI4)              \
+//   X(ArrayDataType::I4, 5, ArrayMemLoc::Device, Array5DI4)              \
+//                                                                        \
+//   /* Device I8 */                                                      \
+//   X(ArrayDataType::I8, 1, ArrayMemLoc::Device, Array1DI8)              \
+//   X(ArrayDataType::I8, 2, ArrayMemLoc::Device, Array2DI8)              \
+//   X(ArrayDataType::I8, 3, ArrayMemLoc::Device, Array3DI8)              \
+//   X(ArrayDataType::I8, 4, ArrayMemLoc::Device, Array4DI8)              \
+//   X(ArrayDataType::I8, 5, ArrayMemLoc::Device, Array5DI8)              \
+//                                                                        \
+//   /* Device R4 */                                                      \
+//   X(ArrayDataType::R4, 1, ArrayMemLoc::Device, Array1DR4)              \
+//   X(ArrayDataType::R4, 2, ArrayMemLoc::Device, Array2DR4)              \
+//   X(ArrayDataType::R4, 3, ArrayMemLoc::Device, Array3DR4)              \
+//   X(ArrayDataType::R4, 4, ArrayMemLoc::Device, Array4DR4)              \
+//   X(ArrayDataType::R4, 5, ArrayMemLoc::Device, Array5DR4)              \
+//                                                                        \
+//   /* Device R8 */                                                      \
+//   X(ArrayDataType::R8, 1, ArrayMemLoc::Device, Array1DR8)              \
+//   X(ArrayDataType::R8, 2, ArrayMemLoc::Device, Array2DR8)              \
+//   X(ArrayDataType::R8, 3, ArrayMemLoc::Device, Array3DR8)              \
+//   X(ArrayDataType::R8, 4, ArrayMemLoc::Device, Array4DR8)              \
+//   X(ArrayDataType::R8, 5, ArrayMemLoc::Device, Array5DR8)              \
+//                                                                        \
+//   /* Host I4 */                                                        \
+//   X(ArrayDataType::I4, 1, ArrayMemLoc::Host, HostArray1DI4)            \
+//   X(ArrayDataType::I4, 2, ArrayMemLoc::Host, HostArray2DI4)            \
+//   X(ArrayDataType::I4, 3, ArrayMemLoc::Host, HostArray3DI4)            \
+//   X(ArrayDataType::I4, 4, ArrayMemLoc::Host, HostArray4DI4)            \
+//   X(ArrayDataType::I4, 5, ArrayMemLoc::Host, HostArray5DI4)            \
+//                                                                        \
+//   /* Host I8 */                                                        \
+//   X(ArrayDataType::I8, 1, ArrayMemLoc::Host, HostArray1DI8)            \
+//   X(ArrayDataType::I8, 2, ArrayMemLoc::Host, HostArray2DI8)            \
+//   X(ArrayDataType::I8, 3, ArrayMemLoc::Host, HostArray3DI8)            \
+//   X(ArrayDataType::I8, 4, ArrayMemLoc::Host, HostArray4DI8)            \
+//   X(ArrayDataType::I8, 5, ArrayMemLoc::Host, HostArray5DI8)            \
+//                                                                        \
+//   /* Host R4 */                                                        \
+//   X(ArrayDataType::R4, 1, ArrayMemLoc::Host, HostArray1DR4)            \
+//   X(ArrayDataType::R4, 2, ArrayMemLoc::Host, HostArray2DR4)            \
+//   X(ArrayDataType::R4, 3, ArrayMemLoc::Host, HostArray3DR4)            \
+//   X(ArrayDataType::R4, 4, ArrayMemLoc::Host, HostArray4DR4)            \
+//   X(ArrayDataType::R4, 5, ArrayMemLoc::Host, HostArray5DR4)            \
+//                                                                        \
+//   /* Host R8 */                                                        \
+//   X(ArrayDataType::R8, 1, ArrayMemLoc::Host, HostArray1DR8)            \
+//   X(ArrayDataType::R8, 2, ArrayMemLoc::Host, HostArray2DR8)            \
+//   X(ArrayDataType::R8, 3, ArrayMemLoc::Host, HostArray3DR8)            \
+//   X(ArrayDataType::R8, 4, ArrayMemLoc::Host, HostArray4DR8)            \
+//   X(ArrayDataType::R8, 5, ArrayMemLoc::Host, HostArray5DR8)            \
+//                                                                        \
+//   /* Both I4: same aliases as Array... */                              \
+//   X(ArrayDataType::I4, 1, ArrayMemLoc::Both, Array1DI4)                \
+//   X(ArrayDataType::I4, 2, ArrayMemLoc::Both, Array2DI4)                \
+//   X(ArrayDataType::I4, 3, ArrayMemLoc::Both, Array3DI4)                \
+//   X(ArrayDataType::I4, 4, ArrayMemLoc::Both, Array4DI4)                \
+//   X(ArrayDataType::I4, 5, ArrayMemLoc::Both, Array5DI4)                \
+//                                                                        \
+//   /* Both I8: same aliases as Array... */                              \
+//   X(ArrayDataType::I8, 1, ArrayMemLoc::Both, Array1DI8)                \
+//   X(ArrayDataType::I8, 2, ArrayMemLoc::Both, Array2DI8)                \
+//   X(ArrayDataType::I8, 3, ArrayMemLoc::Both, Array3DI8)                \
+//   X(ArrayDataType::I8, 4, ArrayMemLoc::Both, Array4DI8)                \
+//   X(ArrayDataType::I8, 5, ArrayMemLoc::Both, Array5DI8)                \
+//                                                                        \
+//   /* Both R4: same aliases as Array... */                              \
+//   X(ArrayDataType::R4, 1, ArrayMemLoc::Both, Array1DR4)                \
+//   X(ArrayDataType::R4, 2, ArrayMemLoc::Both, Array2DR4)                \
+//   X(ArrayDataType::R4, 3, ArrayMemLoc::Both, Array3DR4)                \
+//   X(ArrayDataType::R4, 4, ArrayMemLoc::Both, Array4DR4)                \
+//   X(ArrayDataType::R4, 5, ArrayMemLoc::Both, Array5DR4)                \
+//                                                                        \
+//   /* Both R8: same aliases as Array... */                              \
+//   X(ArrayDataType::R8, 1, ArrayMemLoc::Both, Array1DR8)                \
+//   X(ArrayDataType::R8, 2, ArrayMemLoc::Both, Array2DR8)                \
+//   X(ArrayDataType::R8, 3, ArrayMemLoc::Both, Array3DR8)                \
+//   X(ArrayDataType::R8, 4, ArrayMemLoc::Both, Array4DR8)                \
+//   X(ArrayDataType::R8, 5, ArrayMemLoc::Both, Array5DR8)
 
 template <typename Op>
 decltype(auto) dispatchFieldArray(Field &field, Op &&op) {

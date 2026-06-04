@@ -1,5 +1,5 @@
-#ifndef OMEGA_GLOBALMEANOP_H
-#define OMEGA_GLOBALMEANOP_H
+#ifndef OMEGA_STDDEV_H
+#define OMEGA_STDDEV_H
 
 //===----------------------------------------------------------------------===//
 ///
@@ -10,18 +10,20 @@
 
 namespace OMEGA {
 
-template<typename TT>
-class GlobalMeanOp : public AnalysisOperator {
+template<typename ArrayType>
+class StdDevOp : public AnalysisOperator {
  public:
 
-   GlobalMeanOp(const std::string &Name, const Config &Options) {
+   using scalar_type = typename ArrayType::non_const_value_type;
+
+   StdDevOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
-      OperatorTypeName = "global_mean";
+      OperatorTypeName = "standard_dev";
 
-      InputNames = {"PseudoThickness"};
+      InputNames = {"PseudoThickness", "PseudoThickness_global_mean"};
 
-      std::string OutputFieldName = InstanceName + "_global_mean";
+      std::string OutputFieldName = InstanceName + "_stddev";
       OutputNames = {OutputFieldName};
 
       // Initialize tracking variables
@@ -30,7 +32,7 @@ class GlobalMeanOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMeanOp() override = default;
+   ~StdDevOp() override = default;
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
@@ -41,7 +43,7 @@ class GlobalMeanOp : public AnalysisOperator {
       VCoord = VCoordIn;
       Comm = InEnv->getComm();
 
-      OutputData = typename Array1D<TT>::type(InstanceName + "_out", 1);
+      OutputData = typename Array1D<scalar_type>::type(InstanceName + "_out", 1);
 
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
@@ -50,12 +52,12 @@ class GlobalMeanOp : public AnalysisOperator {
 
       auto OutputField = Field::create(
          OutputNames[0],
-         "Global mean of " + InputNames[0], // Description
+         "Standard deviation of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
-         -std::numeric_limits<TT>::max() / 10,// Min valid value
-         std::numeric_limits<TT>::max(), // Max valid value
-         -std::numeric_limits<TT>::max(), // Fill value
+         0,                      // Min valid value
+         std::numeric_limits<scalar_type>::max(), // Max valid value
+         -std::numeric_limits<scalar_type>::max(), // Fill value
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
@@ -86,13 +88,13 @@ class GlobalMeanOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-      dispatchFieldArray(*InputField, ComputeGlobalMean{Comm, MaskArray, GlobalMean});
+      dispatchFieldArray(*InputField, ComputeStdDev{Comm, MaskArray, StdDev});
 
-      deepCopy(OutputData, GlobalMean);
+      deepCopy(OutputData, StdDev);
 
    }
 
-   TT getVal() {return GlobalMean;}
+   scalar_type getVal() {return StdDev;}
 
  private:
 
@@ -103,27 +105,30 @@ class GlobalMeanOp : public AnalysisOperator {
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
-   typename Array1D<TT>::type OutputData;
+   typename Array1D<scalar_type>::type OutputData;
 
-   TT GlobalMean;
+   scalar_type StdDev;
 
-   struct ComputeGlobalMean {
+   struct ComputeStdDev {
       MPI_Comm Comm;
       Array2DReal MaskArray;
-      TT &GlobMean;
+      scalar_type &LocStdDev;
    
       template <typename ArrayT>
       void operator()(ArrayT InputData) const {
          using ValueT = typename ArrayT::non_const_value_type;
    
-         if constexpr (!std::is_same_v<ValueT, TT>) {
-            ABORT_ERROR("GlobalMeanOp: input field scalar type does not match "
+         if constexpr (!std::is_same_v<ValueT, scalar_type>) {
+            ABORT_ERROR("StdDevOp: input field scalar type does not match "
                         "operator scalar type");
          }
+
+
+
          auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);
          auto MaskSum = globalSum(MaskArray, Comm);
 
-         GlobMean = ValSum/MaskSum;
+         LocStdDev = ValSum/MaskSum;
       }
    };
 
