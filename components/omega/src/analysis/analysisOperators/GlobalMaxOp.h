@@ -10,17 +10,19 @@
 
 namespace OMEGA {
 
-template<typename TT>
+template<typename ArrayType>
 class GlobalMaxOp : public AnalysisOperator {
  public:
+
+   using TT = typename ArrayType::non_const_value_type;
 
    GlobalMaxOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
       OperatorTypeName = "global_max";
 
-      InputNames = {"PseudoThickness"};
       InstanceName = Name;
+      InputNames = {InstanceName};
 
       std::string OutputFieldName = InstanceName + "_global_max";
       std::cout << OutputFieldName << std::endl;
@@ -46,7 +48,7 @@ class GlobalMaxOp : public AnalysisOperator {
       VCoord = VCoordIn;
       Comm = InEnv->getComm();
 
-      OutputData = typename Array1D<TT>::type(InstanceName + "_out", 1);
+      OutputData = typename Array1D<TT>::type(OutputNames[0], 1);
 
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
@@ -73,13 +75,15 @@ class GlobalMaxOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      dispatchFieldArray(*InputField, ComputeGlobalMax{Comm, GlobalMax});
+      auto InputData = InputField->getDataArray<ArrayType>();
+
+      GlobalMax = globalMaxVal(InputData, Comm);
+
+//      dispatchFieldArray(*InputField, ComputeGlobalMax{Comm, GlobalMax});
 
       deepCopy(OutputData, GlobalMax);
 
    }
-
-   TT getVal() {return GlobalMax;}
 
  private:
 
