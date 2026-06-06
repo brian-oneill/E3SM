@@ -97,7 +97,7 @@ std::string AnalysisOpFactory::getArrayTypeName(ArrayDataType dtype, int rank, A
     // Use similar logic to dispatchFieldArray but return the type name string
     #define TRY_ARRAY_TYPE(dt, r, ml, ArrayT) \
         if (dtype == dt && rank == r && memloc == ml) { \
-            return #ArrayT; \
+            return std::string(#ArrayT) + "_" + #ml; \
         }
     
     OMEGA_ANALYSIS_ARRAY_TYPES(TRY_ARRAY_TYPE)

@@ -8,65 +8,6 @@
 
 namespace OMEGA {
 
-class AnalysisOpFactory{
- public:
-   using CreatorFunc = std::function<std::unique_ptr<AnalysisOperator>(
-       const std::string &Name, const Config &Options)>;
-
-   /// Register an operator type
-   static void registerOperator(const std::string &Type, CreatorFunc Creator);
-
-   /// Create an operator instance
-   static std::unique_ptr<AnalysisOperator> createOp(const std::string &Type,
-                                                   const std::string &Name,
-                                                   const Config &Options);
-
-   /// Create an operator instance
-   static std::unique_ptr<AnalysisOperator> createOp(const std::string &Type,
-                                                     const std::string &InputName,
-                                                     const std::string &Name,
-                                                     const Config &Options);
-
-   /// Query available operators (for validation, error messages)
-   static std::vector<std::string> availableOperators();
-
-   /// Check if operator type is registered
-   static bool hasOperator(const std::string &Type);
-
-   /// Register all array type variants of a template operator class
-   template<template<typename> class OperatorTemplate>
-   static void registerAllArrayVariants(const std::string& baseName) {
-      #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT) \
-         registerOperator( \
-            baseName + "_" #ArrayT, \
-            [](const std::string& n, const Config& c) { \
-               return std::make_unique<OperatorTemplate<ArrayT>>(n, c); \
-            });
-      
-      OMEGA_ANALYSIS_ARRAY_TYPES(REGISTER_VARIANT)
-      #undef REGISTER_VARIANT
-   }
-
-
- private:
-   // Static map of registered operators
-   static std::map<std::string, CreatorFunc> Registry;
-   // Meyer's Singleton: guaranteed to be initialized before use
-   static std::map<std::string, CreatorFunc>& registry() {
-      static std::map<std::string, CreatorFunc> s_registry;
-      return s_registry;
-   }
-
-   static std::string getArrayTypeName(ArrayDataType DType,
-                                       I4 Rank,
-                                       ArrayMemLoc MemLoc);
-
-
-
-};
-
-}
-
 // Define array types for analysis operators (1D, 2D, 3D only)
 #define OMEGA_ANALYSIS_ARRAY_TYPES(X)                                    \
    /* 1D Arrays */                                                       \
@@ -108,6 +49,65 @@ class AnalysisOpFactory{
    X(ArrayDataType::R4, 3, ArrayMemLoc::Both, Array3DR4)                 \
    X(ArrayDataType::R4, 3, ArrayMemLoc::Device, Array3DR4)               \
    X(ArrayDataType::R4, 3, ArrayMemLoc::Host, HostArray3DR4)
+
+class AnalysisOpFactory{
+ public:
+   using CreatorFunc = std::function<std::unique_ptr<AnalysisOperator>(
+       const std::string &Name, const Config &Options)>;
+
+   /// Register an operator type
+   static void registerOperator(const std::string &Type, CreatorFunc Creator);
+
+   /// Create an operator instance
+   static std::unique_ptr<AnalysisOperator> createOp(const std::string &Type,
+                                                   const std::string &Name,
+                                                   const Config &Options);
+
+   /// Create an operator instance
+   static std::unique_ptr<AnalysisOperator> createOp(const std::string &Type,
+                                                     const std::string &InputName,
+                                                     const std::string &Name,
+                                                     const Config &Options);
+
+   /// Query available operators (for validation, error messages)
+   static std::vector<std::string> availableOperators();
+
+   /// Check if operator type is registered
+   static bool hasOperator(const std::string &Type);
+
+   /// Register all array type variants of a template operator class
+   template<template<typename> class OperatorTemplate>
+   static void registerAllArrayVariants(const std::string& baseName) {
+      #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT) \
+         registerOperator( \
+            baseName + "_" #ArrayT + "_" #memloc, \
+            [](const std::string& n, const Config& c) { \
+               return std::make_unique<OperatorTemplate<ArrayT>>(n, c); \
+            });
+      
+      OMEGA_ANALYSIS_ARRAY_TYPES(REGISTER_VARIANT)
+      #undef REGISTER_VARIANT
+   }
+
+
+ private:
+   // Static map of registered operators
+   static std::map<std::string, CreatorFunc> Registry;
+   // Meyer's Singleton: guaranteed to be initialized before use
+   static std::map<std::string, CreatorFunc>& registry() {
+      static std::map<std::string, CreatorFunc> s_registry;
+      return s_registry;
+   }
+
+   static std::string getArrayTypeName(ArrayDataType DType,
+                                       I4 Rank,
+                                       ArrayMemLoc MemLoc);
+
+
+
+};
+
+}
 
 ///
 /// Usage in operator implementation file:

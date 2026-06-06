@@ -67,7 +67,7 @@ class GlobalMaxOp : public AnalysisOperator {
          DimNames                // Dimension names
       );
 
-   OutputField->template attachData<typename Array1D<TT>::type>(OutputData);
+      OutputField->template attachData<typename Array1D<TT>::type>(OutputData);
 
    }
 

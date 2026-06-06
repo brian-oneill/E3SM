@@ -9,6 +9,7 @@ void registerAllAnalysisOperators() {
    // Empty! Just being called forces this .o file to be linked
 //   std::cout << "Analysis operators module loaded\n";
    AnalysisOpFactory::registerAllArrayVariants<GlobalMaxOp>("global_max");
+   AnalysisOpFactory::registerAllArrayVariants<GlobalMinOp>("global_min");
 }
 
 //REGISTER_DIAG_OPERATOR(GlobalMaxOp2DR8, "global_max_Array2DR8");

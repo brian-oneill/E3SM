@@ -1922,16 +1922,16 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
 
 ///-----------------------------------------------------------------------------
 /// Finds the local minimum of a Kokkos array product with broadcasting
-template <typename T1, typename ML1, typename MS1,
+template <typename T1, typename ML1, typename MS1, typename IT,
           typename T2, typename ML2, typename MS2>
 std::enable_if_t<
-    std::is_same_v<R8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_same_v<IT, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
     std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
     void>
 localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                   const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
                   const MPI_Comm Comm,                    ///< [in] MPI Communicator
-                  R8 &LocalMinVal,                        ///< [out] local min
+                  IT &LocalMinVal,                        ///< [out] local min
                   const std::vector<I4> *IndxRange = nullptr ///< [in] index range
 ) {
    using Scalar2 = typename Kokkos::View<T2, ML2, MS2>::value_type;
@@ -1967,7 +1967,7 @@ localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
    I8 Stride2V = 1;
    
    // Compute local minimum on host or device
-   R8 LocalMin = std::numeric_limits<R8>::max();
+   IT LocalMin = std::numeric_limits<IT>::max();
    
    if (IsHost) {
       for (I4 I = IRange[0]; I <= IRange[1]; ++I) {
@@ -1994,7 +1994,7 @@ localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                      
                      R8 MaskVal = static_cast<R8>(Arr2.data()[addr2]);
                      if (MaskVal != 0.0) {
-                        R8 TestVal = Arr1.data()[addr1] * MaskVal;
+                        IT TestVal = Arr1.data()[addr1] * MaskVal;
                         if (TestVal < LocalMin)
                            LocalMin = TestVal;
                      }
@@ -2010,7 +2010,7 @@ localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
       
       Kokkos::parallel_reduce("localMinBroadcast_product",
          Kokkos::RangePolicy<>(0, Arr1.size()),
-         KOKKOS_LAMBDA(const int flat_idx, R8& lmin) {
+         KOKKOS_LAMBDA(const int flat_idx, IT& lmin) {
             int horizIdx = 0;
             int vertIdx = 0;
             
@@ -2035,10 +2035,10 @@ localWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
             
             R8 MaskVal = static_cast<R8>(Arr2.data()[arr2_idx]);
             if (MaskVal != 0.0) {
-               R8 TestVal = Arr1.data()[flat_idx] * MaskVal;
+               IT TestVal = Arr1.data()[flat_idx] * MaskVal;
                lmin = Kokkos::min(TestVal, lmin);
             }
-         }, Kokkos::Min<R8>(LocalMin));
+         }, Kokkos::Min<IT>(LocalMin));
    }
    
    LocalMinVal = LocalMin;
@@ -2065,6 +2065,80 @@ globalWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
    // Compute final minimum across MPI tasks
    R8 GlobalMin;
    int Err = MPI_Allreduce(&LocalMin, &GlobalMin, 1, MPI_DOUBLE, MPI_MIN, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMinBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMin;
+}
+
+/// Specific R4 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R4, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    R4>
+globalWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                   const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
+                   const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                   const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local min (also performs error checks)
+   R4 LocalMin;
+   localWeightedMin(Arr1, Arr2, Comm, LocalMin, IndxRange);
+
+   // Compute final minimum across MPI tasks
+   R4 GlobalMin;
+   int Err = MPI_Allreduce(&LocalMin, &GlobalMin, 1, MPI_FLOAT, MPI_MIN, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMinBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMin;
+}
+/// Specific I4 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<I4, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    I4>
+globalWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                   const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
+                   const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                   const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local min (also performs error checks)
+   I4 LocalMin;
+   localWeightedMin(Arr1, Arr2, Comm, LocalMin, IndxRange);
+
+   // Compute final minimum across MPI tasks
+   I4 GlobalMin;
+   int Err = MPI_Allreduce(&LocalMin, &GlobalMin, 1, MPI_INT32_T, MPI_MIN, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMinBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMin;
+}
+
+/// Specific I8 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<I8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    I8>
+globalWeightedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                   const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask/weight (1D or 2D)
+                   const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                   const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local min (also performs error checks)
+   I8 LocalMin;
+   localWeightedMin(Arr1, Arr2, Comm, LocalMin, IndxRange);
+
+   // Compute final minimum across MPI tasks
+   I8 GlobalMin;
+   int Err = MPI_Allreduce(&LocalMin, &GlobalMin, 1, MPI_INT64_T, MPI_MIN, Comm);
    if (Err != MPI_SUCCESS)
       ABORT_ERROR("globalMinBroadcast: Error in MPI_Allreduce");
 

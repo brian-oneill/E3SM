@@ -10,18 +10,22 @@
 
 namespace OMEGA {
 
-template<typename TT>
+template<typename ArrayType>
 class GlobalMinOp : public AnalysisOperator {
  public:
+
+   using TT = typename ArrayType::non_const_value_type;
 
    GlobalMinOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
       OperatorTypeName = "global_min";
 
-      InputNames = {"PseudoThickness"};
+      InstanceName = Name;
+      InputNames = {InstanceName};
 
       std::string OutputFieldName = InstanceName + "_global_min";
+      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
       // Initialize tracking variables
@@ -30,7 +34,10 @@ class GlobalMinOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMinOp() override = default;
+   ~GlobalMinOp() override {
+      if (Field::exists(OutputNames[0]))
+         Field::destroy(OutputNames[0]);
+   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
@@ -41,7 +48,7 @@ class GlobalMinOp : public AnalysisOperator {
       VCoord = VCoordIn;
       Comm = InEnv->getComm();
 
-      OutputData = typename Array1D<TT>::type(InstanceName + "_out", 1);
+      OutputData = typename Array1D<TT>::type(OutputNames[0], 1);
 
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
@@ -60,11 +67,15 @@ class GlobalMinOp : public AnalysisOperator {
          DimNames                // Dimension names
       );
 
+      OutputField->template attachData<typename Array1D<TT>::type>(OutputData);
+
    }
 
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
+
+      auto InputData = InputField->getDataArray<ArrayType>();
 
       std::vector<std::string> InputDimNames;
 
@@ -86,13 +97,14 @@ class GlobalMinOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-      dispatchFieldArray(*InputField, ComputeGlobalMin{Comm, MaskArray, GlobalMin});
+//      dispatchFieldArray(*InputField, ComputeGlobalMin{Comm, MaskArray, GlobalMin});
+      GlobalMin = globalWeightedMin(InputData, MaskArray, Comm);
 
       deepCopy(OutputData, GlobalMin);
 
    }
 
-   TT getVal() {return GlobalMin;}
+//   TT getVal() {return GlobalMin;}
 
  private:
 

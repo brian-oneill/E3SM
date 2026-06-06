@@ -195,6 +195,17 @@ int main(int argc, char *argv[]) {
 //      GlobMinOp.compute(TStamp);
 //
 //      std::cout << GlobMinOp.getVal() << std::endl;
+
+      auto GlobMinOp = AnalysisOpFactory::createOp("global_min", "PseudoThickness", "PseudoThickness", *OmegaConfig);
+
+      GlobMinOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
+      GlobMinOp->compute(TStamp);
+
+      auto GlobMinArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_global_min");
+
+      std::cout << GlobMinArray(0) << std::endl;
+
 //
 //      GlobalMeanOp<Real> GlobMeanOp("PseudoThickness", *OmegaConfig);
 //
