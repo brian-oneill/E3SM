@@ -175,7 +175,8 @@ int main(int argc, char *argv[]) {
 //      std::cout << GlobMaxOp.getVal() << std::endl;
 //      std::cout << AnalysisOpFactory::hasOperator("global_max_R8") << " " << AnalysisOpFactory::hasOperator("global_max") << std::endl;
 
-      auto GlobMaxOp = AnalysisOpFactory::createOp("global_max_1DR8", "PseudoThickness", *OmegaConfig);
+//      auto GlobMaxOp = AnalysisOpFactory::createOp("global_max_2DR8", "PseudoThickness", *OmegaConfig);
+      auto GlobMaxOp = AnalysisOpFactory::createOp("global_max", "PseudoThickness", "PseudoThickness", *OmegaConfig);
 
       GlobMaxOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
 
