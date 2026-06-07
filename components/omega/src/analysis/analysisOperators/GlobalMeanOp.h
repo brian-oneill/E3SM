@@ -10,18 +10,22 @@
 
 namespace OMEGA {
 
-template<typename TT>
+template<typename ArrayType>
 class GlobalMeanOp : public AnalysisOperator {
  public:
+
+   using ScalarT = typename ArrayType::non_const_value_type;
 
    GlobalMeanOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
       OperatorTypeName = "global_mean";
 
-      InputNames = {"PseudoThickness"};
+      InstanceName = Name;
+      InputNames = {InstanceName};
 
       std::string OutputFieldName = InstanceName + "_global_mean";
+      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
       // Initialize tracking variables
@@ -30,7 +34,10 @@ class GlobalMeanOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMeanOp() override = default;
+   ~GlobalMeanOp() override {
+      if (Field::exists(OutputNames[0]))
+         Field::destroy(OutputNames[0]);
+   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
@@ -41,7 +48,7 @@ class GlobalMeanOp : public AnalysisOperator {
       VCoord = VCoordIn;
       Comm = InEnv->getComm();
 
-      OutputData = typename Array1D<TT>::type(InstanceName + "_out", 1);
+      OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
@@ -53,9 +60,9 @@ class GlobalMeanOp : public AnalysisOperator {
          "Global mean of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
-         -std::numeric_limits<TT>::max() / 10,// Min valid value
-         std::numeric_limits<TT>::max(), // Max valid value
-         -std::numeric_limits<TT>::max(), // Fill value
+         -std::numeric_limits<ScalarT>::max() / 10,// Min valid value
+         std::numeric_limits<ScalarT>::max(), // Max valid value
+         -std::numeric_limits<ScalarT>::max(), // Fill value
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
@@ -65,6 +72,8 @@ class GlobalMeanOp : public AnalysisOperator {
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
+
+      auto InputData = InputField->getDataArray<ArrayType>();
 
       std::vector<std::string> InputDimNames;
 
@@ -86,13 +95,19 @@ class GlobalMeanOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-      dispatchFieldArray(*InputField, ComputeGlobalMean{Comm, MaskArray, GlobalMean});
+//      dispatchFieldArray(*InputField, ComputeGlobalMean{Comm, MaskArray, GlobalMean});
+
+      auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);
+      auto MaskSum = globalSum(MaskArray, Comm);
+
+      GlobalMean = ValSum/MaskSum;
 
       deepCopy(OutputData, GlobalMean);
 
    }
 
-   TT getVal() {return GlobalMean;}
+
+   ScalarT getVal() {return GlobalMean;}
 
  private:
 
@@ -103,20 +118,20 @@ class GlobalMeanOp : public AnalysisOperator {
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
-   typename Array1D<TT>::type OutputData;
+   typename Array1D<ScalarT>::type OutputData;
 
-   TT GlobalMean;
+   ScalarT GlobalMean;
 
    struct ComputeGlobalMean {
       MPI_Comm Comm;
       Array2DReal MaskArray;
-      TT &GlobMean;
+      ScalarT &GlobMean;
    
       template <typename ArrayT>
       void operator()(ArrayT InputData) const {
          using ValueT = typename ArrayT::non_const_value_type;
    
-         if constexpr (!std::is_same_v<ValueT, TT>) {
+         if constexpr (!std::is_same_v<ValueT, ScalarT>) {
             ABORT_ERROR("GlobalMeanOp: input field scalar type does not match "
                         "operator scalar type");
          }

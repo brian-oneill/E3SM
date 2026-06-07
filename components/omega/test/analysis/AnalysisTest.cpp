@@ -216,6 +216,19 @@ int main(int argc, char *argv[]) {
 //      std::cout << GlobMeanOp.getVal() << std::endl;
 //
 //
+
+      auto GlobMeanOp = AnalysisOpFactory::createOp("global_mean", "PseudoThickness", "PseudoThickness", *OmegaConfig);
+
+      GlobMeanOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
+      GlobMeanOp->compute(TStamp);
+
+      auto GlobMeanArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_global_mean");
+
+      std::cout << GlobMeanArray(0) << std::endl;
+
+
+
 //      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
 
       finalizeAnalysisTest();
