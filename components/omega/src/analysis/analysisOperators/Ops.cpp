@@ -11,6 +11,7 @@ void registerAllAnalysisOperators() {
    AnalysisOpFactory::registerAllArrayVariants<GlobalMaxOp>("global_max");
    AnalysisOpFactory::registerAllArrayVariants<GlobalMinOp>("global_min");
    AnalysisOpFactory::registerAllArrayVariants<GlobalMeanOp>("global_mean");
+   AnalysisOpFactory::registerAllArrayVariants<StdDevOp>("standard_dev");
 }
 
 //REGISTER_DIAG_OPERATOR(GlobalMaxOp2DR8, "global_max_Array2DR8");

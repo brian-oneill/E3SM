@@ -1870,9 +1870,9 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      parallelReduce(
+      Kokkos::parallel_reduce(
           Kokkos::RangePolicy<>(0, Arr1.size()),
-          KOKKOS_LAMBDA(const int flat_idx, I8 &lsum) {
+          KOKKOS_LAMBDA(const int flat_idx, I4 &lsum) {
              int remaining = flat_idx;
              int horizIdx = 0;
              int vertIdx = 0;
@@ -1986,7 +1986,7 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      parallelReduce(
+      Kokkos::parallel_reduce(
           Kokkos::RangePolicy<>(0, Arr1.size()),
           KOKKOS_LAMBDA(const int flat_idx, I8 &lsum) {
              int remaining = flat_idx;
@@ -2104,7 +2104,7 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      parallelReduce(
+      Kokkos::parallel_reduce(
           Kokkos::RangePolicy<>(0, Arr1.size()),
           KOKKOS_LAMBDA(const int flat_idx, R8 &lsum) {
              int remaining = flat_idx;

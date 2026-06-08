@@ -67,6 +67,8 @@ class GlobalMeanOp : public AnalysisOperator {
          DimNames                // Dimension names
       );
 
+      OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+
    }
 
    void compute(const TimeInstant &TimeStamp) override {

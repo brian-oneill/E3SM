@@ -228,8 +228,17 @@ int main(int argc, char *argv[]) {
       std::cout << GlobMeanArray(0) << std::endl;
 
 
+      auto SigmaOp = AnalysisOpFactory::createOp("standard_dev", "PseudoThickness", "PseudoThickness", *OmegaConfig);
 
-//      StdDevOp<Array2DReal> SDevOp("PseudoThickness", *OmegaConfig);
+      SigmaOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
+
+      SigmaOp->compute(TStamp);
+
+      auto SigmaArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_stddev");
+
+      std::cout << SigmaArray(0) << std::endl;
+
+
 
       finalizeAnalysisTest();
 
