@@ -1,9 +1,6 @@
 #include "AnalysisOpFactory.h"
-#include "analysisOperators/Ops.h"
-#include <iostream>
+#include "operators/Ops.h"
 namespace OMEGA {
-//template class GlobalMaxOp<R8>;
-using GlobalMaxOp2DR8 = GlobalMaxOp<Array2DR8>;
 
 void registerAllAnalysisOperators() {
    // Empty! Just being called forces this .o file to be linked
@@ -12,8 +9,7 @@ void registerAllAnalysisOperators() {
    AnalysisOpFactory::registerAllArrayVariants<GlobalMinOp>("global_min");
    AnalysisOpFactory::registerAllArrayVariants<GlobalMeanOp>("global_mean");
    AnalysisOpFactory::registerAllArrayVariants<StdDevOp>("standard_dev");
+   AnalysisOpFactory::registerAllArrayVariants<TimeMeanOp>("time_mean");
 }
-
-//REGISTER_DIAG_OPERATOR(GlobalMaxOp2DR8, "global_max_Array2DR8");
 
 }

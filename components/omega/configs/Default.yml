@@ -165,6 +165,8 @@ Omega:
       EndTime: 0001-07-31_00:00:00
       Contents:
         - Tracers
+  Analysis:
+    GlobalStats:
   ManufacturedSolution:
     WavelengthX: 5.0e6
     WavelengthY: 4.33013e6

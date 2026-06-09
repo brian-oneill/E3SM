@@ -9,9 +9,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "analysisOperators/Ops.h"
+#include "operators/Ops.h"
+#include "AnalysisGroupManager.h"
 #include "AnalysisOperator.h"
 #include "AnalysisOpFactory.h"
+#include "AnalysisOrchestrator.h"
 #include "Config.h"
 #include "DataTypes.h"
 #include "Dimension.h"
