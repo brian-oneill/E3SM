@@ -1,9 +1,9 @@
 #ifndef OMEGA_OPS_H
 #define OMEGA_OPS_H
 
-#include "operators/GlobalMaxOp.h"
-#include "operators/GlobalMeanOp.h"
-#include "operators/GlobalMinOp.h"
+#include "operators/SpatialMaxOp.h"
+#include "operators/SpatialMeanOp.h"
+#include "operators/SpatialMinOp.h"
 #include "operators/StdDevOp.h"
 #include "operators/TimeMeanOp.h"
 

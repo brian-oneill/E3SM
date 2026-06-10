@@ -1,5 +1,5 @@
-#ifndef OMEGA_GLOBALMINOP_H
-#define OMEGA_GLOBALMINOP_H
+#ifndef OMEGA_GLOBALMAXOP_H
+#define OMEGA_GLOBALMAXOP_H
 
 //===----------------------------------------------------------------------===//
 ///
@@ -11,20 +11,20 @@
 namespace OMEGA {
 
 template<typename ArrayType>
-class GlobalMinOp : public AnalysisOperator {
+class SpatialMaxOp : public AnalysisOperator {
  public:
 
    using TT = typename ArrayType::non_const_value_type;
 
-   GlobalMinOp(const std::string &Name, const Config &Options) {
+   SpatialMaxOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
-      OperatorTypeName = "global_min";
+      OperatorTypeName = "spatial_max";
 
       InstanceName = Name;
       InputNames = {InstanceName};
 
-      std::string OutputFieldName = InstanceName + "_global_min";
+      std::string OutputFieldName = InstanceName + "_spatial_max";
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
@@ -34,7 +34,7 @@ class GlobalMinOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMinOp() override {
+   ~SpatialMaxOp() override {
       if (Field::exists(OutputNames[0]))
          Field::destroy(OutputNames[0]);
    }
@@ -57,7 +57,7 @@ class GlobalMinOp : public AnalysisOperator {
 
       auto OutputField = Field::create(
          OutputNames[0],
-         "Global minimum of " + InputNames[0], // Description
+         "Spatial maximum of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
          -std::numeric_limits<TT>::max() / 10,// Min valid value
@@ -77,34 +77,13 @@ class GlobalMinOp : public AnalysisOperator {
 
       auto InputData = InputField->getDataArray<ArrayType>();
 
-      std::vector<std::string> InputDimNames;
+      SpatialMax = globalMaxVal(InputData, Comm);
 
-      InputField->getDimNames(InputDimNames);
+//      dispatchFieldArray(*InputField, ComputeSpatialMax{Comm, SpatialMax});
 
-      I4 NDims = InputDimNames.size();
-
-      Array2DReal MaskArray;
-
-      std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
-
-      if (IndexSpaceName == "NCells") {
-         MaskArray = VCoord->CellMask;
-      } else if (IndexSpaceName == "NEdges") {
-         MaskArray = VCoord->EdgeMask;
-      } else if (IndexSpaceName == "NVertices") {
-         MaskArray = VCoord->VertexMask;
-      } else {
-         ABORT_ERROR("");
-      }
-
-//      dispatchFieldArray(*InputField, ComputeGlobalMin{Comm, MaskArray, GlobalMin});
-      GlobalMin = globalWeightedMin(InputData, MaskArray, Comm);
-
-      deepCopy(OutputData, GlobalMin);
+      deepCopy(OutputData, SpatialMax);
 
    }
-
-//   TT getVal() {return GlobalMin;}
 
  private:
 
@@ -117,27 +96,27 @@ class GlobalMinOp : public AnalysisOperator {
    /// matching input
    typename Array1D<TT>::type OutputData;
 
-   TT GlobalMin;
+   TT SpatialMax;
 
-   struct ComputeGlobalMin {
+   struct ComputeSpatialMax {
       MPI_Comm Comm;
-      Array2DReal MaskArray;
-      TT &GlobMin;
+      TT &GlobMax;
    
       template <typename ArrayT>
       void operator()(ArrayT InputData) const {
          using ValueT = typename ArrayT::non_const_value_type;
    
          if constexpr (!std::is_same_v<ValueT, TT>) {
-            ABORT_ERROR("GlobalMinOp: input field scalar type does not match "
+            ABORT_ERROR("SpatialMaxOp: input field scalar type does not match "
                         "operator scalar type");
          } else {
-            GlobMin = globalWeightedMin(InputData, MaskArray, Comm);
+            GlobMax = globalMaxVal(InputData, Comm);
          }
       }
-   };
+};
 
 };
 
 } // namespace OMEGA
+
 #endif

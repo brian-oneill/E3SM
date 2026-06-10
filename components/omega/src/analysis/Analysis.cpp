@@ -6,15 +6,17 @@
  
 namespace OMEGA {
 
-void Analysis::init(){
-   auto DefMesh = HorzMesh::getDefault();
-   auto DefVCoord = VertCoord::getDefault();
-   auto DefEnv  = MachEnv::getDefault();
-
+void Analysis::init() {
 
    registerAllAnalysisOperators();
 
    AnalysisOrchestrator::init();
+
+}
+
+void Analysis::finalize() {
+
+   AnalysisOrchestrator::clear();
 
 }
 

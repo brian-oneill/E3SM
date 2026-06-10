@@ -167,6 +167,13 @@ Omega:
         - Tracers
   Analysis:
     GlobalStats:
+       Enable: true
+       Fields: ["NormalVelocity", "PseudoThickness"]
+       Stats: ["max", "min", "mean"]
+       Period: ["daily", "monthly"]
+       Filename: global.stats
+    CustomGroup:
+       Enable: false
   ManufacturedSolution:
     WavelengthX: 5.0e6
     WavelengthY: 4.33013e6

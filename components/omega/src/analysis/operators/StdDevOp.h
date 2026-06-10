@@ -22,7 +22,7 @@ class StdDevOp : public AnalysisOperator {
       OperatorTypeName = "standard_dev";
 
       InstanceName = Name;
-      InputNames = {Name, Name + "_global_mean"};
+      InputNames = {Name, Name + "_spatial_mean"};
 
       std::string OutputFieldName = InstanceName + "_stddev";
       std::cout << OutputFieldName << std::endl;

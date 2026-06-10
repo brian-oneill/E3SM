@@ -11,20 +11,20 @@
 namespace OMEGA {
 
 template<typename ArrayType>
-class GlobalMeanOp : public AnalysisOperator {
+class SpatialMeanOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayType::non_const_value_type;
 
-   GlobalMeanOp(const std::string &Name, const Config &Options) {
+   SpatialMeanOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
-      OperatorTypeName = "global_mean";
+      OperatorTypeName = "spatial_mean";
 
       InstanceName = Name;
       InputNames = {InstanceName};
 
-      std::string OutputFieldName = InstanceName + "_global_mean";
+      std::string OutputFieldName = InstanceName + "_spatial_mean";
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
@@ -34,7 +34,7 @@ class GlobalMeanOp : public AnalysisOperator {
 
    }
 
-   ~GlobalMeanOp() override {
+   ~SpatialMeanOp() override {
       if (Field::exists(OutputNames[0]))
          Field::destroy(OutputNames[0]);
    }
@@ -57,7 +57,7 @@ class GlobalMeanOp : public AnalysisOperator {
 
       auto OutputField = Field::create(
          OutputNames[0],
-         "Global mean of " + InputNames[0], // Description
+         "Spatial mean of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
          -std::numeric_limits<ScalarT>::max() / 10,// Min valid value
@@ -97,19 +97,19 @@ class GlobalMeanOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-//      dispatchFieldArray(*InputField, ComputeGlobalMean{Comm, MaskArray, GlobalMean});
+//      dispatchFieldArray(*InputField, ComputeSpatialMean{Comm, MaskArray, SpatialMean});
 
       auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);
       auto MaskSum = globalSum(MaskArray, Comm);
 
-      GlobalMean = ValSum/MaskSum;
+      SpatialMean = ValSum/MaskSum;
 
-      deepCopy(OutputData, GlobalMean);
+      deepCopy(OutputData, SpatialMean);
 
    }
 
 
-   ScalarT getVal() {return GlobalMean;}
+   ScalarT getVal() {return SpatialMean;}
 
  private:
 
@@ -122,9 +122,9 @@ class GlobalMeanOp : public AnalysisOperator {
    /// matching input
    typename Array1D<ScalarT>::type OutputData;
 
-   ScalarT GlobalMean;
+   ScalarT SpatialMean;
 
-   struct ComputeGlobalMean {
+   struct ComputeSpatialMean {
       MPI_Comm Comm;
       Array2DReal MaskArray;
       ScalarT &GlobMean;
@@ -134,7 +134,7 @@ class GlobalMeanOp : public AnalysisOperator {
          using ValueT = typename ArrayT::non_const_value_type;
    
          if constexpr (!std::is_same_v<ValueT, ScalarT>) {
-            ABORT_ERROR("GlobalMeanOp: input field scalar type does not match "
+            ABORT_ERROR("SpatialMeanOp: input field scalar type does not match "
                         "operator scalar type");
          }
          auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);

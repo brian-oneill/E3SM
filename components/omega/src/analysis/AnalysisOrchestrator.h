@@ -2,12 +2,14 @@
 #define OMEGA_ANALYSISORCHESTRATOR_H
 
 #include "AnalysisOperator.h"
+#include "AnalysisOpFactory.h"
 #include "Config.h"
 #include "HorzMesh.h"
 #include "TimeMgr.h"
 #include "VertCoord.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace OMEGA {
@@ -24,9 +26,13 @@ class AnalysisOrchestrator {
                         const HorzMesh *Mesh,
                         const VertCoord *VCoord,
                         Clock *ModelClock,
-                        const Config *Options);
+                        Config *Options);
 
    ~AnalysisOrchestrator();
+
+   void registerAnalysisOp(std::string &FieldName,
+                           std::string &OpName,
+                           Config &Options);
 
  private:
    struct OperatorNode {
@@ -40,7 +46,9 @@ class AnalysisOrchestrator {
                         const HorzMesh *Mesh,
                         const VertCoord *VCoord,
                         Clock *ModelClock,
-                        const Config *Options);
+                        Config *Options);
+
+   std::string Name;
 
    Clock *ModelClock;
    const HorzMesh *Mesh;
@@ -63,4 +71,3 @@ class AnalysisOrchestrator {
 } // end namespace OMEGA
 
 #endif
-
