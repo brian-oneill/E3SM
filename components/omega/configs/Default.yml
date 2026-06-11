@@ -170,7 +170,7 @@ Omega:
        Enable: true
        Fields: ["NormalVelocity", "PseudoThickness"]
        Stats: ["max", "min", "mean"]
-       Period: ["daily", "monthly"]
+       Period: ["1day", "1month"]
        Filename: global.stats.$Y
        FileFreq: 1
        FileFreqUnits: years

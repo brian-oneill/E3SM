@@ -2,6 +2,7 @@
 #define OMEGA_ANALYSISGROUP_H
 
 #include "Config.h"
+#include "IOStream.h"
 #include <string>
 
 namespace OMEGA {
