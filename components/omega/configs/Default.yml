@@ -171,7 +171,9 @@ Omega:
        Fields: ["NormalVelocity", "PseudoThickness"]
        Stats: ["max", "min", "mean"]
        Period: ["daily", "monthly"]
-       Filename: global.stats
+       Filename: global.stats.$Y
+       FileFreq: 1
+       FileFreqUnits: years
     CustomGroup:
        Enable: false
   ManufacturedSolution:

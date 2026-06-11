@@ -78,8 +78,8 @@ AnalysisOrchestrator::AnalysisOrchestrator(const std::string &InName,
 
 }
 
-void AnalysisOrchestrator::registerAnalysisOp(std::string &FieldName,
-                                         std::string &OpName,
+void AnalysisOrchestrator::registerAnalysisOp(const std::string &FieldName,
+                                         const std::string &OpName,
                                          Config &Options) {
 
    auto NewOp = AnalysisOpFactory::createOp(OpName, FieldName, Options);
@@ -88,6 +88,12 @@ void AnalysisOrchestrator::registerAnalysisOp(std::string &FieldName,
 
       OperatorNode Node;
       Node.Op = std::move(NewOp);
+
+      Node.Upstream = {nullptr};
+      Node.OutputStreamName = "";
+      Alarm NewAlarm;
+      Node.ComputeAlarm = NewAlarm;
+
 
    }
 

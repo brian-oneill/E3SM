@@ -1,15 +1,17 @@
 #ifndef OMEGA_GLOBALSTATS_H
 #define OMEGA_GLOBALSTATS_H
 
+#include "AnalysisGroup.h"
+#include "AnalysisOrchestrator.h"
 #include "Config.h"
 #include "operators/Ops.h"
 #include <string>
 
 namespace OMEGA {
 
-class AnalysisOrchestrator;
+//class AnalysisOrchestrator;
 
-class GlobalStats {
+class GlobalStats : public AnalysisGroup {
  public:
 
    GlobalStats(const std::string &Name,

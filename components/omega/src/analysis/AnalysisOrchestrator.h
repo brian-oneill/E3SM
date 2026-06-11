@@ -30,8 +30,8 @@ class AnalysisOrchestrator {
 
    ~AnalysisOrchestrator();
 
-   void registerAnalysisOp(std::string &FieldName,
-                           std::string &OpName,
+   void registerAnalysisOp(const std::string &FieldName,
+                           const std::string &OpName,
                            Config &Options);
 
  private:
