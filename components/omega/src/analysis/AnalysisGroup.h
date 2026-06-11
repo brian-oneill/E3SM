@@ -42,8 +42,12 @@ class AnalysisGroup {
       Config toConfig() const {
          Config Cfg;
          for (const auto& [key, value] : Params) {
-            Cfg.set(key, value);
+            if (!value.empty()) {
+               Cfg.set(key, value);
+            }
          }
+
+         Cfg.set("Contents", "");
 
          return Cfg;
       }

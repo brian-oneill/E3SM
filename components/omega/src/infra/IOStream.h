@@ -150,6 +150,7 @@ class IOStream {
    /// Flag to determine whether the Contents have been validated or not
    bool Validated;
 
+ public:
    //---- Private utility functions to support public interfaces
    /// Creates a new stream and adds to the list of all streams, based on
    /// options in the input model configuration. This routine is called by
@@ -159,6 +160,7 @@ class IOStream {
                       Config &StreamConfig, ///< [in] stream configuration
                       Clock *&ModelClock    ///< [inout] Omega model clock
    );
+ private:
 
    /// Read all dimensions from an input file and determine the dimension ID.
    /// The file must be in data mode.

@@ -111,8 +111,9 @@ class StdDevOp : public AnalysisOperator {
 
       std::cout << "meanval: " << MeanVal(0) << std::endl;
 
+      I4 NSize = static_cast<I4>(InputData.size());
       parallelFor(
-          {InputData.size()}, KOKKOS_LAMBDA(const int flat_idx) {
+          {NSize}, KOKKOS_LAMBDA(const int flat_idx) {
              int remaining = flat_idx;
              int horizIdx = 0;
              int vertIdx = 0;

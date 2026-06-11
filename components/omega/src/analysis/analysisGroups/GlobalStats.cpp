@@ -50,15 +50,19 @@ GlobalStats::GlobalStats(const std::string &Name,
          ABORT_ERROR("GlobalStats: Invalid period found in Config, {}", PeriodName);
       }
       if (UnitsStr.back() != 's') {
-         UnitsStr += "s";
+         UnitsStr += 's';
       }
       std::cout << "freq, unit: " << FreqStr << " " << UnitsStr << std::endl;
 
-      Config NewStreamCfg;
-
       AnalysisStreamCfg StreamCfg;
       StreamCfg.Params["Filename"] = FilenamePrefix + "_" + PeriodName + FilenameTemplate;
+      StreamCfg.Params["Freq"] = FreqStr;
+      StreamCfg.Params["FreqUnits"] = UnitsStr;
 //      std::cout << "Filename: " << StreamCfgParams.Filename << std::endl;
+
+      auto NewStreamCfg = StreamCfg.toConfig();
+      Clock DummyClock;
+      IOStream::create(Name + "_" + PeriodName, NewStreamCfg, DummyClock);
 
       for (const auto &VarName: VarList) {
          for (const auto &OpName: OpList) {
