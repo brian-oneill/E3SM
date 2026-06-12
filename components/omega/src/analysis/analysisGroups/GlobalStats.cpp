@@ -37,7 +37,7 @@ GlobalStats::GlobalStats(const std::string &Name,
       FilenamePrefix = FilenameStr;
    }
 
-   
+
    for (const auto &PeriodName: PeriodList) {
       std::string FreqStr;
       std::string UnitsStr;
@@ -61,8 +61,8 @@ GlobalStats::GlobalStats(const std::string &Name,
 //      std::cout << "Filename: " << StreamCfgParams.Filename << std::endl;
 
       auto NewStreamCfg = StreamCfg.toConfig();
-      Clock DummyClock;
-      IOStream::create(Name + "_" + PeriodName, NewStreamCfg, DummyClock);
+      auto RefClock = Orchestrator->getModelClock();
+      IOStream::create(Name + "_" + PeriodName, NewStreamCfg, RefClock);
 
       for (const auto &VarName: VarList) {
          for (const auto &OpName: OpList) {

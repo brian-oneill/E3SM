@@ -38,9 +38,45 @@ class TimeMeanOp : public AnalysisOperator {
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
                    const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
+
+      auto InputField = Field::get(InputNames[0]);
+
+      auto InputData = InputField->getDataArray<ArrayT>();
+
+      auto NDims = InputField->getNumDims();
+
+      auto DimNames = InputField->getDimNames();
+
+      
+      auto OutputField = Field::create(
+         OutputNames[0],
+         "Time average of " + InputNames[0], // Description
+         "",                     // Units (inherited from input)
+         "",                     // Standard name
+         -std::numeric_limits<ScalarT>::max() / 10,// Min valid value
+         std::numeric_limits<ScalarT>::max(), // Max valid value
+         -std::numeric_limits<ScalarT>::max(), // Fill value
+         NDims,                  // Dimension lengths
+         DimNames                // Dimension names
+      );
+
+      AccumArray = decltype(InputData)(OutputNames[0] + "_accumulator", InputData.layout());
+
+      OutputData = 
+
    }
 
    void compute(const TimeInstant &TimeStamp) override {
+      NSize = static_cast<I4>(AccumArray.size());
+      parallelFor(
+          {NSize}, KOKKOS_LAMBDA(const int FlatIdx) {
+             AccumArray.data()[FlatIdx] += Input.data()[FlatIdx];
+          });
+      ++NAccum;
    }
 
  private:
@@ -50,7 +86,10 @@ class TimeMeanOp : public AnalysisOperator {
    const VertCoord *VCoord;                 ///< VertCoord
    MPI_Comm Comm;
 
-   ArrayT Accumulator;
+   ArrayT AccumArray;
+   ArrayT OutputData;;
+   I4 NAccum;
+   I4 NSize;
 
 
 };

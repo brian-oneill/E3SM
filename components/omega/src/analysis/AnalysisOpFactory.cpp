@@ -51,6 +51,7 @@ AnalysisOpFactory::createOp(const std::string &OpType,
    auto it = Reg.find(FullOpType);
    
    if (it == Reg.end()) {
+
 //      // Build helpful error message with suggestions
 //      std::ostringstream oss;
 //      oss << "DiagOperatorFactory: Unknown operator type '" << type << "'.\n";

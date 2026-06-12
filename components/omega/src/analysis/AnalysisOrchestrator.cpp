@@ -47,10 +47,13 @@ AnalysisOrchestrator *AnalysisOrchestrator::create(const std::string &Name,
 AnalysisOrchestrator::AnalysisOrchestrator(const std::string &InName,
                         const HorzMesh *InMesh,
                         const VertCoord *InVCoord,
-                        Clock *ModelClock,
+                        Clock *InModelClock,
                         Config *Options) {
 
    Name = InName;
+   Mesh = InMesh;
+   VCoord = InVCoord;
+   ModelClock = InModelClock;
 
    Error Err;
    Config AnalysisCfg("Analysis");
@@ -97,6 +100,10 @@ void AnalysisOrchestrator::registerAnalysisOp(const std::string &FieldName,
 
    }
 
+}
+
+Clock *&AnalysisOrchestrator::getModelClock(){
+   return ModelClock;
 }
 
 void AnalysisOrchestrator::clear() {

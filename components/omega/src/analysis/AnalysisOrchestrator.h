@@ -34,6 +34,8 @@ class AnalysisOrchestrator {
                            const std::string &OpName,
                            Config &Options);
 
+   Clock *&getModelClock();
+
  private:
    struct OperatorNode {
       std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
