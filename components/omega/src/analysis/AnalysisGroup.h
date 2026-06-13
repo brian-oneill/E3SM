@@ -44,11 +44,12 @@ class AnalysisGroup {
          Config Cfg;
          for (const auto& [key, value] : Params) {
             if (!value.empty()) {
-               Cfg.set(key, value);
+               Cfg.add(key, value);
             }
          }
 
-         Cfg.set("Contents", "");
+         std::vector<std::string> EmptyStrVec{""};
+         Cfg.add("Contents", EmptyStrVec);
 
          return Cfg;
       }

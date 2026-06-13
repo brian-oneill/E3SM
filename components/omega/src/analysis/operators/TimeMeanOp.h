@@ -27,10 +27,16 @@ class TimeMeanOp : public AnalysisOperator {
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
-
+      // Initialize tracking variables
+      FieldComputed = false;
+      LastComputed = TimeInstant();
+      CompPhase = TemporalPhase::Accumulate;
+      Finalized = false;
    }
 
    ~TimeMeanOp() override {
+      if (Field::exists(OutputNames[0]))
+         Field::destroy(OutputNames[0]);
    }
 
 
@@ -45,13 +51,13 @@ class TimeMeanOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayT>();
+      InputData = InputField->getDataArray<ArrayT>();
 
       auto NDims = InputField->getNumDims();
 
-      auto DimNames = InputField->getDimNames();
+      std::vector<std::string> DimNames;
+      InputField->getDimNames(DimNames);
 
-      
       auto OutputField = Field::create(
          OutputNames[0],
          "Time average of " + InputNames[0], // Description
@@ -64,19 +70,26 @@ class TimeMeanOp : public AnalysisOperator {
          DimNames                // Dimension names
       );
 
+      ArraySize = static_cast<I4>(InputData.size());
+
       AccumArray = decltype(InputData)(OutputNames[0] + "_accumulator", InputData.layout());
 
-      OutputData = 
+      OutputData = decltype(InputData)(OutputNames[0] + "_out", InputData.layout());
+
+      OutputField->template attachData<ArrayT>(OutputData);
+
+      CompPhase = TemporalPhase::Accumulate;
 
    }
 
    void compute(const TimeInstant &TimeStamp) override {
-      NSize = static_cast<I4>(AccumArray.size());
+      if (CompPhase == TemporalPhase::Accumulate) {
       parallelFor(
-          {NSize}, KOKKOS_LAMBDA(const int FlatIdx) {
-             AccumArray.data()[FlatIdx] += Input.data()[FlatIdx];
+          {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
+             AccumArray.data()[FlatIdx] += InputData.data()[FlatIdx];
           });
-      ++NAccum;
+      ++NumSamples;
+      }
    }
 
  private:
@@ -86,11 +99,17 @@ class TimeMeanOp : public AnalysisOperator {
    const VertCoord *VCoord;                 ///< VertCoord
    MPI_Comm Comm;
 
+   TemporalPhase CompPhase;
+   bool Finalized;
+   
+   ArrayT InputData;
    ArrayT AccumArray;
-   ArrayT OutputData;;
-   I4 NAccum;
-   I4 NSize;
+   ArrayT OutputData;
+   I4 NumSamples;
+   I4 ArraySize;
 
+   Alarm PeriodAlarm;
+   Alarm IntervalAlarm;
 
 };
 

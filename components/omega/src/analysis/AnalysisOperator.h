@@ -18,10 +18,15 @@
 
 namespace OMEGA {
 
+// Temporal operators have an accumulation phase and a operation/output phase
+enum class TemporalPhase {Accumulate, Operate};
+
 class AnalysisOperator {
 
 
  public:
+   AnalysisOperator();
+
    virtual ~AnalysisOperator() = default;
 
    /// Return name for this operator type

@@ -14,6 +14,13 @@
 
 namespace OMEGA {
 
+struct OperatorNode {
+   std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
+   std::vector<OperatorNode*> Upstream;        // Dependencies
+   std::string OutputStreamName;               // Which stream owns it
+   Alarm ComputeAlarm;                         // When to compute
+};
+
 class AnalysisOrchestrator {
  public:
    static void init();
@@ -28,6 +35,8 @@ class AnalysisOrchestrator {
                         Clock *ModelClock,
                         Config *Options);
 
+   static AnalysisOrchestrator *getDefault();
+
    ~AnalysisOrchestrator();
 
    void registerAnalysisOp(const std::string &FieldName,
@@ -36,13 +45,9 @@ class AnalysisOrchestrator {
 
    Clock *&getModelClock();
 
+   const std::vector<OperatorNode> &getOpNodes() const;
+
  private:
-   struct OperatorNode {
-      std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
-      std::vector<OperatorNode*> Upstream;        // Dependencies
-      std::string OutputStreamName;               // Which stream owns it
-      Alarm ComputeAlarm;                         // When to compute
-   };
 
    AnalysisOrchestrator(const std::string &Name,
                         const HorzMesh *Mesh,
@@ -58,7 +63,7 @@ class AnalysisOrchestrator {
 
 
    /// All registered operators
-   std::vector<OperatorNode> Operators;
+   std::vector<OperatorNode> OpNodes;
 
    static AnalysisOrchestrator *DefOrchestrator;
    static std::map<std::string, std::unique_ptr<AnalysisOrchestrator>> AllOrchestrators;

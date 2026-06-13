@@ -10,11 +10,11 @@
 
 namespace OMEGA {
 
-template<typename ArrayType>
+template<typename ArrayT>
 class SpatialMinOp : public AnalysisOperator {
  public:
 
-   using TT = typename ArrayType::non_const_value_type;
+   using ScalarT = typename ArrayT::non_const_value_type;
 
    SpatialMinOp(const std::string &Name, const Config &Options) {
 
@@ -48,7 +48,7 @@ class SpatialMinOp : public AnalysisOperator {
       VCoord = VCoordIn;
       Comm = InEnv->getComm();
 
-      OutputData = typename Array1D<TT>::type(OutputNames[0], 1);
+      OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
@@ -60,14 +60,14 @@ class SpatialMinOp : public AnalysisOperator {
          "Spatial minimum of " + InputNames[0], // Description
          "",                     // Units (inherited from input)
          "",                     // Standard name
-         -std::numeric_limits<TT>::max() / 10,// Min valid value
-         std::numeric_limits<TT>::max(), // Max valid value
-         -std::numeric_limits<TT>::max(), // Fill value
+         -std::numeric_limits<ScalarT>::max() / 10,// Min valid value
+         std::numeric_limits<ScalarT>::max(), // Max valid value
+         -std::numeric_limits<ScalarT>::max(), // Fill value
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
 
-      OutputField->template attachData<typename Array1D<TT>::type>(OutputData);
+      OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 
    }
 
@@ -75,7 +75,7 @@ class SpatialMinOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayType>();
+      auto InputData = InputField->getDataArray<ArrayT>();
 
       std::vector<std::string> InputDimNames;
 
@@ -104,7 +104,7 @@ class SpatialMinOp : public AnalysisOperator {
 
    }
 
-//   TT getVal() {return SpatialMin;}
+//   ScalarT getVal() {return SpatialMin;}
 
  private:
 
@@ -115,27 +115,9 @@ class SpatialMinOp : public AnalysisOperator {
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
-   typename Array1D<TT>::type OutputData;
+   typename Array1D<ScalarT>::type OutputData;
 
-   TT SpatialMin;
-
-   struct ComputeSpatialMin {
-      MPI_Comm Comm;
-      Array2DReal MaskArray;
-      TT &GlobMin;
-   
-      template <typename ArrayT>
-      void operator()(ArrayT InputData) const {
-         using ValueT = typename ArrayT::non_const_value_type;
-   
-         if constexpr (!std::is_same_v<ValueT, TT>) {
-            ABORT_ERROR("SpatialMinOp: input field scalar type does not match "
-                        "operator scalar type");
-         } else {
-            GlobMin = globalWeightedMin(InputData, MaskArray, Comm);
-         }
-      }
-   };
+   ScalarT SpatialMin;
 
 };
 

@@ -2,6 +2,10 @@
 
 namespace OMEGA {
 
+AnalysisOperator::AnalysisOperator() {
+
+}
+
 const std::string AnalysisOperator::getOperatorType() {
    return OperatorTypeName;
 }

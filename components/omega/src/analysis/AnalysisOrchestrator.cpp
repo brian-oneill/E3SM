@@ -25,6 +25,8 @@ void AnalysisOrchestrator::init() {
 
 }
 
+AnalysisOrchestrator *AnalysisOrchestrator::getDefault() {return DefOrchestrator;}
+
 AnalysisOrchestrator *AnalysisOrchestrator::create(const std::string &Name,
                         const HorzMesh *Mesh,
                         const VertCoord *VCoord,
@@ -97,6 +99,7 @@ void AnalysisOrchestrator::registerAnalysisOp(const std::string &FieldName,
       Alarm NewAlarm;
       Node.ComputeAlarm = NewAlarm;
 
+      OpNodes.push_back(std::move(Node));
 
    }
 
@@ -105,6 +108,8 @@ void AnalysisOrchestrator::registerAnalysisOp(const std::string &FieldName,
 Clock *&AnalysisOrchestrator::getModelClock(){
    return ModelClock;
 }
+
+const std::vector<OperatorNode> &AnalysisOrchestrator::getOpNodes() const {return OpNodes;}
 
 void AnalysisOrchestrator::clear() {
    AllOrchestrators.clear();

@@ -167,6 +167,11 @@ int main(int argc, char *argv[]) {
 
       TimeInstant TStamp;
 
+      std::cout << "-------------------- registered op nodes : " << std::endl;
+      auto DefOrch = AnalysisOrchestrator::getDefault();
+      for (const auto &OpNode : DefOrch->getOpNodes()) {
+         std::cout << OpNode.Op->getName() << std::endl;
+      }
 /*
 
 //      SpatialMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);

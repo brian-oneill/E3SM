@@ -10,11 +10,11 @@
 
 namespace OMEGA {
 
-template<typename ArrayType>
+template<typename ArrayT>
 class SpatialMeanOp : public AnalysisOperator {
  public:
 
-   using ScalarT = typename ArrayType::non_const_value_type;
+   using ScalarT = typename ArrayT::non_const_value_type;
 
    SpatialMeanOp(const std::string &Name, const Config &Options) {
 
@@ -75,7 +75,7 @@ class SpatialMeanOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayType>();
+      auto InputData = InputField->getDataArray<ArrayT>();
 
       std::vector<std::string> InputDimNames;
 
@@ -123,26 +123,6 @@ class SpatialMeanOp : public AnalysisOperator {
    typename Array1D<ScalarT>::type OutputData;
 
    ScalarT SpatialMean;
-
-   struct ComputeSpatialMean {
-      MPI_Comm Comm;
-      Array2DReal MaskArray;
-      ScalarT &GlobMean;
-   
-      template <typename ArrayT>
-      void operator()(ArrayT InputData) const {
-         using ValueT = typename ArrayT::non_const_value_type;
-   
-         if constexpr (!std::is_same_v<ValueT, ScalarT>) {
-            ABORT_ERROR("SpatialMeanOp: input field scalar type does not match "
-                        "operator scalar type");
-         }
-         auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);
-         auto MaskSum = globalSum(MaskArray, Comm);
-
-         GlobMean = ValSum/MaskSum;
-      }
-   };
 
 };
 
