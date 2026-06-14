@@ -28,16 +28,12 @@ class SpatialMinOp : public AnalysisOperator {
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
-      // Initialize tracking variables
-      FieldComputed = false;
-      LastComputed = TimeInstant();
-
    }
 
-   ~SpatialMinOp() override {
-      if (Field::exists(OutputNames[0]))
-         Field::destroy(OutputNames[0]);
-   }
+//   ~SpatialMinOp() override {
+//      if (Field::exists(OutputNames[0]))
+//         Field::destroy(OutputNames[0]);
+//   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,

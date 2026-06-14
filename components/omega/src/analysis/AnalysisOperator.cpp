@@ -3,7 +3,17 @@
 namespace OMEGA {
 
 AnalysisOperator::AnalysisOperator() {
+   // Initialize tracking variables
+   FieldComputed = false;
+   LastComputed = TimeInstant();
+}
 
+AnalysisOperator::~AnalysisOperator() {
+   for (const auto &OutputName : OutputNames) {
+      if (Field::exists(OutputName)) {
+         Field::destroy(OutputName);
+      }
+   }
 }
 
 const std::string AnalysisOperator::getOperatorType() {

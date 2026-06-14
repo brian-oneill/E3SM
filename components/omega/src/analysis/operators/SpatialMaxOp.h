@@ -28,16 +28,12 @@ class SpatialMaxOp : public AnalysisOperator {
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
-      // Initialize tracking variables
-      FieldComputed = false;
-      LastComputed = TimeInstant();
-
    }
 
-   ~SpatialMaxOp() override {
-      if (Field::exists(OutputNames[0]))
-         Field::destroy(OutputNames[0]);
-   }
+//   ~SpatialMaxOp() override {
+//      if (Field::exists(OutputNames[0]))
+//         Field::destroy(OutputNames[0]);
+//   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,

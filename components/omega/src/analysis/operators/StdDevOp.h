@@ -11,15 +11,15 @@
 namespace OMEGA {
 
 template<typename ArrayT>
-class StdDevOp : public AnalysisOperator {
+class SpatialStdDevOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
-   StdDevOp(const std::string &Name, const Config &Options) {
+   SpatialStdDevOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
-      OperatorTypeName = "standard_dev";
+      OperatorTypeName = "spatial_stddev";
 
       InstanceName = Name;
       InputNames = {Name, Name + "_spatial_mean"};
@@ -34,10 +34,10 @@ class StdDevOp : public AnalysisOperator {
 
    }
 
-   ~StdDevOp() override {
-      if (Field::exists(OutputNames[0]))
-         Field::destroy(OutputNames[0]);
-   }
+//   ~SpatialStdDevOp() override {
+//      if (Field::exists(OutputNames[0]))
+//         Field::destroy(OutputNames[0]);
+//   }
 
    void initialize(const Config *Options,
                    const MachEnv *InEnv,

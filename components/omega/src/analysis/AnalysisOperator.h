@@ -27,7 +27,7 @@ class AnalysisOperator {
  public:
    AnalysisOperator();
 
-   virtual ~AnalysisOperator() = default;
+   ~AnalysisOperator();
 
    /// Return name for this operator type
    const std::string getOperatorType();

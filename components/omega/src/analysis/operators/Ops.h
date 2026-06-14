@@ -4,7 +4,7 @@
 #include "operators/SpatialMaxOp.h"
 #include "operators/SpatialMeanOp.h"
 #include "operators/SpatialMinOp.h"
-#include "operators/StdDevOp.h"
+#include "operators/SpatialStdDevOp.h"
 #include "operators/TimeMeanOp.h"
 
 namespace OMEGA {

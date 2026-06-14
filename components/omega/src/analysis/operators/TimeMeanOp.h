@@ -27,17 +27,14 @@ class TimeMeanOp : public AnalysisOperator {
       std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
 
-      // Initialize tracking variables
-      FieldComputed = false;
-      LastComputed = TimeInstant();
       CompPhase = TemporalPhase::Accumulate;
       Finalized = false;
    }
 
-   ~TimeMeanOp() override {
-      if (Field::exists(OutputNames[0]))
-         Field::destroy(OutputNames[0]);
-   }
+//   ~TimeMeanOp() override {
+//      if (Field::exists(OutputNames[0]))
+//         Field::destroy(OutputNames[0]);
+//   }
 
 
    void initialize(const Config *Options,

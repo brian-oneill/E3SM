@@ -7,7 +7,7 @@ void registerAllAnalysisOperators() {
    AnalysisOpFactory::registerAllArrayVariants<SpatialMaxOp>("spatial_max");
    AnalysisOpFactory::registerAllArrayVariants<SpatialMinOp>("spatial_min");
    AnalysisOpFactory::registerAllArrayVariants<SpatialMeanOp>("spatial_mean");
-   AnalysisOpFactory::registerAllArrayVariants<StdDevOp>("standard_dev");
+   AnalysisOpFactory::registerAllArrayVariants<SpatialStdDevOp>("spatial_stddev");
    AnalysisOpFactory::registerAllArrayVariants<TimeMeanOp>("time_mean");
 }
 
