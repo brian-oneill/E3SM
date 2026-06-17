@@ -8,6 +8,18 @@ AnalysisOperator::AnalysisOperator() {
    LastComputed = TimeInstant();
 }
 
+AnalysisOperator::AnalysisOperator(const std::string &OperatorType) {
+
+   // Set operator type name
+   OperatorTypeName = OperatorType;
+
+
+   // Initialize tracking variables
+   FieldComputed = false;
+   LastComputed = TimeInstant();
+}
+
+
 AnalysisOperator::~AnalysisOperator() {
    for (const auto &OutputName : OutputNames) {
       if (Field::exists(OutputName)) {

@@ -1,12 +1,15 @@
 #ifndef OMEGA_ANALYSISGROUP_H
 #define OMEGA_ANALYSISGROUP_H
 
+//===----------------------------------------------------------------------===//
+#include "Analysis.h"
 #include "Config.h"
 #include "IOStream.h"
 #include <string>
 
 namespace OMEGA {
 
+/// The AnalysisGroup class ...
 class AnalysisGroup {
 
  public:
@@ -15,12 +18,21 @@ class AnalysisGroup {
 //                 Config &Options,
 //                 AnalysisOrchestrator *Orchestrator);
 
+   ///
    virtual ~AnalysisGroup() = default;
 
+   ///
    std::string getName();
+
+   ///
+   const std::vector<std::string> createStreamsForAnalysisGroup(
+       const std::string &GroupName,
+       Config &AnalysisGroupCfg,
+       Analysis *AnalysisPtr);
 
  protected:
 
+   ///
    struct AnalysisStreamCfg {
       AnalysisStreamCfg()
          : Params{
@@ -40,6 +52,7 @@ class AnalysisGroup {
          }
       {}
 
+      ///
       Config toConfig() const {
          Config Cfg;
          for (const auto& [key, value] : Params) {
@@ -54,9 +67,14 @@ class AnalysisGroup {
          return Cfg;
       }
 
+      ///
       std::map<std::string, std::string> Params;
    };
 
+   ///
+   std::vector<std::string> parseFreqStr(const std::string &FreqStr);
+
+   ///
    std::string GroupName;
 
 };

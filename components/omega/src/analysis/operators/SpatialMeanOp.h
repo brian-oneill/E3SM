@@ -1,7 +1,6 @@
 #ifndef OMEGA_GLOBALMEANOP_H
 #define OMEGA_GLOBALMEANOP_H
 
-//===----------------------------------------------------------------------===//
 ///
 //===----------------------------------------------------------------------===//
 
@@ -10,31 +9,28 @@
 
 namespace OMEGA {
 
+///
 template<typename ArrayT>
 class SpatialMeanOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
-   SpatialMeanOp(const std::string &Name, const Config &Options) {
+   ///
+   SpatialMeanOp(const std::string &UpstreamName, const Config &Options)
+       : AnalysisOperator("spatial_mean") {
 
-      // Set operator type
-      OperatorTypeName = "spatial_mean";
 
-      InstanceName = Name;
-      InputNames = {InstanceName};
+      InputNames = {UpstreamName};
 
-      std::string OutputFieldName = InstanceName + "_spatial_mean";
-      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_spatial_mean";
+//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
+      InstanceName = OutputFieldName;
 
-   }
+   }  // end constructor
 
-//   ~SpatialMeanOp() override {
-//      if (Field::exists(OutputNames[0]))
-//         Field::destroy(OutputNames[0]);
-//   }
-
+   ///
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
@@ -65,8 +61,9 @@ class SpatialMeanOp : public AnalysisOperator {
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 
-   }
+   } // end initialize
 
+   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
@@ -102,8 +99,9 @@ class SpatialMeanOp : public AnalysisOperator {
 
       deepCopy(OutputData, SpatialMean);
 
-   }
-
+      LastComputed = TimeStamp;
+      FieldComputed = true;
+   } // end compute
 
    ScalarT getVal() {return SpatialMean;}
 
@@ -120,7 +118,7 @@ class SpatialMeanOp : public AnalysisOperator {
 
    ScalarT SpatialMean;
 
-};
+}; // end class SpatialMeanOp
 
 } // end namespace OMEGA
 

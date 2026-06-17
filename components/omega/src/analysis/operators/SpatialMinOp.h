@@ -1,7 +1,6 @@
 #ifndef OMEGA_GLOBALMINOP_H
 #define OMEGA_GLOBALMINOP_H
 
-//===----------------------------------------------------------------------===//
 ///
 //===----------------------------------------------------------------------===//
 
@@ -10,31 +9,27 @@
 
 namespace OMEGA {
 
+///
 template<typename ArrayT>
 class SpatialMinOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
-   SpatialMinOp(const std::string &Name, const Config &Options) {
+   ///
+   SpatialMinOp(const std::string &UpstreamName, const Config &Options)
+       : AnalysisOperator("spatial_min") {
 
-      // Set operator type
-      OperatorTypeName = "spatial_min";
+      InputNames = {UpstreamName};
 
-      InstanceName = Name;
-      InputNames = {InstanceName};
-
-      std::string OutputFieldName = InstanceName + "_spatial_min";
-      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_spatial_min";
+//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
+      InstanceName = OutputFieldName;
 
-   }
+   } // end constructor
 
-//   ~SpatialMinOp() override {
-//      if (Field::exists(OutputNames[0]))
-//         Field::destroy(OutputNames[0]);
-//   }
-
+   ///
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
@@ -65,8 +60,9 @@ class SpatialMinOp : public AnalysisOperator {
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 
-   }
+   } // end initialize
 
+   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
@@ -93,12 +89,13 @@ class SpatialMinOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-//      dispatchFieldArray(*InputField, ComputeSpatialMin{Comm, MaskArray, SpatialMin});
       SpatialMin = globalWeightedMin(InputData, MaskArray, Comm);
 
       deepCopy(OutputData, SpatialMin);
 
-   }
+      LastComputed = TimeStamp;
+      FieldComputed = true;
+   } // end compute
 
 //   ScalarT getVal() {return SpatialMin;}
 
@@ -115,7 +112,7 @@ class SpatialMinOp : public AnalysisOperator {
 
    ScalarT SpatialMin;
 
-};
+}; // end class SpatialMinOp
 
 } // namespace OMEGA
 #endif

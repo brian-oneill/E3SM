@@ -5,6 +5,7 @@
 #include "Analysis.h"
 #include "AuxiliaryState.h"
 #include "Decomp.h"
+#include "Eos.h"
 #include "Field.h"
 #include "Halo.h"
 #include "HorzMesh.h"
@@ -75,6 +76,9 @@ void initAnalysisTest() {
 
    // Initialize Aux State variables
    AuxiliaryState::init();
+
+   // Initialize the equaiton of state
+   Eos::init();
 
    // Initialize pressure gradient
    PressureGrad::init();
@@ -168,8 +172,8 @@ int main(int argc, char *argv[]) {
       TimeInstant TStamp;
 
       std::cout << "-------------------- registered op nodes : " << std::endl;
-      auto DefOrch = AnalysisOrchestrator::getDefault();
-      for (const auto &OpNode : DefOrch->getOpNodes()) {
+      auto DefAnalysis = Analysis::getDefault();
+      for (const auto &OpNode : DefAnalysis->getOpNodes()) {
          std::cout << OpNode.Op->getName() << std::endl;
       }
 /*

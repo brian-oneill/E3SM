@@ -1,26 +1,30 @@
+//===----------------------------------------------------------------------===//
+
 #include "AnalysisOpFactory.h"
 #include <iostream>
 
 namespace OMEGA {
 
-std::map<std::string, AnalysisOpFactory::CreatorFunc> AnalysisOpFactory::Registry;
-
-void AnalysisOpFactory::registerOperator(const std::string& Type, 
-                                          CreatorFunc creator) {
+//------------------------------------------------------------------------------
+void AnalysisOpFactory::registerOperator(
+       const std::string &Label, 
+       CreatorFunc Creator
+) {
 
    auto &Reg = registry();
 
-   std::cout << "REGISTER: Operator '" << Type << "' registered\n";
+//   std::cout << "REGISTER: Operator '" << Label << "' registered\n";
 
    // Check for duplicate registration
-   if (Reg.find(Type) != Reg.end()) {
+   if (Reg.find(Label) != Reg.end()) {
       ABORT_ERROR(
-         "AnalysisOpFactory: Operator type {} is already registered", Type);
+         "AnalysisOpFactory: Operator type {} is already registered", Label);
    }
 
-  Reg[Type] = creator;
+  Reg[Label] = Creator;
 }
 
+//------------------------------------------------------------------------------
 std::unique_ptr<AnalysisOperator> 
 AnalysisOpFactory::createOp(const std::string &OpType,
                             const std::string &InputName,
@@ -44,7 +48,7 @@ AnalysisOpFactory::createOp(const std::string &OpType,
    // Build fully-qualified operator type
    std::string FullOpType = OpType + "_" + arrayTypeName;
 
-   std::cout << "full op type name: " << FullOpType << std::endl;
+//   std::cout << "full op type name: " << FullOpType << std::endl;
 
    auto &Reg = registry();
 
@@ -70,50 +74,14 @@ AnalysisOpFactory::createOp(const std::string &OpType,
    return it->second(InputName, Options);
 }
 
-std::unique_ptr<AnalysisOperator> 
-AnalysisOpFactory::createOp(const std::string &OpType,
-         const std::string &InputName,
-         const std::string &Name,
-         const Config &Options) {
-    
-    // Get FieldPtr and extract metadata
-    auto FieldPtr = Field::get(InputName);
-    if (!FieldPtr) {
-        ABORT_ERROR("Field '{}' not found for operator creation", InputName);
-    }
-    
-    ArrayDataType DType = FieldPtr->getType();
-    int Rank = FieldPtr->getNumDims();
-    ArrayMemLoc MemLoc = FieldPtr->getMemoryLocation();
-    
-    // Map metadata to array type name
-    std::string arrayTypeName = getArrayTypeName(DType, Rank, MemLoc);
-    
-    // Build fully-qualified operator type
-    std::string FullOpType = OpType + "_" + arrayTypeName;
-
-   std::cout << "full op type name: " << FullOpType << std::endl;
-
-   auto &Reg = registry();
-
-   auto it = Reg.find(FullOpType);
-   
-   if (it == Reg.end()) {
-    
-      ABORT_ERROR("Operator not found");
-   }
-   
-   // Call the registered creator function
-   return it->second(Name, Options);
-}
-
-
+//------------------------------------------------------------------------------
 bool AnalysisOpFactory::hasOperator(const std::string &Type) {
    auto &Reg = registry();
    return Reg.find(Type) != Reg.end();
 }
 
 
+//------------------------------------------------------------------------------
 std::string AnalysisOpFactory::getArrayTypeName(ArrayDataType DType, int Rank, ArrayMemLoc MemLoc) {
    // Use similar logic to dispatchFieldArray but return the type name string
    #define TRY_ARRAY_TYPE(dt, r, ml, ArrayT) \

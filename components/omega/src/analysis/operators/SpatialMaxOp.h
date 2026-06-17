@@ -1,7 +1,6 @@
 #ifndef OMEGA_GLOBALMAXOP_H
 #define OMEGA_GLOBALMAXOP_H
 
-//===----------------------------------------------------------------------===//
 ///
 //===----------------------------------------------------------------------===//
 
@@ -10,31 +9,27 @@
 
 namespace OMEGA {
 
+///
 template<typename ArrayT>
 class SpatialMaxOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
-   SpatialMaxOp(const std::string &Name, const Config &Options) {
+   ///
+   SpatialMaxOp(const std::string &UpstreamName, const Config &Options) 
+       : AnalysisOperator("spatial_max") {
 
-      // Set operator type
-      OperatorTypeName = "spatial_max";
+      InputNames = {UpstreamName};
 
-      InstanceName = Name;
-      InputNames = {InstanceName};
-
-      std::string OutputFieldName = InstanceName + "_spatial_max";
-      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_spatial_max";
+//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
+      InstanceName = OutputFieldName;
 
-   }
+   } // end constructor
 
-//   ~SpatialMaxOp() override {
-//      if (Field::exists(OutputNames[0]))
-//         Field::destroy(OutputNames[0]);
-//   }
-
+   ///
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
@@ -65,8 +60,9 @@ class SpatialMaxOp : public AnalysisOperator {
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 
-   }
+   } // end initialize
 
+   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
@@ -79,7 +75,9 @@ class SpatialMaxOp : public AnalysisOperator {
 
       deepCopy(OutputData, SpatialMax);
 
-   }
+      LastComputed = TimeStamp;
+      FieldComputed = true;
+   } // end compute
 
  private:
 
@@ -94,8 +92,7 @@ class SpatialMaxOp : public AnalysisOperator {
 
    ScalarT SpatialMax;
 
-
-};
+}; // end class SpatialMaxOp
 
 } // namespace OMEGA
 

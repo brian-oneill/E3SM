@@ -1,7 +1,6 @@
 #ifndef OMEGA_TIMEMEANOP_H
 #define OMEGA_TIMEMEANOP_H
 
-//===----------------------------------------------------------------------===//
 ///
 //===----------------------------------------------------------------------===//
 
@@ -9,12 +8,14 @@
 
 namespace OMEGA {
 
+///
 template<typename ArrayT>
 class TimeMeanOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
+   ///
    TimeMeanOp(const std::string &Name, const Config &Options) {
 
       // Set operator type
@@ -29,14 +30,9 @@ class TimeMeanOp : public AnalysisOperator {
 
       CompPhase = TemporalPhase::Accumulate;
       Finalized = false;
-   }
+   } // end constructor
 
-//   ~TimeMeanOp() override {
-//      if (Field::exists(OutputNames[0]))
-//         Field::destroy(OutputNames[0]);
-//   }
-
-
+   ///
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
@@ -77,8 +73,9 @@ class TimeMeanOp : public AnalysisOperator {
 
       CompPhase = TemporalPhase::Accumulate;
 
-   }
+   } // end initialize
 
+   ///
    void compute(const TimeInstant &TimeStamp) override {
       if (CompPhase == TemporalPhase::Accumulate) {
       parallelFor(
@@ -87,7 +84,10 @@ class TimeMeanOp : public AnalysisOperator {
           });
       ++NumSamples;
       }
-   }
+
+      LastComputed = TimeStamp;
+      FieldComputed = true;
+   } // end compute
 
  private:
 
@@ -98,7 +98,7 @@ class TimeMeanOp : public AnalysisOperator {
 
    TemporalPhase CompPhase;
    bool Finalized;
-   
+
    ArrayT InputData;
    ArrayT AccumArray;
    ArrayT OutputData;
@@ -108,7 +108,7 @@ class TimeMeanOp : public AnalysisOperator {
    Alarm PeriodAlarm;
    Alarm IntervalAlarm;
 
-};
+}; // end class TimeMeanOp
 
 } // end namespace OMEGA
 

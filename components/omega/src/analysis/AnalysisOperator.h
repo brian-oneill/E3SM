@@ -21,11 +21,13 @@ namespace OMEGA {
 // Temporal operators have an accumulation phase and a operation/output phase
 enum class TemporalPhase {Accumulate, Operate};
 
+/// The AnalysisOperator class ...
 class AnalysisOperator {
-
 
  public:
    AnalysisOperator();
+   AnalysisOperator(const std::string &OperatorType);
+
 
    ~AnalysisOperator();
 
@@ -66,8 +68,8 @@ class AnalysisOperator {
  
    TimeInstant LastComputed;
    bool FieldComputed;
-};
+}; // end class AnalysisOperator
 
-}
+} // end namespace OMEGA
 
 #endif

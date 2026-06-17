@@ -10,35 +10,27 @@
 
 namespace OMEGA {
 
+///
 template<typename ArrayT>
 class SpatialStdDevOp : public AnalysisOperator {
  public:
 
    using ScalarT = typename ArrayT::non_const_value_type;
 
-   SpatialStdDevOp(const std::string &Name, const Config &Options) {
+   ///
+   SpatialStdDevOp(const std::string &UpstreamName, const Config &Options)
+       : AnalysisOperator("spatial_stddev") {
 
-      // Set operator type
-      OperatorTypeName = "spatial_stddev";
+      InputNames = {UpstreamName, UpstreamName + "_spatial_mean"};
 
-      InstanceName = Name;
-      InputNames = {Name, Name + "_spatial_mean"};
-
-      std::string OutputFieldName = InstanceName + "_stddev";
-      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_spatial_stddev";
+//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
+      InstanceName = OutputFieldName;
 
-      // Initialize tracking variables
-      FieldComputed = false;
-      LastComputed = TimeInstant();
+   } // end constructot
 
-   }
-
-//   ~SpatialStdDevOp() override {
-//      if (Field::exists(OutputNames[0]))
-//         Field::destroy(OutputNames[0]);
-//   }
-
+   ///
    void initialize(const Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
@@ -75,8 +67,9 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       WorkArray = decltype(InputData)(OutputNames[0] + "_work_array", InputData.layout()); 
 
-   }
+   } // end initialize
 
+   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
@@ -154,7 +147,9 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       deepCopy(OutputData, StdDev);
 
-   }
+      LastComputed = TimeStamp;
+      FieldComputed = true;
+   } // end compute
 
  private:
 
@@ -171,8 +166,7 @@ class SpatialStdDevOp : public AnalysisOperator {
 
    ScalarT StdDev;
 
-
-};
+}; // end class SpatialStdDevOp
 
 } // end namespace OMEGA
 

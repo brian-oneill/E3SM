@@ -1,6 +1,8 @@
 #ifndef OMEGA_OPS_H
 #define OMEGA_OPS_H
 
+//===----------------------------------------------------------------------===//
+
 #include "operators/SpatialMaxOp.h"
 #include "operators/SpatialMeanOp.h"
 #include "operators/SpatialMinOp.h"
@@ -9,7 +11,8 @@
 
 namespace OMEGA {
 
-void registerAllAnalysisOperators();
+///
+void registerAllBaseAnalysisOperators();
 
-}
+}  // end namespace OMEGA
 #endif
