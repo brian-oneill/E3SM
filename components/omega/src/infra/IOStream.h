@@ -151,6 +151,8 @@ class IOStream {
    bool Validated;
 
  public:
+   static void printAllStreams();
+
    //---- Private utility functions to support public interfaces
    /// Creates a new stream and adds to the list of all streams, based on
    /// options in the input model configuration. This routine is called by
@@ -300,6 +302,11 @@ class IOStream {
    // Retrieve the filename for a given stream
    static std::string
    getFilename(const std::string &StreamName ///< [in] name of stream
+   );
+
+   //---------------------------------------------------------------------------
+   // Retrieve the Alarm for a given stream
+   static Alarm *getAlarm(const std::string &StreamName ///< [in] name of stream
    );
 
    //---------------------------------------------------------------------------

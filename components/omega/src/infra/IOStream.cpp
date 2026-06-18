@@ -36,6 +36,13 @@ namespace OMEGA {
 // Create static class members
 std::map<std::string, std::shared_ptr<IOStream>> IOStream::AllStreams;
 
+void IOStream::printAllStreams(){
+
+   for (const auto& [key, value] : AllStreams) {
+      std::cout << "StreamName: " << key << std::endl;
+   }
+}
+
 //------------------------------------------------------------------------------
 // Initializes all streams defined in the input configuration file. This
 // does not validate the contents of the streams since the relevant Fields
@@ -148,6 +155,15 @@ IOStream::getFilename(const std::string &StreamName ///< [in] name of stream
    auto StreamPtr = get(StreamName);
    return StreamPtr->Filename;
 } // End getFilename
+
+//------------------------------------------------------------------------------
+// Retrieves a pointer to the Read/Write alarm for the stream with the input
+// name
+Alarm *IOStream::getAlarm(const std::string &StreamName ///< [in] name of stream
+) {
+   auto StreamPtr = get(StreamName);
+   return &StreamPtr->MyAlarm;
+}
 
 //------------------------------------------------------------------------------
 // Adds a field to the contents of a stream. Because streams may be created

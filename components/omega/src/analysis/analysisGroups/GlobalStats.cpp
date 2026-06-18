@@ -38,11 +38,7 @@ GlobalStats::GlobalStats(const std::string &GroupName,
    }
 
    std::vector<std::string> StreamNames;
-   StreamNames = createStreamsForAnalysisGroup(GroupName, Options, AnalysisObj);
-
-   for (const auto &StreamName: StreamNames) {
-      std::cout << StreamName << std::endl;
-   }
+   StreamNames = createAnalysisStream(GroupName, Options, AnalysisObj);
 //   for (const auto &PeriodName: PeriodList) {
 //      std::string FreqStr;
 //      std::string UnitsStr;
@@ -69,6 +65,10 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 //      auto RefClock = AnalysisObj->getModelClock();
 //      IOStream::create(GroupName + "_" + PeriodName, NewStreamCfg, RefClock);
 
+
+   for (const auto &StreamName: StreamNames) {
+      std::cout << StreamName << std::endl;
+
       for (const auto &VarName: VarList) {
          for (const auto &OpName: OpList) {
 
@@ -79,6 +79,7 @@ GlobalStats::GlobalStats(const std::string &GroupName,
          }
       }
 //   }
+   }
 
 }
 

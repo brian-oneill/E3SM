@@ -12,7 +12,7 @@ std::string AnalysisGroup::getName() {
 }
 
 //------------------------------------------------------------------------------
-const std::vector<std::string> AnalysisGroup::createStreamsForAnalysisGroup(
+const std::vector<std::string> AnalysisGroup::createAnalysisStream(
     const std::string &GroupName,
     Config &AnalysisGroupCfg,
     Analysis *AnalysisPtr) {
@@ -62,12 +62,25 @@ const std::vector<std::string> AnalysisGroup::createStreamsForAnalysisGroup(
 //      }
 //      std::cout << "freq, unit: " << FreqStr << " " << UnitsStr << std::endl;
       std::vector<std::string> ParsedStr = parseFreqStr(PeriodName);
+      I4 Freq = std::stoi(ParsedStr[0]);
+      TimeUnits FreqUnits = TimeUnitsFromString(ParsedStr[1]);
+      TimeInterval PeriodInterval(Freq, FreqUnits);
+
+      auto RestartInterval = IOStream::getAlarm("RestartWrite");
+      bool isDivisible = RestartInterval->getInterval()->isDivisibleBy(PeriodInterval);
+
+      if (!isDivisible) {
+         ABORT_ERROR("The RestartWrite interval is not evenly divisible by the averaging period {} {}. Currently, temporal averaging is "
+                     "only available over intervals where RestartPeriod % PeriodInterval == 0",
+                     ParsedStr[0], ParsedStr[1]);
+      }
+
+//      std::cout << " is divisible:  " << isDivisible << std::endl;
 
       AnalysisStreamCfg StreamCfg;
       StreamCfg.Params["Filename"] = FilenamePrefix + "_" + PeriodName + "Avg" + FilenameTemplate;
       StreamCfg.Params["Freq"] = ParsedStr[0];
       StreamCfg.Params["FreqUnits"] = ParsedStr[1];
-//      std::cout << "Filename: " << StreamCfgParams.Filename << std::endl;
 
       auto NewStreamCfg = StreamCfg.toConfig();
       auto RefClock = AnalysisPtr->getModelClock();
@@ -91,7 +104,7 @@ const std::vector<std::string> AnalysisGroup::createStreamsForAnalysisGroup(
    }
 
    return StreamNames;
-} // end createStreamsForAnalysisGroup
+} // end createAnalysisStream
 
 //------------------------------------------------------------------------------
 std::vector<std::string> AnalysisGroup::parseFreqStr(const std::string &FreqStr) {

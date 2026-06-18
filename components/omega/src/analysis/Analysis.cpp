@@ -29,8 +29,9 @@ void Analysis::init() {
 
    Config *OmegaConfig = Config::getOmegaConfig();
 
-
    Analysis::DefAnalysis = create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
+
+   IOStream::printAllStreams();
 } // end init
 
 //------------------------------------------------------------------------------
@@ -67,6 +68,11 @@ Analysis::Analysis(const std::string &InName,
    VCoord = InVCoord;
    ModelClock = InModelClock;
 
+   std::string NamePrefix = Name + "_";
+   if (Name == "Default") {
+      NamePrefix = "";
+   }
+
    Error Err;
    Config AnalysisCfg("Analysis");
    Err += Options->get(AnalysisCfg);
@@ -82,7 +88,7 @@ Analysis::Analysis(const std::string &InName,
       if (GroupEnabled) {
          std::cout << GroupName << " " << GroupEnabled << std::endl;
          if (GroupName == "GlobalStats") {
-            GlobalStats GlobalStatsGroup(Name, GroupCfg, this);
+            GlobalStats GlobalStatsGroup(NamePrefix + GroupName, GroupCfg, this);
 
             continue;
          }
@@ -98,9 +104,9 @@ void Analysis::registerAnalysisOp(const std::string &FieldName,
 
    auto NewOp = AnalysisOpFactory::createOp(OpName, FieldName, Options);
 
-   std::cout << "register op w name:  " << NewOp->getName() << std::endl;
+//   std::cout << "register op w name:  " << NewOp->getName() << "| exists: " << OpNodeExists(NewOp->getName()) << std::endl;
 
-   if (NewOp) {
+   if (NewOp and !OpNodeExists(NewOp->getName()) {
 
       OperatorNode Node;
       Node.Op = std::move(NewOp);
@@ -124,6 +130,18 @@ Clock *&Analysis::getModelClock(){
 
 //------------------------------------------------------------------------------
 const std::vector<OperatorNode> &Analysis::getOpNodes() const {return OpNodes;}
+
+//------------------------------------------------------------------------------
+bool Analysis::OpNodeExists(const std::string &FullOpName) {
+
+   for (const auto &OpNode: OpNodes) {
+      if (FullOpName == OpNode.Op->getName()) {
+         return true;
+      }
+   }
+
+   return false;
+}
 
 //------------------------------------------------------------------------------
 Analysis *Analysis::getDefault() {return DefAnalysis;}

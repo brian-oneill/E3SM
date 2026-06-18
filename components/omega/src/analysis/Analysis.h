@@ -65,6 +65,9 @@ class Analysis {
    const std::vector<OperatorNode> &getOpNodes() const;
 
    ///
+   bool OpNodeExists(const std::string &FullOpName);
+
+   ///
    static Analysis *getDefault();
 
    ///

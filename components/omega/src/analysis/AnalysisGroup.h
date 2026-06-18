@@ -25,7 +25,7 @@ class AnalysisGroup {
    std::string getName();
 
    ///
-   const std::vector<std::string> createStreamsForAnalysisGroup(
+   const std::vector<std::string> createAnalysisStream(
        const std::string &GroupName,
        Config &AnalysisGroupCfg,
        Analysis *AnalysisPtr);
