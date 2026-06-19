@@ -36,7 +36,11 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
 //            std::cout << "global stats: " << VarName << " | op: " << OpName << std::endl;
 //            auto Op = AnalysisOpFactory::createOp("spatial_" + OpName, VarName, Options);
-            AnalysisObj->registerAnalysisOp("spatial_" + OpName, {VarName}, Options);
+            std::string OperatorType = "spatial_" + OpName;
+            AnalysisObj->registerAnalysisOp(OperatorType, {VarName}, Options);
+            if (OutputStream.IsTimeAvg) {
+               AnalysisObj->registerAnalysisOp("time_mean", {VarName + "_" + OperatorType}, makeOpConfig(opParam("Period", OutputStream.IntervalStr)));
+            }
 
          }
       }
