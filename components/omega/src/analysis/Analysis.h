@@ -40,13 +40,13 @@ struct OperatorNode {
 /// The AnalysisStream struct ...
 struct AnalysisStream {
    AnalysisStream(std::string InStreamName, std::string InIntervalStr,
-                TimeInterval InPeriodInterval, bool InIsAverage)
+                TimeInterval InPeriodInterval, bool InIsTimeAvg)
    : StreamName(InStreamName), IntervalStr(InIntervalStr),
-     PeriodInterval(InPeriodInterval), IsAverage(InIsAverage) {}
+     PeriodInterval(InPeriodInterval), IsTimeAvg(InIsTimeAvg) {}
    std::string StreamName;      // Name of stream
    std::string IntervalStr;     // String form of interval
    TimeInterval PeriodInterval; // TimeInterval form of interval
-   bool IsAverage;              // Is temporal averages or discrete samples
+   bool IsTimeAvg;              // Is temporal average or discrete samples
 };
 
 /// The Analysis class ...
@@ -70,7 +70,7 @@ class Analysis {
    void registerAnalysisOp(
        const std::string &OpName,
        const std::vector<std::string> &UpstreamNames,
-       Config &Options);
+       Config Options);
 
    ///
    Clock *&getModelClock();

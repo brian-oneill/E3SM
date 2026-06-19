@@ -17,7 +17,7 @@ class SpatialMaxOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMaxOp(const std::vector<std::string> &UpstreamNames, Config &Options) 
+   SpatialMaxOp(const std::vector<std::string> &UpstreamNames, Config Options) 
        : AnalysisOperator("spatial_max") {
 
       InputNames = UpstreamNames;
@@ -27,17 +27,6 @@ class SpatialMaxOp : public AnalysisOperator {
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
 
-   } // end constructor
-
-   ///
-   void initialize(Config *Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
 
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
@@ -59,6 +48,18 @@ class SpatialMaxOp : public AnalysisOperator {
       );
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+
+   } // end constructor
+
+   ///
+   void initialize(Config Options,
+                   const MachEnv *InEnv,
+                   const HorzMesh *MeshIn,
+                   const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
 
    } // end initialize
 

@@ -17,7 +17,7 @@ class SpatialMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, Config &Options)
+   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, Config Options)
        : AnalysisOperator("spatial_mean") {
 
 
@@ -27,18 +27,6 @@ class SpatialMeanOp : public AnalysisOperator {
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
-
-   }  // end constructor
-
-   ///
-   void initialize(Config *Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
 
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
@@ -60,6 +48,18 @@ class SpatialMeanOp : public AnalysisOperator {
       );
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+
+   }  // end constructor
+
+   ///
+   void initialize(Config Options,
+                   const MachEnv *InEnv,
+                   const HorzMesh *MeshIn,
+                   const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
 
    } // end initialize
 

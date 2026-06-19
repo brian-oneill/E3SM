@@ -26,6 +26,17 @@ inline Config makeOpConfig() {
     return Config();
 }
 
+template<typename T>
+using OpParam = std::pair<std::string, std::decay_t<T>>;
+
+template<typename T>
+OpParam<T> opParam(std::string Key, T&& Value) {
+    return {
+        std::move(Key),
+        std::forward<T>(Value)
+    };
+}
+
 /// Create a Config with key-value pairs
 /// Usage: makeOpConfig({"key1", value1}, {"key2", value2}, ...)
 template<typename T, typename... Args>
@@ -62,7 +73,7 @@ class AnalysisOperator {
    bool isCacheValid(const TimeInstant &TimeStamp);
 
    /// Initialize operator: create and register output fields in Field map
-   virtual void initialize(Config *Options,
+   virtual void initialize(Config Options,
                            const MachEnv *InEnv,
                            const HorzMesh *Mesh,
                            const VertCoord *VCoord) = 0;

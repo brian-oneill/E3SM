@@ -83,7 +83,7 @@ class AnalysisOpFactory{
  public:
 
    using CreatorFunc = std::function<std::unique_ptr<AnalysisOperator>(
-       const std::vector<std::string> &UpstreamNames, Config &Options)>;
+       const std::vector<std::string> &UpstreamNames, Config Options)>;
 
    /// Register an operator type. Associates a sting label with a constructor
    /// for an AnalysisOperator templated on a particular Array type
@@ -96,7 +96,7 @@ class AnalysisOpFactory{
    static std::unique_ptr<AnalysisOperator> createOp(
        const std::string &OpType,
        const std::vector<std::string> &UpstreamNames,
-       Config &Options
+       Config Options
    );
 
    /// Query available operators (for validation, error messages)
@@ -111,7 +111,7 @@ class AnalysisOpFactory{
       #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT) \
          registerOperator( \
             baseName + "_" #ArrayT + "_" #memloc, \
-            [](const std::vector<std::string> &names, Config& c) { \
+            [](const std::vector<std::string> &names, Config c) { \
                return std::make_unique<OperatorTemplate<ArrayT>>(names, c); \
             });
       
@@ -147,7 +147,7 @@ class AnalysisOpFactory{
   namespace { \
     static bool registered_##Type = []() { \
       ::OMEGA::AnalysisOpFactory::registerOperator(Name, \
-        [](const std::string& n, ::OMEGA::Config& c) { \
+        [](const std::string& n, ::OMEGA::Config c) { \
           return std::make_unique<Type>(n, c); \
         }); \
       return true; \

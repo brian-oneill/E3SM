@@ -17,7 +17,7 @@ class SpatialMinOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMinOp(const std::vector<std::string> &UpstreamNames, Config &Options)
+   SpatialMinOp(const std::vector<std::string> &UpstreamNames, Config Options)
        : AnalysisOperator("spatial_min") {
 
       InputNames = UpstreamNames;
@@ -26,18 +26,6 @@ class SpatialMinOp : public AnalysisOperator {
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
-
-   } // end constructor
-
-   ///
-   void initialize(Config *Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
 
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
@@ -59,6 +47,18 @@ class SpatialMinOp : public AnalysisOperator {
       );
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+
+   } // end constructor
+
+   ///
+   void initialize(Config Options,
+                   const MachEnv *InEnv,
+                   const HorzMesh *MeshIn,
+                   const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
 
    } // end initialize
 

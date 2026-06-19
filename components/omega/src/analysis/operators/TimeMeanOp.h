@@ -16,7 +16,7 @@ class TimeMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config &Options) {
+   TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config Options) {
 
       // Set operator type
       OperatorTypeName = "time_mean";
@@ -33,17 +33,6 @@ class TimeMeanOp : public AnalysisOperator {
 
       CompPhase = TemporalPhase::Accumulate;
       Finalized = false;
-   } // end constructor
-
-   ///
-   void initialize(Config *Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
 
       auto InputField = Field::get(InputNames[0]);
 
@@ -74,7 +63,17 @@ class TimeMeanOp : public AnalysisOperator {
 
       OutputField->template attachData<ArrayT>(OutputData);
 
-      CompPhase = TemporalPhase::Accumulate;
+   } // end constructor
+
+   ///
+   void initialize(Config Options,
+                   const MachEnv *InEnv,
+                   const HorzMesh *MeshIn,
+                   const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
 
    } // end initialize
 

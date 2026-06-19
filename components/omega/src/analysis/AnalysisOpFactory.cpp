@@ -29,7 +29,7 @@ std::unique_ptr<AnalysisOperator>
 AnalysisOpFactory::createOp(
     const std::string &OpType,
     const std::vector<std::string> &UpstreamNames,
-    Config &Options
+    Config Options
 ) {
 
    for (const auto &FieldName: UpstreamNames) {

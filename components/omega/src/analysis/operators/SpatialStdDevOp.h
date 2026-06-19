@@ -18,7 +18,7 @@ class SpatialStdDevOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialStdDevOp(const std::vector<std::string> &UpstreamNames, Config &Options)
+   SpatialStdDevOp(const std::vector<std::string> &UpstreamNames, Config Options)
        : AnalysisOperator("spatial_stddev") {
 
       InputNames = {UpstreamNames[0], UpstreamNames[0] + "_spatial_mean"};
@@ -27,18 +27,6 @@ class SpatialStdDevOp : public AnalysisOperator {
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
-
-   } // end constructot
-
-   ///
-   void initialize(Config *Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
 
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
@@ -66,6 +54,18 @@ class SpatialStdDevOp : public AnalysisOperator {
       auto InputData = InputField->getDataArray<ArrayT>();
 
       WorkArray = decltype(InputData)(OutputNames[0] + "_work_array", InputData.layout()); 
+
+   } // end constructot
+
+   ///
+   void initialize(Config Options,
+                   const MachEnv *InEnv,
+                   const HorzMesh *MeshIn,
+                   const VertCoord *VCoordIn) override {
+
+      Mesh = MeshIn;
+      VCoord = VCoordIn;
+      Comm = InEnv->getComm();
 
    } // end initialize
 

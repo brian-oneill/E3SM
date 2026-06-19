@@ -102,7 +102,7 @@ Analysis::Analysis(const std::string &InName,
 void Analysis::registerAnalysisOp(
     const std::string &OpName,
     const std::vector<std::string> &UpstreamNames,
-    Config &Options) {
+    Config Options) {
 
    auto NewOp = AnalysisOpFactory::createOp(OpName, UpstreamNames, Options);
 
