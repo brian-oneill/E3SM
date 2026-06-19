@@ -17,7 +17,7 @@ class SpatialMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, const Config &Options)
+   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, Config &Options)
        : AnalysisOperator("spatial_mean") {
 
 
@@ -31,7 +31,7 @@ class SpatialMeanOp : public AnalysisOperator {
    }  // end constructor
 
    ///
-   void initialize(const Config *Options,
+   void initialize(Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
                    const VertCoord *VCoordIn) override {

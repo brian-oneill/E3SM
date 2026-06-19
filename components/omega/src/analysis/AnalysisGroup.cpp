@@ -115,6 +115,9 @@ void AnalysisGroup::createAnalysisGroupStreams(
           AnalysisStream(NewStreamName, SampleName, SampleInterval, false));
    }
 
+   for (const auto &OutputStream: OutputStreams) {
+      std::cout << OutputStream.StreamName << " " << OutputStream.IntervalStr << std::endl;
+   }
 } // end createAnalysisGroupStreams
 
 //------------------------------------------------------------------------------

@@ -17,7 +17,7 @@ class SpatialMinOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMinOp(const std::vector<std::string> &UpstreamNames, const Config &Options)
+   SpatialMinOp(const std::vector<std::string> &UpstreamNames, Config &Options)
        : AnalysisOperator("spatial_min") {
 
       InputNames = UpstreamNames;
@@ -30,7 +30,7 @@ class SpatialMinOp : public AnalysisOperator {
    } // end constructor
 
    ///
-   void initialize(const Config *Options,
+   void initialize(Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
                    const VertCoord *VCoordIn) override {

@@ -26,8 +26,10 @@ GlobalStats::GlobalStats(const std::string &GroupName,
    
    createAnalysisGroupStreams(GroupName, Options, AnalysisObj);
 
-   for (const auto &StreamName: StreamNames) {
-      std::cout << StreamName << std::endl;
+//   for (const auto &StreamName: StreamNames) {
+   for (const auto &OutputStream: OutputStreams) {
+//      std::cout << StreamName << std::endl;
+//      std::cout << OutputStream.StreamName << " " << OutputStream.IntervalStr << std::endl;
 
       for (const auto &VarName: VarList) {
          for (const auto &OpName: OpList) {
@@ -38,8 +40,8 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
          }
       }
-//   }
    }
+//   }
 
 }
 

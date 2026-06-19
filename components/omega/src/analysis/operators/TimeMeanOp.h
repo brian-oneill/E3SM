@@ -16,13 +16,15 @@ class TimeMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   TimeMeanOp(const std::vector<std::string> &UpstreamNames, const Config &Options) {
+   TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config &Options) {
 
       // Set operator type
       OperatorTypeName = "time_mean";
 
       InputNames = UpstreamNames;
 
+      std::string AvgPeriod;
+      Options.get("Period", AvgPeriod);
       std::string OutputFieldName = InputNames[0] + "_time_mean";
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
@@ -34,7 +36,7 @@ class TimeMeanOp : public AnalysisOperator {
    } // end constructor
 
    ///
-   void initialize(const Config *Options,
+   void initialize(Config *Options,
                    const MachEnv *InEnv,
                    const HorzMesh *MeshIn,
                    const VertCoord *VCoordIn) override {
