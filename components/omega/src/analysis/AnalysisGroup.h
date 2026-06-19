@@ -14,10 +14,6 @@ class AnalysisGroup {
 
  public:
 
-//   AnalysisGroup(const std::string &Name,
-//                 Config &Options,
-//                 AnalysisOrchestrator *Orchestrator);
-
    ///
    virtual ~AnalysisGroup() = default;
 
@@ -25,16 +21,16 @@ class AnalysisGroup {
    std::string getName();
 
    ///
-   const std::vector<std::string> createAnalysisStream(
+   void createAnalysisGroupStreams(
        const std::string &GroupName,
-       Config &AnalysisGroupCfg,
+       Config &AnalysisGroupOptions,
        Analysis *AnalysisPtr);
 
  protected:
 
    ///
-   struct AnalysisStreamCfg {
-      AnalysisStreamCfg()
+   struct StreamParams {
+      StreamParams()
          : Params{
             {"UsePointerFile", "false"},
             {"PointerFilename", ""},
@@ -51,16 +47,28 @@ class AnalysisGroup {
             {"EndTime", ""},
          }
       {}
+      void apply(const std::map<std::string, std::string> &Overrides) {
+         for (const auto& [Key, Value] : Overrides) {
+            auto It = Params.find(Key);
+
+            if (It == Params.end()) {
+               ABORT_ERROR("Analysis: Unknown Stream config parameter, {}", Key);
+            }
+
+            It->second = Value;
+         }
+      }
 
       ///
       Config toConfig() const {
          Config Cfg;
-         for (const auto& [key, value] : Params) {
-            if (!value.empty()) {
-               Cfg.add(key, value);
+         for (const auto& [Key, Value] : Params) {
+            if (!Value.empty()) {
+               Cfg.add(Key, Value);
             }
          }
 
+         // Contents will be added after operators are built
          std::vector<std::string> EmptyStrVec{""};
          Cfg.add("Contents", EmptyStrVec);
 
@@ -76,6 +84,12 @@ class AnalysisGroup {
 
    ///
    std::string GroupName;
+
+   ///
+   std::vector<AnalysisStream> OutputStreams;
+   std::vector<std::string> StreamNames;
+   std::vector<std::pair<std::string, TimeInterval>> AveragingPeriods;
+   std::vector<std::pair<std::string, TimeInterval>> SamplingPeriods;
 
 };
 

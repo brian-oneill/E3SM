@@ -17,10 +17,10 @@ class SpatialMinOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMinOp(const std::string &UpstreamName, const Config &Options)
+   SpatialMinOp(const std::vector<std::string> &UpstreamNames, const Config &Options)
        : AnalysisOperator("spatial_min") {
 
-      InputNames = {UpstreamName};
+      InputNames = UpstreamNames;
 
       std::string OutputFieldName = InputNames[0] + "_spatial_min";
 //      std::cout << OutputFieldName << std::endl;

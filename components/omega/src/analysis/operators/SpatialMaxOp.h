@@ -17,10 +17,10 @@ class SpatialMaxOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMaxOp(const std::string &UpstreamName, const Config &Options) 
+   SpatialMaxOp(const std::vector<std::string> &UpstreamNames, const Config &Options) 
        : AnalysisOperator("spatial_max") {
 
-      InputNames = {UpstreamName};
+      InputNames = UpstreamNames;
 
       std::string OutputFieldName = InputNames[0] + "_spatial_max";
 //      std::cout << OutputFieldName << std::endl;

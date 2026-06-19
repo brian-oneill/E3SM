@@ -29,9 +29,10 @@ void Analysis::init() {
 
    Config *OmegaConfig = Config::getOmegaConfig();
 
-   Analysis::DefAnalysis = create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
+   Analysis::DefAnalysis =
+       create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
 
-   IOStream::printAllStreams();
+//   IOStream::printAllStreams();
 } // end init
 
 //------------------------------------------------------------------------------
@@ -98,21 +99,22 @@ Analysis::Analysis(const std::string &InName,
 } // end constructor
 
 //------------------------------------------------------------------------------
-void Analysis::registerAnalysisOp(const std::string &FieldName,
-                                  const std::string &OpName,
-                                  Config &Options) {
+void Analysis::registerAnalysisOp(
+    const std::string &OpName,
+    const std::vector<std::string> &UpstreamNames,
+    Config &Options) {
 
-   auto NewOp = AnalysisOpFactory::createOp(OpName, FieldName, Options);
+   auto NewOp = AnalysisOpFactory::createOp(OpName, UpstreamNames, Options);
 
 //   std::cout << "register op w name:  " << NewOp->getName() << "| exists: " << OpNodeExists(NewOp->getName()) << std::endl;
 
-   if (NewOp and !OpNodeExists(NewOp->getName()) {
+   if (NewOp and !OpNodeExists(NewOp->getName())) {
 
       OperatorNode Node;
       Node.Op = std::move(NewOp);
 
       Node.Upstream = {nullptr};
-      Node.OutputStreamName = "";
+      Node.StreamName = "";
       Alarm NewAlarm;
       Node.ComputeAlarm = NewAlarm;
 
@@ -126,7 +128,6 @@ void Analysis::registerAnalysisOp(const std::string &FieldName,
 Clock *&Analysis::getModelClock(){
    return ModelClock;
 }
-
 
 //------------------------------------------------------------------------------
 const std::vector<OperatorNode> &Analysis::getOpNodes() const {return OpNodes;}

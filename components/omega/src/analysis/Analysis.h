@@ -29,11 +29,24 @@
 
 namespace OMEGA {
 
+/// The OperatorNode struct ...
 struct OperatorNode {
    std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
    std::vector<OperatorNode*> Upstream;        // Dependencies
-   std::string OutputStreamName;               // Which stream owns it
+   std::string StreamName;                // Which stream owns it
    Alarm ComputeAlarm;                         // When to compute
+};
+
+/// The AnalysisStream struct ...
+struct AnalysisStream {
+   AnalysisStream(std::string InStreamName, std::string InIntervalStr,
+                TimeInterval InPeriodInterval, bool InIsAverage)
+   : StreamName(InStreamName), IntervalStr(InIntervalStr),
+     PeriodInterval(InPeriodInterval), IsAverage(InIsAverage) {}
+   std::string StreamName;      // Name of stream
+   std::string IntervalStr;     // String form of interval
+   TimeInterval PeriodInterval; // TimeInterval form of interval
+   bool IsAverage;              // Is temporal averages or discrete samples
 };
 
 /// The Analysis class ...
@@ -54,9 +67,10 @@ class Analysis {
    void computeAll();
 
    ///
-   void registerAnalysisOp(const std::string &FieldName,
-                           const std::string &OpName,
-                           Config &Options);
+   void registerAnalysisOp(
+       const std::string &OpName,
+       const std::vector<std::string> &UpstreamNames,
+       Config &Options);
 
    ///
    Clock *&getModelClock();

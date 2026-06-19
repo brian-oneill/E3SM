@@ -81,8 +81,9 @@ namespace OMEGA {
 /// The AnalysisOpFactory
 class AnalysisOpFactory{
  public:
+
    using CreatorFunc = std::function<std::unique_ptr<AnalysisOperator>(
-       const std::string &Name, const Config &Options)>;
+       const std::vector<std::string> &UpstreamNames, const Config &Options)>;
 
    /// Register an operator type. Associates a sting label with a constructor
    /// for an AnalysisOperator templated on a particular Array type
@@ -92,9 +93,11 @@ class AnalysisOpFactory{
    );
 
    /// Create an operator instance
-   static std::unique_ptr<AnalysisOperator> createOp(const std::string &Type,
-                                                   const std::string &Name,
-                                                   const Config &Options);
+   static std::unique_ptr<AnalysisOperator> createOp(
+       const std::string &OpType,
+       const std::vector<std::string> &UpstreamNames,
+       const Config &Options
+   );
 
    /// Query available operators (for validation, error messages)
    static std::vector<std::string> availableOperators();
@@ -108,8 +111,8 @@ class AnalysisOpFactory{
       #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT) \
          registerOperator( \
             baseName + "_" #ArrayT + "_" #memloc, \
-            [](const std::string& n, const Config& c) { \
-               return std::make_unique<OperatorTemplate<ArrayT>>(n, c); \
+            [](const std::vector<std::string> &names, const Config& c) { \
+               return std::make_unique<OperatorTemplate<ArrayT>>(names, c); \
             });
       
       OMEGA_ANALYSIS_ARRAY_TYPES(REGISTER_VARIANT)

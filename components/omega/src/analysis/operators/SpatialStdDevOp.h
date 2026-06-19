@@ -18,10 +18,10 @@ class SpatialStdDevOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialStdDevOp(const std::string &UpstreamName, const Config &Options)
+   SpatialStdDevOp(const std::vector<std::string> &UpstreamNames, const Config &Options)
        : AnalysisOperator("spatial_stddev") {
 
-      InputNames = {UpstreamName, UpstreamName + "_spatial_mean"};
+      InputNames = {UpstreamNames[0], UpstreamNames[0] + "_spatial_mean"};
 
       std::string OutputFieldName = InputNames[0] + "_spatial_stddev";
 //      std::cout << OutputFieldName << std::endl;

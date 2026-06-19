@@ -17,11 +17,11 @@ class SpatialMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   SpatialMeanOp(const std::string &UpstreamName, const Config &Options)
+   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, const Config &Options)
        : AnalysisOperator("spatial_mean") {
 
 
-      InputNames = {UpstreamName};
+      InputNames = UpstreamNames;
 
       std::string OutputFieldName = InputNames[0] + "_spatial_mean";
 //      std::cout << OutputFieldName << std::endl;

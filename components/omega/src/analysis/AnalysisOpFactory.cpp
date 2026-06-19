@@ -26,17 +26,21 @@ void AnalysisOpFactory::registerOperator(
 
 //------------------------------------------------------------------------------
 std::unique_ptr<AnalysisOperator> 
-AnalysisOpFactory::createOp(const std::string &OpType,
-                            const std::string &InputName,
-                            const Config &Options) {
+AnalysisOpFactory::createOp(
+    const std::string &OpType,
+    const std::vector<std::string> &UpstreamNames,
+    const Config &Options
+) {
 
-
-   // Get FieldPtr and extract metadata
-   auto FieldPtr = Field::get(InputName);
-   if (!FieldPtr) {
-       ABORT_ERROR("Field '{}' not found for operator creation", InputName);
+   for (const auto &FieldName: UpstreamNames) {
+      auto FieldPtr = Field::get(FieldName);
+      if (!FieldPtr) {
+         ABORT_ERROR("Field '{}' not found for operator creation", FieldName);
+      }
    }
-   
+
+   // Get FieldPtr for first Field in UpstreamNames and extract metadata
+   auto FieldPtr = Field::get(UpstreamNames[0]);
    ArrayDataType DType = FieldPtr->getType();
    int Rank = FieldPtr->getNumDims();
    ArrayMemLoc MemLoc = FieldPtr->getMemoryLocation();
@@ -71,7 +75,7 @@ AnalysisOpFactory::createOp(const std::string &OpType,
    }
    
    // Call the registered creator function
-   return it->second(InputName, Options);
+   return it->second(UpstreamNames, Options);
 }
 
 //------------------------------------------------------------------------------

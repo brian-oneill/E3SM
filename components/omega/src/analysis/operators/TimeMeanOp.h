@@ -16,17 +16,18 @@ class TimeMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   TimeMeanOp(const std::string &Name, const Config &Options) {
+   TimeMeanOp(const std::vector<std::string> &UpstreamNames, const Config &Options) {
 
       // Set operator type
       OperatorTypeName = "time_mean";
 
-      InstanceName = Name;
-      InputNames = {Name};
+      InputNames = UpstreamNames;
 
-      std::string OutputFieldName = InstanceName + "_time_mean";
-      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_time_mean";
+//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
+      InstanceName = OutputFieldName;
+
 
       CompPhase = TemporalPhase::Accumulate;
       Finalized = false;
@@ -78,11 +79,11 @@ class TimeMeanOp : public AnalysisOperator {
    ///
    void compute(const TimeInstant &TimeStamp) override {
       if (CompPhase == TemporalPhase::Accumulate) {
-      parallelFor(
-          {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
-             AccumArray.data()[FlatIdx] += InputData.data()[FlatIdx];
-          });
-      ++NumSamples;
+         parallelFor(
+             {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
+                AccumArray.data()[FlatIdx] += InputData.data()[FlatIdx];
+             });
+         ++NumSamples;
       }
 
       LastComputed = TimeStamp;
