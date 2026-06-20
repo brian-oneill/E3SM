@@ -13,8 +13,33 @@ namespace OMEGA {
 Analysis *Analysis::DefAnalysis = nullptr;
 std::map<std::string, std::unique_ptr<Analysis>> Analysis::AllAnalysisObjects;
 
+//------------------------------------------------------------------------------
+// Local utility routine that breaks a string into a numeric substring and a
+// character substring, assuming the numeric substring is first.
+std::vector<std::string> parseFreqStr(const std::string &FreqStr) {
+
+   std::string DigitStr;
+   std::string UnitsStr;
+   size_t Pos = FreqStr.find_first_not_of("0123456789");
+   if (Pos != std::string::npos) {
+      DigitStr = FreqStr.substr(0, Pos);
+      UnitsStr = FreqStr.substr(Pos);
+   }
+   if (FreqStr == "" or UnitsStr == "") {
+      ABORT_ERROR("Analysis: Invalid frequency string found in Config: {}", FreqStr);
+   }
+   if (UnitsStr.back() != 's') {
+      UnitsStr += 's';
+   }
+
+   return {DigitStr, UnitsStr};
+
+}
 
 //------------------------------------------------------------------------------
+// Initialize the Analysis module by creating the default Analysis instance, and
+// registering all operator types for the AnalysisOpFactor requires prior
+// initialization of the HorzMesh, VertCoord, and TimeStepper
 void Analysis::init() {
 
    registerAllBaseAnalysisOperators();
@@ -32,10 +57,12 @@ void Analysis::init() {
    Analysis::DefAnalysis =
        create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
 
-//   IOStream::printAllStreams();
+   IOStream::printAllStreams();
 } // end init
 
 //------------------------------------------------------------------------------
+// Creates a new Analysis instance using the constructor and puts it in the
+// AllAnalysisObjects map.
 Analysis *Analysis::create(const std::string &Name,
                         const HorzMesh *Mesh,
                         const VertCoord *VCoord,
@@ -58,6 +85,9 @@ Analysis *Analysis::create(const std::string &Name,
 
 
 //------------------------------------------------------------------------------
+// Construct a new Analysis instance. Loops over the contents of the Analysis
+// node in the config file, calls derived constructor for pre-defined
+// AnalysisGroups, or parses composable operator chains for custom groups.
 Analysis::Analysis(const std::string &InName,
                         const HorzMesh *InMesh,
                         const VertCoord *InVCoord,
@@ -93,44 +123,102 @@ Analysis::Analysis(const std::string &InName,
 
             continue;
          }
+         ABORT_ERROR("Analysis: custom analysis group enabled in config, but"
+                     "composable operators are not yet supported.");
       }
    } 
 
 } // end constructor
 
 //------------------------------------------------------------------------------
+// For a given string defining an operator chain, parses the string into nodes
+// of the chain, and builds operators for each node. Currently nodes in a chain
+// string are assumed to be separated by an underscore character ('_').
+void Analysis::parseChainAndBuildOps(
+   const std::string &OpChainStr
+) {
+   std::vector<std::string> ChainVec;
+   std::stringstream OpChainSS(OpChainStr);
+
+   std::string Part;
+
+   while (std::getline(OpChainSS, Part, '_')) {
+       ChainVec.push_back(Part);
+   }
+
+   std::string CurChainStr;
+   for (const auto &ChainNode : ChainVec) {
+      std::string Upstream = CurChainStr;
+      if (CurChainStr.empty()) {
+         CurChainStr = ChainNode;
+      } else {
+         CurChainStr += ("_" + ChainNode);
+      }
+//      std::cout << CurChainStr << " exists: " << Field::exists(CurChainStr) << " | ";
+//      std::cout << Upstream << " " << CurChainStr << std::endl;
+//      std::cout << "node,upstream,current: " << ChainNode << " " << Upstream << " " << CurChainStr << std::endl;
+
+      if (!Field::exists(CurChainStr)) {
+//         std::cout << "current does not exist" << std::endl;
+         if (ChainNode.find("Spatial") != std::string::npos) {
+//            std::cout << "creating " << ChainNode << " for " << Upstream << std::endl;
+            registerAnalysisOp(ChainNode, {Upstream}, makeOpConfig());
+         }
+         if (ChainNode.find("Time") != std::string::npos) {
+            std::size_t Pos = ChainNode.find_first_of("0123456789");
+            if (Pos == std::string::npos) {
+               ABORT_ERROR("Analysis: Improper temporal window string, {}", ChainNode);
+            }
+            std::string TimeOp = ChainNode.substr(0, Pos);
+            std::string FreqStr = ChainNode.substr(Pos);
+            registerAnalysisOp(TimeOp, {Upstream}, makeOpConfig(opParam("Period", FreqStr)));
+         }
+      }
+   }
+
+} // end parseChainAndBuildOps
+
+//------------------------------------------------------------------------------
+// For given operator type and upstream inputs, create an AnalysisOperator
+// instance and an OperatorNode
 void Analysis::registerAnalysisOp(
     const std::string &OpName,
     const std::vector<std::string> &UpstreamNames,
     Config Options) {
 
    auto NewOp = AnalysisOpFactory::createOp(OpName, UpstreamNames, Options);
+   std::string NewName = NewOp->getName();
+//   std::cout << "register op w name:  " << NewName << "| exists: " << OpNodeExists(NewName) << std::endl;
 
-//   std::cout << "register op w name:  " << NewOp->getName() << "| exists: " << OpNodeExists(NewOp->getName()) << std::endl;
-
-   if (NewOp and !OpNodeExists(NewOp->getName())) {
+   if (NewOp) {
 
       OperatorNode Node;
       Node.Op = std::move(NewOp);
 
-      Node.Upstream = {nullptr};
-      Node.StreamName = "";
-      Alarm NewAlarm;
-      Node.ComputeAlarm = NewAlarm;
-
       OpNodes.push_back(std::move(Node));
+      RegisteredOpNames.push_back(NewName);
 
    }
+
+//   std::cout << "registered: " << NewOp->getName() << std::endl;
 
 } // end registerAnalysisOp
 
 //------------------------------------------------------------------------------
+// Fetch a reference to the a pointer the ModelClock, required for
+// IOStream::create.
 Clock *&Analysis::getModelClock(){
    return ModelClock;
 }
 
 //------------------------------------------------------------------------------
-const std::vector<OperatorNode> &Analysis::getOpNodes() const {return OpNodes;}
+const std::vector<OperatorNode*> Analysis::getOpNodes() {
+   std::vector<OperatorNode*> OpPtrs;
+   for (OperatorNode &OpNode: OpNodes) {
+      OpPtrs.push_back(&OpNode);
+   }
+   return OpPtrs;
+}
 
 //------------------------------------------------------------------------------
 bool Analysis::OpNodeExists(const std::string &FullOpName) {

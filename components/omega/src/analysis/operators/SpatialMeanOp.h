@@ -18,12 +18,12 @@ class SpatialMeanOp : public AnalysisOperator {
 
    ///
    SpatialMeanOp(const std::vector<std::string> &UpstreamNames, Config Options)
-       : AnalysisOperator("spatial_mean") {
+       : AnalysisOperator("SpatialMean") {
 
 
       InputNames = UpstreamNames;
 
-      std::string OutputFieldName = InputNames[0] + "_spatial_mean";
+      std::string OutputFieldName = InputNames[0] + "_SpatialMean";
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;

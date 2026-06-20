@@ -18,11 +18,11 @@ class SpatialMinOp : public AnalysisOperator {
 
    ///
    SpatialMinOp(const std::vector<std::string> &UpstreamNames, Config Options)
-       : AnalysisOperator("spatial_min") {
+       : AnalysisOperator("SpatialMin") {
 
       InputNames = UpstreamNames;
 
-      std::string OutputFieldName = InputNames[0] + "_spatial_min";
+      std::string OutputFieldName = InputNames[0] + "_SpatialMin";
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;

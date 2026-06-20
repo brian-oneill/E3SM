@@ -19,13 +19,13 @@ class TimeMeanOp : public AnalysisOperator {
    TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config Options) {
 
       // Set operator type
-      OperatorTypeName = "time_mean";
+      OperatorTypeName = "TimeMean";
 
       InputNames = UpstreamNames;
 
       std::string AvgPeriod;
       Options.get("Period", AvgPeriod);
-      std::string OutputFieldName = InputNames[0] + "_time_mean";
+      std::string OutputFieldName = InputNames[0] + "_TimeMean" + AvgPeriod;
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;

@@ -19,11 +19,11 @@ class SpatialStdDevOp : public AnalysisOperator {
 
    ///
    SpatialStdDevOp(const std::vector<std::string> &UpstreamNames, Config Options)
-       : AnalysisOperator("spatial_stddev") {
+       : AnalysisOperator("SpatialStdDev") {
 
-      InputNames = {UpstreamNames[0], UpstreamNames[0] + "_spatial_mean"};
+      InputNames = {UpstreamNames[0], UpstreamNames[0] + "_SpatialMean"};
 
-      std::string OutputFieldName = InputNames[0] + "_spatial_stddev";
+      std::string OutputFieldName = InputNames[0] + "_SpatialStdDev";
 //      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;

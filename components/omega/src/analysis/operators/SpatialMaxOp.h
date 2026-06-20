@@ -18,12 +18,11 @@ class SpatialMaxOp : public AnalysisOperator {
 
    ///
    SpatialMaxOp(const std::vector<std::string> &UpstreamNames, Config Options) 
-       : AnalysisOperator("spatial_max") {
+       : AnalysisOperator("SpatialMax") {
 
       InputNames = UpstreamNames;
 
-      std::string OutputFieldName = InputNames[0] + "_spatial_max";
-//      std::cout << OutputFieldName << std::endl;
+      std::string OutputFieldName = InputNames[0] + "_SpatialMax";
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
 
@@ -46,6 +45,7 @@ class SpatialMaxOp : public AnalysisOperator {
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
+//      std::cout << OutputFieldName << " created" << std::endl;
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 

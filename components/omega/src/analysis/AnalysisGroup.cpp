@@ -10,9 +10,10 @@ std::string AnalysisGroup::getName() {
 
 //------------------------------------------------------------------------------
 void AnalysisGroup::createAnalysisGroupStreams(
-    const std::string &GroupName,
-    Config &AnalysisGroupOptions,
-    Analysis *AnalysisPtr) {
+   const std::string &GroupName,
+   Config &AnalysisGroupOptions,
+   Analysis *AnalysisManager
+) {
 
    Error Err1;
    Error Err2;
@@ -30,7 +31,8 @@ void AnalysisGroup::createAnalysisGroupStreams(
       }
    }
 
-   // Create an instance of the StreamParams struct and apply overrides
+   // Create an instance of the StreamParams struct and apply optional overrides
+   // from above
    StreamParams StreamCfg;
    StreamCfg.apply(ParamOverrides);
 
@@ -63,9 +65,10 @@ void AnalysisGroup::createAnalysisGroupStreams(
    // for each period in this group
    for (const auto &PeriodName: AvgPeriodList) {
       // The period is given as a single string beginning with numerals and
-      // ending with a character string of a unit of time, e.g. 1day, 2months.
-      // Break the string into separate components for adding to the Stream and
-      // create a TimeInterval to compare with the RestartWrite interval.
+      // ending with a character string representing a unit of time, e.g. 1day,
+      // 2months. Break the string into separate components for adding to the
+      // Stream and create a TimeInterval to compare with the RestartWrite
+      // interval.
       std::vector<std::string> ParsedStr = parseFreqStr(PeriodName);
       I4 Freq = std::stoi(ParsedStr[0]);
       TimeUnits FreqUnits = TimeUnitsFromString(ParsedStr[1]);
@@ -85,7 +88,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
       StreamCfg.Params["FreqUnits"] = ParsedStr[1];
 
       auto NewStreamCfg = StreamCfg.toConfig();
-      auto RefClock = AnalysisPtr->getModelClock();
+      auto RefClock = AnalysisManager->getModelClock();
       std::string NewStreamName = GroupName + "_" + PeriodName + "Avg";
       IOStream::create(NewStreamName, NewStreamCfg, RefClock);
       StreamNames.push_back(NewStreamName);
@@ -107,7 +110,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
       StreamCfg.Params["FreqUnits"] = ParsedStr[1];
 
       auto NewStreamCfg = StreamCfg.toConfig();
-      auto RefClock = AnalysisPtr->getModelClock();
+      auto RefClock = AnalysisManager->getModelClock();
       std::string NewStreamName = GroupName + "_" + SampleName + "Samples";
       IOStream::create(NewStreamName, NewStreamCfg, RefClock);
       StreamNames.push_back(NewStreamName);
@@ -117,25 +120,6 @@ void AnalysisGroup::createAnalysisGroupStreams(
 
 } // end createAnalysisGroupStreams
 
-//------------------------------------------------------------------------------
-std::vector<std::string> AnalysisGroup::parseFreqStr(const std::string &FreqStr) {
 
-   std::string DigitStr;
-   std::string UnitsStr;
-   size_t Pos = FreqStr.find_first_not_of("0123456789");
-   if (Pos != std::string::npos) {
-      DigitStr = FreqStr.substr(0, Pos);
-      UnitsStr = FreqStr.substr(Pos);
-   }
-   if (FreqStr == "" or UnitsStr == "") {
-      ABORT_ERROR("Analysis: Invalid frequency string found in Config: {}", FreqStr);
-   }
-   if (UnitsStr.back() != 's') {
-      UnitsStr += 's';
-   }
-
-   return {DigitStr, UnitsStr};
-
-}
 
 } // end namespace OMEGA

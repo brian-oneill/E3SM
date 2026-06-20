@@ -6,6 +6,7 @@
 #include "Config.h"
 #include "IOStream.h"
 #include <string>
+#include <sstream>
 
 namespace OMEGA {
 
@@ -22,9 +23,9 @@ class AnalysisGroup {
 
    ///
    void createAnalysisGroupStreams(
-       const std::string &GroupName,
-       Config &AnalysisGroupOptions,
-       Analysis *AnalysisPtr);
+      const std::string &GroupName,
+      Config &AnalysisGroupOptions,
+      Analysis *AnalysisManager);
 
  protected:
 
@@ -78,9 +79,6 @@ class AnalysisGroup {
       ///
       std::map<std::string, std::string> Params;
    };
-
-   ///
-   std::vector<std::string> parseFreqStr(const std::string &FreqStr);
 
    ///
    std::string GroupName;

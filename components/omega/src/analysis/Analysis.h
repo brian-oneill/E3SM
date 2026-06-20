@@ -29,11 +29,14 @@
 
 namespace OMEGA {
 
+///
+std::vector<std::string> parseFreqStr(const std::string &FreqStr);
+
 /// The OperatorNode struct ...
 struct OperatorNode {
    std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
-   std::vector<OperatorNode*> Upstream;        // Dependencies
-   std::string StreamName;                // Which stream owns it
+   std::vector<OperatorNode*> Upstreams;       // Upstream dependencies
+   std::vector<std::string> StreamName;        // Which stream owns it
    Alarm ComputeAlarm;                         // When to compute
 };
 
@@ -48,6 +51,7 @@ struct AnalysisStream {
    TimeInterval PeriodInterval; // TimeInterval form of interval
    bool IsTimeAvg;              // Is temporal average or discrete samples
 };
+
 
 /// The Analysis class ...
 class Analysis {
@@ -67,6 +71,12 @@ class Analysis {
    void computeAll();
 
    ///
+   void parseChainAndBuildOps(
+      const std::string &OpChainStr
+   );
+
+
+   ///
    void registerAnalysisOp(
        const std::string &OpName,
        const std::vector<std::string> &UpstreamNames,
@@ -76,7 +86,7 @@ class Analysis {
    Clock *&getModelClock();
 
    ///
-   const std::vector<OperatorNode> &getOpNodes() const;
+   const std::vector<OperatorNode*> getOpNodes();
 
    ///
    bool OpNodeExists(const std::string &FullOpName);
