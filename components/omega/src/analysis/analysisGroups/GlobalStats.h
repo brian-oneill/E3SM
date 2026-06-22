@@ -18,8 +18,8 @@ class GlobalStats : public AnalysisGroup {
  public:
 
    GlobalStats(const std::string &GroupName,
-               Config &Options,
-               Analysis *AnalysisObj);
+               Config &AnalysisGroupOptions,
+               Analysis *AnalysisManager);
 
    ~GlobalStats() = default;
 

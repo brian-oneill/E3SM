@@ -102,7 +102,7 @@ class SpatialStdDevOp : public AnalysisOperator {
       auto MeanField = Field::get(InputNames[1]);
       auto MeanVal = MeanField->getDataArray<typename Array1D<ScalarT>::type>();
 
-      std::cout << "meanval: " << MeanVal(0) << std::endl;
+//      std::cout << "meanval: " << MeanVal(0) << std::endl;
 
       I4 NSize = static_cast<I4>(InputData.size());
       parallelFor(

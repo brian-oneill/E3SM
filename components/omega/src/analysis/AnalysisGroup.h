@@ -29,8 +29,19 @@ class AnalysisGroup {
 
  protected:
 
-   ///
+   /// Structure to store metadata about operator chains
+   struct OpChainInfo {
+      std::string ChainStr;      // Operator instance name (e.g., "Temperature_SpatialMean_TimeMean1day")
+      std::string FreqStr;       // Frequency/period string (e.g., "1day", "6hour")
+      bool IsTimeAvg;            // true for time average, false for discrete samples
+   };
+
+   /// The StreamParams struct serves as a template for creating output streams
+   /// associated with an AnalysisGroup
    struct StreamParams {
+      // Params is a string-to-string map of all the possible options used in
+      // IOStream creation. When a StreamParams instance is created, it has
+      // the following values by default
       StreamParams()
          : Params{
             {"UsePointerFile", "false"},
@@ -48,6 +59,8 @@ class AnalysisGroup {
             {"EndTime", ""},
          }
       {}
+      // If optional stream config options are given for the AnalysisGroup,
+      // apply will take the options overwrite the default values above
       void apply(const std::map<std::string, std::string> &Overrides) {
          for (const auto& [Key, Value] : Overrides) {
             auto It = Params.find(Key);
@@ -60,34 +73,36 @@ class AnalysisGroup {
          }
       }
 
-      ///
+      // Creates a Config object to be passed to IOStream::create
       Config toConfig() const {
          Config Cfg;
+         // Loop over the Params, add only options where Value is not empty
          for (const auto& [Key, Value] : Params) {
             if (!Value.empty()) {
                Cfg.add(Key, Value);
             }
          }
 
-         // Contents will be added after operators are built
+         // Contents are added after stream is created, leave empty for now
          std::vector<std::string> EmptyStrVec{""};
          Cfg.add("Contents", EmptyStrVec);
 
          return Cfg;
       }
 
-      ///
+      // Map of config options used to create output streams for the
+      // AnalysisGroup
       std::map<std::string, std::string> Params;
    };
 
-   ///
+   /// Name of this AnalysisGroup
    std::string GroupName;
 
+   /// Vector storing metadata for all operator chains in this group
+   std::vector<OpChainInfo> OpChainInfos;
+
    ///
-   std::vector<AnalysisStream> OutputStreams;
-   std::vector<std::string> StreamNames;
-   std::vector<std::pair<std::string, TimeInterval>> AveragingPeriods;
-   std::vector<std::pair<std::string, TimeInterval>> SamplingPeriods;
+   std::vector<std::string> OpChainStrings;
 
 };
 

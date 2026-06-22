@@ -57,7 +57,7 @@ void Analysis::init() {
    Analysis::DefAnalysis =
        create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
 
-   IOStream::printAllStreams();
+//   IOStream::printAllStreams();
 } // end init
 
 //------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ Analysis::Analysis(const std::string &InName,
       bool GroupEnabled = false;
       GroupCfg.get("Enable", GroupEnabled);
       if (GroupEnabled) {
-         std::cout << GroupName << " " << GroupEnabled << std::endl;
+//         std::cout << GroupName << " " << GroupEnabled << std::endl;
          if (GroupName == "GlobalStats") {
             GlobalStats GlobalStatsGroup(NamePrefix + GroupName, GroupCfg, this);
 
@@ -128,6 +128,9 @@ Analysis::Analysis(const std::string &InName,
       }
    } 
 
+   buildOperatorDependencies();
+
+   setComputeAlarms();
 } // end constructor
 
 //------------------------------------------------------------------------------
@@ -184,7 +187,8 @@ void Analysis::parseChainAndBuildOps(
 void Analysis::registerAnalysisOp(
     const std::string &OpName,
     const std::vector<std::string> &UpstreamNames,
-    Config Options) {
+    Config Options
+) {
 
    auto NewOp = AnalysisOpFactory::createOp(OpName, UpstreamNames, Options);
    std::string NewName = NewOp->getName();
@@ -203,6 +207,133 @@ void Analysis::registerAnalysisOp(
 //   std::cout << "registered: " << NewOp->getName() << std::endl;
 
 } // end registerAnalysisOp
+
+//------------------------------------------------------------------------------
+void Analysis::buildOperatorDependencies() {
+   for (auto &Node : OpNodes) {
+      auto InputNames = Node.Op->getInputFieldNames();
+      
+      for (const auto &InputName : InputNames) {
+         for (auto &PotentialUpstream : OpNodes) {
+            auto UpstreamOutputs = PotentialUpstream.Op->getOutputFieldNames();
+            
+            for (const auto &UpstreamOutput : UpstreamOutputs) {
+               if (UpstreamOutput == InputName) {
+                  // Check if already in Upstreams vector
+                  if (std::find(Node.Upstreams.begin(), 
+                               Node.Upstreams.end(), 
+                               &PotentialUpstream) == Node.Upstreams.end()) {
+                     // Not found, so add it
+                     Node.Upstreams.push_back(&PotentialUpstream);
+                  }
+                  break;
+               }
+            }
+         }
+      }
+   }
+}
+
+//------------------------------------------------------------------------------
+void Analysis::setComputeAlarms() {
+   // Get the model timestep
+   TimeInterval Timestep = ModelClock->getTimeStep();
+
+   // Get current time
+   TimeInstant CurrentTime = ModelClock->getCurrentTime();
+   
+   // Step 1: Set alarms for terminal operators
+   for (auto &Node : OpNodes) {
+      std::string OpName = Node.Op->getName();
+      
+      if (!Node.StreamName.empty()) {
+         // Terminal operator
+         if (OpName.find("TimeMean") != std::string::npos) {
+            // TimeMean operators compute every timestep for accumulation
+            Node.ComputeAlarm = Alarm("Compute_" + OpName, 
+                                      Timestep,
+                                      CurrentTime);
+         } else {
+            // Discrete sampling operators compute at their stream interval
+            TimeInterval ShortestInterval = findShortestStreamInterval(Node);
+            Node.ComputeAlarm = Alarm("Compute_" + OpName, 
+                                      ShortestInterval,
+                                      CurrentTime);
+            std::cout << "terminal operator: " << OpName << std::endl;
+         }
+      }
+   }
+   
+   // Step 2: Propagate alarms upstream
+   bool AllAlarmsSet = false;
+   while (!AllAlarmsSet) {
+      AllAlarmsSet = true;
+      
+      for (auto &Node : OpNodes) {
+         // Skip if alarm already set
+         if (!Node.ComputeAlarm.getName().empty()) {
+            continue;
+         }
+         
+         // Find shortest alarm among downstream operators
+         TimeInterval ShortestDownstream = findShortestDownstreamAlarm(Node);
+         
+         if (ShortestDownstream == TimeInterval()) {
+            // No downstream alarms found yet, need another iteration
+            AllAlarmsSet = false;
+
+         } else {
+            Node.ComputeAlarm = Alarm("Compute_" + Node.Op->getName(), 
+                                      ShortestDownstream,
+                                      CurrentTime);
+            std::cout << "intermediate operator: " << Node.Op->getName() << std::endl;
+         }
+      }
+   }
+}
+
+
+//------------------------------------------------------------------------------
+TimeInterval Analysis::findShortestStreamInterval(const OperatorNode &Node) {
+   TimeInterval Shortest(999999, TimeUnits::Years);
+   
+   for (const auto &StreamName : Node.StreamName) {
+      auto StreamAlarm = IOStream::getAlarm(StreamName);
+      auto StreamInterval = StreamAlarm->getInterval();
+      
+      if (*StreamInterval < Shortest) {
+         Shortest = *StreamInterval;
+      }
+   }
+   
+   return Shortest;
+}
+
+TimeInterval Analysis::findShortestDownstreamAlarm(const OperatorNode &Node) {
+   TimeInterval Shortest(999999, TimeUnits::Years);
+   bool FoundAny = false;
+
+   // Search all operators to find those that have this node as upstream
+   for (const auto &OtherNode : OpNodes) {
+      for (const auto *Upstream : OtherNode.Upstreams) {
+         if (Upstream == &Node) {
+            // OtherNode is downstream of Node
+            if (!OtherNode.ComputeAlarm.getName().empty()) {
+               auto DownstreamInterval = OtherNode.ComputeAlarm.getInterval();
+               if (*DownstreamInterval < Shortest) {
+                  Shortest = *DownstreamInterval;
+                  FoundAny = true;
+               }
+            }
+            break;
+         }
+      }
+   }
+
+   // Return zero-length interval if none found
+   return FoundAny ? Shortest : TimeInterval();
+}
+
 
 //------------------------------------------------------------------------------
 // Fetch a reference to the a pointer the ModelClock, required for

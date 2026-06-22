@@ -42,12 +42,10 @@ struct OperatorNode {
 
 /// The AnalysisStream struct ...
 struct AnalysisStream {
-   AnalysisStream(std::string InStreamName, std::string InIntervalStr,
-                TimeInterval InPeriodInterval, bool InIsTimeAvg)
-   : StreamName(InStreamName), IntervalStr(InIntervalStr),
-     PeriodInterval(InPeriodInterval), IsTimeAvg(InIsTimeAvg) {}
+   // AnalysisStream constructor
+   AnalysisStream(std::string InStreamName, TimeInterval InPeriodInterval, bool InIsTimeAvg)
+   : StreamName(InStreamName), PeriodInterval(InPeriodInterval), IsTimeAvg(InIsTimeAvg) {}
    std::string StreamName;      // Name of stream
-   std::string IntervalStr;     // String form of interval
    TimeInterval PeriodInterval; // TimeInterval form of interval
    bool IsTimeAvg;              // Is temporal average or discrete samples
 };
@@ -56,6 +54,9 @@ struct AnalysisStream {
 /// The Analysis class ...
 class Analysis {
  public:
+   /// Analysis output stream info
+   std::vector<AnalysisStream> OutputStreams;
+
    ///
    static void init();
 
@@ -65,7 +66,8 @@ class Analysis {
        const HorzMesh *Mesh,
        const VertCoord *VCoord,
        Clock *ModelClock,
-       Config *Options);
+       Config *Options
+   );
 
    ///
    void computeAll();
@@ -80,7 +82,8 @@ class Analysis {
    void registerAnalysisOp(
        const std::string &OpName,
        const std::vector<std::string> &UpstreamNames,
-       Config Options);
+       Config Options
+   );
 
    ///
    Clock *&getModelClock();
@@ -112,7 +115,8 @@ class Analysis {
             const HorzMesh *Mesh,
             const VertCoord *VCoord,
             Clock *ModelClock,
-            Config *Options);
+            Config *Options
+   );
 
    ///
    std::string Name;
@@ -126,6 +130,17 @@ class Analysis {
    /// Full names of registered operators
    std::vector<std::string> RegisteredOpNames;
 
+   ///
+   void buildOperatorDependencies();
+
+   ///
+   void setComputeAlarms();
+
+   /// 
+   TimeInterval findShortestStreamInterval(const OperatorNode &Node);
+
+   ///
+   TimeInterval findShortestDownstreamAlarm(const OperatorNode &Node);
 
    // Forbid copy and move construction
    Analysis(const Analysis &) = delete;

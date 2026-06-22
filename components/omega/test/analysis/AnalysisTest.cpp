@@ -171,10 +171,10 @@ int main(int argc, char *argv[]) {
 
       TimeInstant TStamp;
 
-      std::cout << "-------------------- registered op nodes : " << std::endl;
+//      std::cout << "-------------------- registered op nodes : " << std::endl;
       auto DefAnalysis = Analysis::getDefault();
       for (const auto &OpNode : DefAnalysis->getOpNodes()) {
-         std::cout << OpNode->Op->getName() << std::endl;
+//         std::cout << OpNode->Op->getName() << std::endl;
       }
 /*
 

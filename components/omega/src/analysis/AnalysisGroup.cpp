@@ -23,7 +23,8 @@ void AnalysisGroup::createAnalysisGroupStreams(
    Err1 = AnalysisGroupOptions.get(AnalysisStreamOptions);
    std::map<std::string, std::string> ParamOverrides;
    if (Err1.isSuccess()) {
-      for (Config::Iter It = AnalysisStreamOptions.begin(); It != AnalysisStreamOptions.end(); ++It) {
+      for (Config::Iter It = AnalysisStreamOptions.begin(); 
+           It != AnalysisStreamOptions.end(); ++It) {
          std::string Key = It->first.as<std::string>();
          std::string Value;
          AnalysisStreamOptions.get(Key, Value);
@@ -32,22 +33,10 @@ void AnalysisGroup::createAnalysisGroupStreams(
    }
 
    // Create an instance of the StreamParams struct and apply optional overrides
-   // from above
    StreamParams StreamCfg;
    StreamCfg.apply(ParamOverrides);
 
-   // Fetch the temporal averaging and sampling periods
-   std::vector<std::string> AvgPeriodList;
-   Err1 = AnalysisGroupOptions.get("AvgPeriod", AvgPeriodList);
-   std::vector<std::string> SampleFreqList;
-   Err2 = AnalysisGroupOptions.get("SampleFreq", SampleFreqList);
-   if (Err1.isFail() and Err2.isFail()) {
-      ABORT_ERROR("Analysis: Error reading both AvgPeriod and SampleFreq from "
-                  "Config, at least one must be present");
-   }
-
-   // Get filename from config, and parse it into a prefix and a
-   // timestamp template
+   // Get filename from config, and parse it into a prefix and a timestamp template
    std::string FilenameStr;
    Err1 = AnalysisGroupOptions.get("Filename", FilenameStr);
    CHECK_ERROR_ABORT(Err1, "Analysis: Filename not found in Config");
@@ -61,65 +50,97 @@ void AnalysisGroup::createAnalysisGroupStreams(
       FilenamePrefix = FilenameStr;
    }
 
-   // Loop over list of temporal averaging periods and create a separate stream
-   // for each period in this group
-   for (const auto &PeriodName: AvgPeriodList) {
-      // The period is given as a single string beginning with numerals and
-      // ending with a character string representing a unit of time, e.g. 1day,
-      // 2months. Break the string into separate components for adding to the
-      // Stream and create a TimeInterval to compare with the RestartWrite
-      // interval.
-      std::vector<std::string> ParsedStr = parseFreqStr(PeriodName);
+   // Group operator chains by their stream characteristics
+   // Map: StreamName -> list of operator instance names
+   std::map<std::string, std::vector<std::string>> StreamToOpNames;
+   
+   for (const auto &Info : OpChainInfos) {
+      std::string StreamName;
+      
+      if (Info.IsTimeAvg) {
+         StreamName = GroupName + "_" + Info.FreqStr + "Avg";
+      } else {
+         StreamName = GroupName + "_" + Info.FreqStr + "Samples";
+      }
+      
+//      std::cout << StreamName << " : " << Info.ChainStr << std::endl;
+      StreamToOpNames[StreamName].push_back(Info.ChainStr);
+   }
+
+   // Create streams and associate operators
+   for (const auto &[StreamName, OpNames] : StreamToOpNames) {
+      
+      // Determine stream type from name
+      bool IsTimeAvg = (StreamName.find("Avg") != std::string::npos);
+      
+      // Extract period string from stream name
+      // e.g., "GlobalStats_1DayAvg" -> "1Day"
+      size_t UnderscorePos = StreamName.find_last_of("_");
+      std::string PeriodWithSuffix = StreamName.substr(UnderscorePos + 1);
+      std::string PeriodStr;
+      if (IsTimeAvg) {
+         PeriodStr = PeriodWithSuffix.substr(0, PeriodWithSuffix.find("Avg"));
+      } else {
+         PeriodStr = PeriodWithSuffix.substr(0, PeriodWithSuffix.find("Samples"));
+      }
+      
+      // Parse period string into frequency and units
+      std::vector<std::string> ParsedStr = parseFreqStr(PeriodStr);
       I4 Freq = std::stoi(ParsedStr[0]);
       TimeUnits FreqUnits = TimeUnitsFromString(ParsedStr[1]);
       TimeInterval PeriodInterval(Freq, FreqUnits);
-      AveragingPeriods.push_back({PeriodName, PeriodInterval});
-
-      // Fetch the RestartWrite alarm and check if the interval is evenly
-      // divisible by the averaging period interval.
-      auto RestartAlarm = IOStream::getAlarm("RestartWrite");
-      bool IsDivisible = RestartAlarm->getInterval()->isDivisibleBy(PeriodInterval);
-      if (!IsDivisible) {
-         ABORT_ERROR("Analysis: The RestartWrite interval is not divisible by the averaging period, {} {}. Currently, temporal averaging is only available over intervals where RestartPeriod % PeriodInterval == 0", ParsedStr[0], ParsedStr[1]);
+      
+      // For time-averaged streams, validate against RestartWrite interval
+      if (IsTimeAvg) {
+         auto RestartAlarm = IOStream::getAlarm("RestartWrite");
+         bool IsDivisible = RestartAlarm->getInterval()->isDivisibleBy(PeriodInterval);
+         if (!IsDivisible) {
+            ABORT_ERROR("Analysis: The RestartWrite interval is not divisible by "
+                       "the averaging period, {} {}. Currently, temporal averaging "
+                       "is only available over intervals where "
+                       "RestartPeriod % PeriodInterval == 0", 
+                       ParsedStr[0], ParsedStr[1]);
+         }
       }
 
-      StreamCfg.Params["Filename"] = FilenamePrefix + "_" + PeriodName + "Avg" + FilenameTemplate;
+      // Configure stream parameters
+      StreamCfg.Params["Filename"] = FilenamePrefix + "_" + PeriodStr + 
+                                     (IsTimeAvg ? "Avg" : "Samples") + FilenameTemplate;
       StreamCfg.Params["Freq"] = ParsedStr[0];
       StreamCfg.Params["FreqUnits"] = ParsedStr[1];
 
+      // Create the IOStream
       auto NewStreamCfg = StreamCfg.toConfig();
       auto RefClock = AnalysisManager->getModelClock();
-      std::string NewStreamName = GroupName + "_" + PeriodName + "Avg";
-      IOStream::create(NewStreamName, NewStreamCfg, RefClock);
-      StreamNames.push_back(NewStreamName);
-      OutputStreams.push_back(
-          AnalysisStream(NewStreamName, PeriodName, PeriodInterval, true));
-   }
-
-   // Loop over list of discrete sampling frequencies and create a separate
-   // stream for each period in this group.
-   for (const auto &SampleName: SampleFreqList) {
-      std::vector<std::string> ParsedStr = parseFreqStr(SampleName);
-      I4 Freq = std::stoi(ParsedStr[0]);
-      TimeUnits FreqUnits = TimeUnitsFromString(ParsedStr[1]);
-      TimeInterval SampleInterval(Freq, FreqUnits);
-      SamplingPeriods.push_back({SampleName, SampleInterval});
-
-      StreamCfg.Params["Filename"] = FilenamePrefix + "_" + SampleName + "Samples" + FilenameTemplate;
-      StreamCfg.Params["Freq"] = ParsedStr[0];
-      StreamCfg.Params["FreqUnits"] = ParsedStr[1];
-
-      auto NewStreamCfg = StreamCfg.toConfig();
-      auto RefClock = AnalysisManager->getModelClock();
-      std::string NewStreamName = GroupName + "_" + SampleName + "Samples";
-      IOStream::create(NewStreamName, NewStreamCfg, RefClock);
-      StreamNames.push_back(NewStreamName);
-      OutputStreams.push_back(
-          AnalysisStream(NewStreamName, SampleName, SampleInterval, false));
+      IOStream::create(StreamName, NewStreamCfg, RefClock);
+      
+      // Get the created stream
+      auto Stream = IOStream::get(StreamName);
+      
+      // Associate operators with stream and populate contents
+      auto OpNodes = AnalysisManager->getOpNodes();
+      for (auto *Node : OpNodes) {
+         std::string OpInstanceName = Node->Op->getName();
+         
+         // Check if this operator is in our list for this stream
+         if (std::find(OpNames.begin(), OpNames.end(), OpInstanceName) != OpNames.end()) {
+            // Associate operator with stream
+            Node->StreamName.push_back(StreamName);
+            
+            // Add operator's output fields to stream contents
+            for (const auto &FieldName : Node->Op->getOutputFieldNames()) {
+               Stream->addField(FieldName);
+            }
+         }
+      }
+      
+      // Store stream information in AnalysisGroup
+      AnalysisManager->OutputStreams.push_back(
+          AnalysisStream(StreamName, PeriodInterval, IsTimeAvg)
+      );
+      
    }
 
 } // end createAnalysisGroupStreams
-
-
 
 } // end namespace OMEGA
