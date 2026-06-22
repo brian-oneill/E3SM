@@ -176,6 +176,13 @@ int main(int argc, char *argv[]) {
       for (const auto &OpNode : DefAnalysis->getOpNodes()) {
 //         std::cout << OpNode->Op->getName() << std::endl;
       }
+
+//   auto DefTimeStepper = TimeStepper::getDefault();
+//   Clock *OmegaClock = DefTimeStepper->getClock();
+//   for (const auto Alarm: OmegaClock->Alarms) {
+//      std::cout << Alarm->getName() << std::endl;
+//   }
+
 /*
 
 //      SpatialMaxOp<Real> GlobMaxOp("PseudoThickness", *OmegaConfig);

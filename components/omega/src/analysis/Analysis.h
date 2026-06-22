@@ -37,7 +37,7 @@ struct OperatorNode {
    std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
    std::vector<OperatorNode*> Upstreams;       // Upstream dependencies
    std::vector<std::string> StreamName;        // Which stream owns it
-   Alarm ComputeAlarm;                         // When to compute
+   std::vector<Alarm*> ComputeAlarms;          // Pointers to alarms (owned by streams or Analysis)
 };
 
 /// The AnalysisStream struct ...
@@ -104,6 +104,10 @@ class Analysis {
    static void finalize();
 
  private:
+
+   // Storage for accumulation alarms (owned by Analysis, not streams)
+   std::vector<std::unique_ptr<Alarm>> AccumulationAlarms;
+
    ///
    static Analysis *DefAnalysis;
 
@@ -142,6 +146,9 @@ class Analysis {
    ///
    TimeInterval findShortestDownstreamAlarm(const OperatorNode &Node);
 
+   ///
+   void propagateAlarmsUpstream();
+   
    // Forbid copy and move construction
    Analysis(const Analysis &) = delete;
    Analysis(Analysis &&)      = delete;
