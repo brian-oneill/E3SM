@@ -57,8 +57,8 @@ void AnalysisGroup::createAnalysisGroupStreams(
    for (const auto &Info : OpChainInfos) {
       std::string StreamName;
       
-      if (Info.IsTimeAvg) {
-         StreamName = GroupName + "_" + Info.FreqStr + "Avg";
+      if (Info.IsTimeReduction) {
+         StreamName = GroupName + "_" + Info.FreqStr + "TimeStats";
       } else {
          StreamName = GroupName + "_" + Info.FreqStr + "Samples";
       }
@@ -71,15 +71,15 @@ void AnalysisGroup::createAnalysisGroupStreams(
    for (const auto &[StreamName, OpNames] : StreamToOpNames) {
       
       // Determine stream type from name
-      bool IsTimeAvg = (StreamName.find("Avg") != std::string::npos);
+      bool IsTimeReduction = (StreamName.find("TimeStats") != std::string::npos);
       
       // Extract period string from stream name
-      // e.g., "GlobalStats_1DayAvg" -> "1Day"
+      // e.g., "GlobalStats_1DayTimeStats" -> "1Day"
       size_t UnderscorePos = StreamName.find_last_of("_");
       std::string PeriodWithSuffix = StreamName.substr(UnderscorePos + 1);
       std::string PeriodStr;
-      if (IsTimeAvg) {
-         PeriodStr = PeriodWithSuffix.substr(0, PeriodWithSuffix.find("Avg"));
+      if (IsTimeReduction) {
+         PeriodStr = PeriodWithSuffix.substr(0, PeriodWithSuffix.find("TimeStats"));
       } else {
          PeriodStr = PeriodWithSuffix.substr(0, PeriodWithSuffix.find("Samples"));
       }
@@ -91,7 +91,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
       TimeInterval PeriodInterval(Freq, FreqUnits);
       
       // For time-averaged streams, validate against RestartWrite interval
-      if (IsTimeAvg) {
+      if (IsTimeReduction) {
          auto RestartAlarm = IOStream::getAlarm("RestartWrite");
          bool IsDivisible = RestartAlarm->getInterval()->isDivisibleBy(PeriodInterval);
          if (!IsDivisible) {
@@ -105,7 +105,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
 
       // Configure stream parameters
       StreamCfg.Params["Filename"] = FilenamePrefix + "_" + PeriodStr + 
-                                     (IsTimeAvg ? "Avg" : "Samples") + FilenameTemplate;
+                                     (IsTimeReduction ? "TimeStats" : "Samples") + FilenameTemplate;
       StreamCfg.Params["Freq"] = ParsedStr[0];
       StreamCfg.Params["FreqUnits"] = ParsedStr[1];
 
@@ -136,7 +136,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
       
       // Store stream information in AnalysisGroup
       AnalysisManager->OutputStreams.push_back(
-          AnalysisStream(StreamName, PeriodInterval, IsTimeAvg)
+          AnalysisStream(StreamName, PeriodInterval, IsTimeReduction)
       );
       
    }

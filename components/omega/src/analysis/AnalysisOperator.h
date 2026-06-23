@@ -1,6 +1,8 @@
 #ifndef OMEGA_ANALYSISOP_H
 #define OMEGA_ANALYSISOP_H
 
+//===----------------------------------------------------------------------===//
+
 #include "Config.h"
 #include "DataTypes.h"
 #include "Dimension.h"
@@ -18,23 +20,12 @@
 
 namespace OMEGA {
 
-// Temporal operators have an accumulation phase and a operation/output phase
+/// Temporal operators have an accumulation phase and a operation/output phase
 enum class TemporalPhase {Accumulate, Operate};
 
-// Base case: return the config
+/// Base case: return the config
 inline Config makeOpConfig() {
     return Config();
-}
-
-template<typename T>
-using OpParam = std::pair<std::string, std::decay_t<T>>;
-
-template<typename T>
-OpParam<T> opParam(std::string Key, T&& Value) {
-    return {
-        std::move(Key),
-        std::forward<T>(Value)
-    };
 }
 
 /// Create a Config with key-value pairs
@@ -44,6 +35,19 @@ Config makeOpConfig(const std::pair<std::string, T>& Param, Args... OtherArgs) {
     Config Cfg = makeOpConfig(OtherArgs...);  // Recurse to build from end
     Cfg.add(Param.first, Param.second);
     return Cfg;
+}
+
+///
+template<typename T>
+using OpParam = std::pair<std::string, std::decay_t<T>>;
+
+///
+template<typename T>
+OpParam<T> opParam(std::string Key, T&& Value) {
+    return {
+        std::move(Key),
+        std::forward<T>(Value)
+    };
 }
 
 /// The AnalysisOperator class ...
@@ -72,11 +76,13 @@ class AnalysisOperator {
    /// Returns true if Field has already been computed on this timestamp
    bool isCacheValid(const TimeInstant &TimeStamp);
 
-   /// Initialize operator: create and register output fields in Field map
-   virtual void initialize(Config Options,
-                           const MachEnv *InEnv,
-                           const HorzMesh *Mesh,
-                           const VertCoord *VCoord) = 0;
+   /// Initialize operator 
+   virtual void initialize(
+       const MachEnv *Env,
+       const HorzMesh *Mesh,
+       const VertCoord *VCoord,
+       Config Options
+   );
 
    /// Perform computation of Analysis fields. Data arrays of input field
    /// retrieved from Field map using input field names. Writes to
@@ -85,6 +91,13 @@ class AnalysisOperator {
 
 
  protected:
+
+   // Member data
+   const HorzMesh *Mesh;                    ///< Horizontal mesh
+   const VertCoord *VCoord;                 ///< VertCoord
+   MPI_Comm Comm;
+
+
    std::string OperatorTypeName;
    std::string InstanceName;
    std::vector<std::string> InputNames;

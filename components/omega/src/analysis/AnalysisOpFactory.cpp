@@ -25,6 +25,7 @@ void AnalysisOpFactory::registerOperator(
 }
 
 //------------------------------------------------------------------------------
+// 
 std::unique_ptr<AnalysisOperator> 
 AnalysisOpFactory::createOp(
     const std::string &OpType,
@@ -52,25 +53,11 @@ AnalysisOpFactory::createOp(
    // Build fully-qualified operator type
    std::string FullOpType = OpType + "_" + arrayTypeName;
 
-//   std::cout << "full op type name: " << FullOpType << std::endl;
-
    auto &Reg = registry();
 
    auto it = Reg.find(FullOpType);
    
    if (it == Reg.end()) {
-
-//      // Build helpful error message with suggestions
-//      std::ostringstream oss;
-//      oss << "DiagOperatorFactory: Unknown operator type '" << type << "'.\n";
-//      oss << "Available operators: ";
-      
-//      auto available = availableOperators();
-//      for (size_t i = 0; i < available.size(); ++i) {
-//         oss << available[i];
-//         if (i < available.size() - 1) oss << ", ";
-//      }
-      
       ABORT_ERROR("Operator type {} not found", FullOpType);
    }
    
@@ -86,7 +73,11 @@ bool AnalysisOpFactory::hasOperator(const std::string &Type) {
 
 
 //------------------------------------------------------------------------------
-std::string AnalysisOpFactory::getArrayTypeName(ArrayDataType DType, int Rank, ArrayMemLoc MemLoc) {
+std::string AnalysisOpFactory::getArrayTypeName(
+   ArrayDataType DType,
+   int Rank,
+   ArrayMemLoc MemLoc
+) {
    // Use similar logic to dispatchFieldArray but return the type name string
    #define TRY_ARRAY_TYPE(dt, r, ml, ArrayT) \
        if (DType == dt && Rank == r && MemLoc == ml) { \

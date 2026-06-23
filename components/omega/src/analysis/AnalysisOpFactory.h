@@ -138,20 +138,4 @@ class AnalysisOpFactory{
 
 } // end namespace OMEGA
 
-/// Usage in operator implementation file:
-///   REGISTER_ANALYSIS_OPERATOR(GlobalMinOp, "global_min");
-///
-/// This creates a static initializer that registers the operator
-/// before main() runs.
-#define REGISTER_ANALYSIS_OPERATOR(Type, Name) \
-  namespace { \
-    static bool registered_##Type = []() { \
-      ::OMEGA::AnalysisOpFactory::registerOperator(Name, \
-        [](const std::string& n, ::OMEGA::Config c) { \
-          return std::make_unique<Type>(n, c); \
-        }); \
-      return true; \
-    }(); \
-  }
-
 #endif

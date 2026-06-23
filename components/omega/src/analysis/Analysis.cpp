@@ -44,6 +44,8 @@ void Analysis::init() {
 
    registerAllBaseAnalysisOperators();
 
+   auto DefEnv  = MachEnv::getDefault();
+
    auto Mesh = HorzMesh::getDefault();
 
    auto VCoord = VertCoord::getDefault();
@@ -55,7 +57,7 @@ void Analysis::init() {
    Config *OmegaConfig = Config::getOmegaConfig();
 
    Analysis::DefAnalysis =
-       create("Default", Mesh, VCoord, OmegaClock, OmegaConfig);
+       create("Default", DefEnv, Mesh, VCoord, OmegaClock, OmegaConfig);
 
 //   IOStream::printAllStreams();
 } // end init
@@ -63,11 +65,14 @@ void Analysis::init() {
 //------------------------------------------------------------------------------
 // Creates a new Analysis instance using the constructor and puts it in the
 // AllAnalysisObjects map.
-Analysis *Analysis::create(const std::string &Name,
-                        const HorzMesh *Mesh,
-                        const VertCoord *VCoord,
-                        Clock *ModelClock,
-                        Config *Options) {
+Analysis *Analysis::create(
+   const std::string &Name,
+   const MachEnv *Env,
+   const HorzMesh *Mesh,
+   const VertCoord *VCoord,
+   Clock *ModelClock,
+   Config *Options
+) {
 
    if (AllAnalysisObjects.find(Name) != AllAnalysisObjects.end()) {
       LOG_ERROR("Attempted to create an Analysis with name {} "
@@ -75,7 +80,7 @@ Analysis *Analysis::create(const std::string &Name,
       return nullptr;
    }
 
-   auto NewAnalysis = new Analysis(Name, Mesh, VCoord, ModelClock, Options);
+   auto NewAnalysis = new Analysis(Name, Env, Mesh, VCoord, ModelClock, Options);
 
    AllAnalysisObjects.emplace(Name, NewAnalysis);
 
@@ -89,12 +94,14 @@ Analysis *Analysis::create(const std::string &Name,
 // node in the config file, calls derived constructor for pre-defined
 // AnalysisGroups, or parses composable operator chains for custom groups.
 Analysis::Analysis(const std::string &InName,
+                        const MachEnv *InEnv,
                         const HorzMesh *InMesh,
                         const VertCoord *InVCoord,
                         Clock *InModelClock,
                         Config *Options) {
 
    Name = InName;
+   Env = InEnv;
    Mesh = InMesh;
    VCoord = InVCoord;
    ModelClock = InModelClock;
@@ -131,6 +138,9 @@ Analysis::Analysis(const std::string &InName,
    buildOperatorDependencies();
 
    setComputeAlarms();
+
+   initializeAllOps();
+
 } // end constructor
 
 //------------------------------------------------------------------------------
@@ -140,15 +150,18 @@ Analysis::Analysis(const std::string &InName,
 void Analysis::parseChainAndBuildOps(
    const std::string &OpChainStr
 ) {
+
+   // The input OpChainStr is broken into nodes and stored in ChainVec
    std::vector<std::string> ChainVec;
    std::stringstream OpChainSS(OpChainStr);
-
    std::string Part;
-
    while (std::getline(OpChainSS, Part, '_')) {
        ChainVec.push_back(Part);
    }
 
+   // Working from the beginning of the chain, check if the Op already exists
+   // by checking the Field registry for the Op output. If not build the Op and
+   // Node by calling registerAnalysisOp
    std::string CurChainStr;
    for (const auto &ChainNode : ChainVec) {
       std::string Upstream = CurChainStr;
@@ -183,7 +196,8 @@ void Analysis::parseChainAndBuildOps(
 
 //------------------------------------------------------------------------------
 // For given operator type and upstream inputs, create an AnalysisOperator
-// instance and an OperatorNode
+// instance and places it within a new OperatorNode. The OperatorNode is placed
+// within the OpNodes member of the Analysis class.
 void Analysis::registerAnalysisOp(
     const std::string &OpName,
     const std::vector<std::string> &UpstreamNames,
@@ -268,7 +282,7 @@ void Analysis::setComputeAlarms() {
             Node.ComputeAlarms.push_back(AccumulationAlarm.get());
             AccumulationAlarms.push_back(std::move(AccumulationAlarm));
             
-//            std::cout << "terminal avg op: " << OpName << std::endl;
+//            std::cout << "terminal time reduction op: " << OpName << std::endl;
          } else {
             // Discrete sampling operators: point to stream alarms
             for (const auto &StreamName : Node.StreamName) {
@@ -324,6 +338,17 @@ void Analysis::propagateAlarmsUpstream() {
    }
    
 } // end propagateAlarmsUpstream
+
+
+//------------------------------------------------------------------------------
+//
+void Analysis::initializeAllOps() {
+
+   for (OperatorNode &OpNode: OpNodes) {
+      OpNode.Op->initialize( Env, Mesh, VCoord, makeOpConfig());
+   }
+
+} // end initializeAllOps
 
 //------------------------------------------------------------------------------
 // Fetch a reference to the a pointer the ModelClock, required for

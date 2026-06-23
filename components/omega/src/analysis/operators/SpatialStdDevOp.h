@@ -58,18 +58,6 @@ class SpatialStdDevOp : public AnalysisOperator {
    } // end constructot
 
    ///
-   void initialize(Config Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
-
-   } // end initialize
-
-   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);

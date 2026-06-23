@@ -1,13 +1,16 @@
+//===----------------------------------------------------------------------===//
 #include "AnalysisOperator.h"
 
 namespace OMEGA {
 
+//------------------------------------------------------------------------------
 AnalysisOperator::AnalysisOperator() {
    // Initialize tracking variables
    FieldComputed = false;
    LastComputed = TimeInstant();
 }
 
+//------------------------------------------------------------------------------
 AnalysisOperator::AnalysisOperator(const std::string &OperatorType) {
 
    // Set operator type name
@@ -19,7 +22,22 @@ AnalysisOperator::AnalysisOperator(const std::string &OperatorType) {
    LastComputed = TimeInstant();
 }
 
+//------------------------------------------------------------------------------
+void AnalysisOperator::initialize(
+    const MachEnv *Env,
+    const HorzMesh *InMesh,
+    const VertCoord *InVCoord,
+    Config Options
+) {
 
+
+   Mesh = InMesh;
+   VCoord = InVCoord;
+   Comm = Env->getComm();
+
+} // end initialize
+
+//------------------------------------------------------------------------------
 AnalysisOperator::~AnalysisOperator() {
    for (const auto &OutputName : OutputNames) {
       if (Field::exists(OutputName)) {
@@ -28,20 +46,25 @@ AnalysisOperator::~AnalysisOperator() {
    }
 }
 
+//------------------------------------------------------------------------------
 const std::string AnalysisOperator::getOperatorType() {
    return OperatorTypeName;
 }
 
+//------------------------------------------------------------------------------
 const std::string AnalysisOperator::getName() { return InstanceName; }
 
+//------------------------------------------------------------------------------
 const std::vector<std::string> AnalysisOperator::getInputFieldNames() {
    return InputNames;
 }
 
+//------------------------------------------------------------------------------
 const std::vector<std::string> AnalysisOperator::getOutputFieldNames() {
    return OutputNames;
 }
 
+//------------------------------------------------------------------------------
 bool AnalysisOperator::isCacheValid(const TimeInstant &TimeStamp) {
    bool IsValid = false;
    if (FieldComputed && LastComputed == TimeStamp) {

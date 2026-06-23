@@ -33,7 +33,7 @@ class AnalysisGroup {
    struct OpChainInfo {
       std::string ChainStr;      // Operator instance name (e.g., "Temperature_SpatialMean_TimeMean1day")
       std::string FreqStr;       // Frequency/period string (e.g., "1day", "6hour")
-      bool IsTimeAvg;            // true for time average, false for discrete samples
+      bool IsTimeReduction;            // true for temporal reduction, false for discrete samples
    };
 
    /// The StreamParams struct serves as a template for creating output streams

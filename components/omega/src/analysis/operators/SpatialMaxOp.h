@@ -52,18 +52,6 @@ class SpatialMaxOp : public AnalysisOperator {
    } // end constructor
 
    ///
-   void initialize(Config Options,
-                   const MachEnv *InEnv,
-                   const HorzMesh *MeshIn,
-                   const VertCoord *VCoordIn) override {
-
-      Mesh = MeshIn;
-      VCoord = VCoordIn;
-      Comm = InEnv->getComm();
-
-   } // end initialize
-
-   ///
    void compute(const TimeInstant &TimeStamp) override {
 
       auto InputField = Field::get(InputNames[0]);
@@ -81,11 +69,6 @@ class SpatialMaxOp : public AnalysisOperator {
    } // end compute
 
  private:
-
-   // Member data
-   const HorzMesh *Mesh;                    ///< Horizontal mesh
-   const VertCoord *VCoord;                 ///< VertCoord
-   MPI_Comm Comm;
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input

@@ -19,6 +19,7 @@
 #include "Field.h"
 #include "HorzMesh.h"
 #include "Logging.h"
+#include "MachEnv.h"
 #include "TimeMgr.h"
 #include "VertCoord.h"
 
@@ -43,11 +44,11 @@ struct OperatorNode {
 /// The AnalysisStream struct ...
 struct AnalysisStream {
    // AnalysisStream constructor
-   AnalysisStream(std::string InStreamName, TimeInterval InPeriodInterval, bool InIsTimeAvg)
-   : StreamName(InStreamName), PeriodInterval(InPeriodInterval), IsTimeAvg(InIsTimeAvg) {}
+   AnalysisStream(std::string InStreamName, TimeInterval InPeriodInterval, bool InIsTimeReduction)
+   : StreamName(InStreamName), PeriodInterval(InPeriodInterval), IsTimeReduction(InIsTimeReduction) {}
    std::string StreamName;      // Name of stream
    TimeInterval PeriodInterval; // TimeInterval form of interval
-   bool IsTimeAvg;              // Is temporal average or discrete samples
+   bool IsTimeReduction;              // Is temporal average or discrete samples
 };
 
 
@@ -63,6 +64,7 @@ class Analysis {
    ///
    static Analysis * create(
        const std::string &Name,
+       const MachEnv *Env,
        const HorzMesh *Mesh,
        const VertCoord *VCoord,
        Clock *ModelClock,
@@ -116,6 +118,7 @@ class Analysis {
 
    ///
    Analysis(const std::string &Name,
+            const MachEnv *Env,
             const HorzMesh *Mesh,
             const VertCoord *VCoord,
             Clock *ModelClock,
@@ -124,10 +127,10 @@ class Analysis {
 
    ///
    std::string Name;
-
-   Clock *ModelClock;
+   const MachEnv *Env;
    const HorzMesh *Mesh;
    const VertCoord *VCoord;
+   Clock *ModelClock;
 
    /// All registered operator nodes
    std::vector<OperatorNode> OpNodes;
@@ -139,6 +142,9 @@ class Analysis {
 
    ///
    void setComputeAlarms();
+
+   ///
+   void initializeAllOps();
 
    /// 
    TimeInterval findShortestStreamInterval(const OperatorNode &Node);
