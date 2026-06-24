@@ -35,10 +35,10 @@ std::vector<std::string> parseFreqStr(const std::string &FreqStr);
 
 /// The OperatorNode struct ...
 struct OperatorNode {
-   std::unique_ptr<AnalysisOperator> Op;       // Operator is owned here
-   std::vector<OperatorNode*> Upstreams;       // Upstream dependencies
-   std::vector<std::string> StreamName;        // Which stream owns it
-   std::vector<Alarm*> ComputeAlarms;          // Pointers to alarms (owned by streams or Analysis)
+   std::unique_ptr<AnalysisOperator> Op; // Operator is owned here
+   std::vector<OperatorNode*> Upstreams; // Upstream dependencies
+   std::vector<std::string> StreamNames; // Which stream owns it
+   std::vector<Alarm*> ComputeAlarms;    // Pointers to Alarms
 };
 
 /// The Analysis class ...
@@ -133,12 +133,6 @@ class Analysis {
 
    ///
    void initializeAllOps();
-
-   /// 
-   TimeInterval findShortestStreamInterval(const OperatorNode &Node);
-
-   ///
-   TimeInterval findShortestDownstreamAlarm(const OperatorNode &Node);
 
    ///
    void propagateAlarmsUpstream();
