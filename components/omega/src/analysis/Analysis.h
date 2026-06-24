@@ -41,22 +41,9 @@ struct OperatorNode {
    std::vector<Alarm*> ComputeAlarms;          // Pointers to alarms (owned by streams or Analysis)
 };
 
-/// The AnalysisStream struct ...
-struct AnalysisStream {
-   // AnalysisStream constructor
-   AnalysisStream(std::string InStreamName, TimeInterval InPeriodInterval, bool InIsTimeReduction)
-   : StreamName(InStreamName), PeriodInterval(InPeriodInterval), IsTimeReduction(InIsTimeReduction) {}
-   std::string StreamName;      // Name of stream
-   TimeInterval PeriodInterval; // TimeInterval form of interval
-   bool IsTimeReduction;              // Is temporal average or discrete samples
-};
-
-
 /// The Analysis class ...
 class Analysis {
  public:
-   /// Analysis output stream info
-   std::vector<AnalysisStream> OutputStreams;
 
    ///
    static void init();
@@ -134,8 +121,9 @@ class Analysis {
 
    /// All registered operator nodes
    std::vector<OperatorNode> OpNodes;
-   /// Full names of registered operators
-   std::vector<std::string> RegisteredOpNames;
+
+   ///
+   static void registerAllBaseAnalysisOperators();
 
    ///
    void buildOperatorDependencies();

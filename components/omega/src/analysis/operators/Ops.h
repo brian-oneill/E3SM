@@ -11,8 +11,5 @@
 
 namespace OMEGA {
 
-///
-void registerAllBaseAnalysisOperators();
-
 }  // end namespace OMEGA
 #endif

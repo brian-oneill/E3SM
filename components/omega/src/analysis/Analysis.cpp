@@ -214,7 +214,6 @@ void Analysis::registerAnalysisOp(
       Node.Op = std::move(NewOp);
 
       OpNodes.push_back(std::move(Node));
-      RegisteredOpNames.push_back(NewName);
 
    }
 

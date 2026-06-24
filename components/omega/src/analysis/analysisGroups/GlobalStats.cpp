@@ -21,12 +21,12 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
    // Get statistics operators list
    std::vector<std::string> OpList;
-   Err1 = AnalysisGroupOptions.get("Stats", OpList);
-   CHECK_ERROR_ABORT(Err1, "GlobalStats: Stats list not found in Config");
+   Err1 = AnalysisGroupOptions.get("SpatialStats", OpList);
+   CHECK_ERROR_ABORT(Err1, "GlobalStats: SpatialStats list not found in Config");
 
-   // Get temporal averaging periods (optional)
+   // Get temporal reduction periods (optional)
    std::vector<std::string> PeriodList;
-   Err1 = AnalysisGroupOptions.get("AvgPeriod", PeriodList);
+   Err1 = AnalysisGroupOptions.get("ReductionPeriod", PeriodList);
 
    // Get discrete sampling frequencies (optional)
    std::vector<std::string> SampleFreqList;
@@ -34,8 +34,8 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
    // At least one temporal specification must be present
    if (Err1.isFail() and Err2.isFail()) {
-      ABORT_ERROR("GlobalStats: Error reading both AvgPeriod and SampleFreq from "
-                  "Config, at least one must be present");
+      ABORT_ERROR("GlobalStats: Error reading both ReductionPeriod and "
+                  "SampleFreq from Config, at least one must be present");
    }
 
    for (const auto &VarName: VarList) {
@@ -46,7 +46,7 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
          std::string NewOpChainName = VarName + "_Spatial" + OpName; 
 
-         // Create time-averaged chains (spatial op + temporal averaging)
+         // Create temporal reduction chains (spatial op + temporal reduction)
          for (const auto &Period: PeriodList) {
             ChainStr = VarName + "_" + OperatorType + "_TimeMean" + Period;
 
@@ -60,7 +60,8 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 
          }
 
-         // Create discrete sampling chains (spatial op only, no temporal averaging)
+         // Create discrete sampling chains (spatial op only, no temporal
+         // temporal reduction)
          if (!SampleFreqList.empty()) {
             ChainStr = VarName + "_" + OperatorType;
             // Parse and build the operator chain if Ops were not built above
@@ -97,7 +98,7 @@ GlobalStats::GlobalStats(const std::string &GroupName,
 //   for (const auto &OutputStream: OutputStreams) {
 //      std::cout << StreamName << std::endl;
 //      std::cout << OutputStream.StreamName << " " << OutputStream.IntervalStr << std::endl;
-         //if (OutputStream.IsTimeAvg) {
+         //if (OutputStream.IsTimeReduction) {
          //   AnalysisManager->registerAnalysisOp("time_mean", {VarName + "_" + OperatorType}, makeOpConfig(opParam("Period", OutputStream.IntervalStr)));
          //}
 

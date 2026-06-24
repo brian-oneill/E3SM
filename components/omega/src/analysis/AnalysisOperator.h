@@ -20,9 +20,6 @@
 
 namespace OMEGA {
 
-/// Temporal operators have an accumulation phase and a operation/output phase
-enum class TemporalPhase {Accumulate, Operate};
-
 /// Base case: return the config
 inline Config makeOpConfig() {
     return Config();
@@ -76,6 +73,7 @@ class AnalysisOperator {
    /// Returns true if Field has already been computed on this timestamp
    bool isCacheValid(const TimeInstant &TimeStamp);
 
+
    /// Initialize operator 
    virtual void initialize(
        const MachEnv *Env,
@@ -83,6 +81,10 @@ class AnalysisOperator {
        const VertCoord *VCoord,
        Config Options
    );
+
+   /// Set period alarm for temporal reduction operators
+   /// Default implementation does nothing (non-temporal operators ignore this)
+   virtual void setPeriodAlarm(Alarm *Alarm) {}
 
    /// Perform computation of Analysis fields. Data arrays of input field
    /// retrieved from Field map using input field names. Writes to

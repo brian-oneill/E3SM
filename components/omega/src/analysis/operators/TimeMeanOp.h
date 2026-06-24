@@ -30,10 +30,6 @@ class TimeMeanOp : public AnalysisOperator {
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
 
-
-      CompPhase = TemporalPhase::Accumulate;
-      Finalized = false;
-
       auto InputField = Field::get(InputNames[0]);
 
       InputData = InputField->getDataArray<ArrayT>();
@@ -63,18 +59,43 @@ class TimeMeanOp : public AnalysisOperator {
 
       OutputField->template attachData<ArrayT>(OutputData);
 
+      NumAccum = 0;
+      PeriodAlarm = nullptr;
+      IsNewPeriod = true;
+
    } // end constructor
 
    ///
+   void setPeriodAlarm(Alarm *Alarm) override {
+      PeriodAlarm = Alarm;
+   }
+
+   ///
    void compute(const TimeInstant &TimeStamp) override {
-      if (CompPhase == TemporalPhase::Accumulate) {
+      // Accumulate: add current array state
+      if (IsNewPeriod) {
+         NumAccum = 1;
+         deepCopy(OutputData, InputData);
+         IsNewPeriod = false;
+      } else {
          parallelFor(
              {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
-                AccumArray.data()[FlatIdx] += InputData.data()[FlatIdx];
+                OutputData.data()[FlatIdx] += InputData.data()[FlatIdx];
              });
-         ++NumSamples;
+         ++NumAccum;
+         // Check if we should finalize
+         bool ShouldFinalize =
+             (PeriodAlarm != nullptr && PeriodAlarm->isRinging());
+         if (ShouldFinalize) {
+            // Compute mean to finalize output
+            Real InvNumAccum = 1.0 / static_cast<Real>(NumAccum);
+            parallelFor(
+                {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
+                   OutputData.data()[FlatIdx] *= InvNumAccum;
+                });
+            IsNewPeriod = true; // next compute starts fresh
+         }
       }
-
       LastComputed = TimeStamp;
       FieldComputed = true;
    } // end compute
@@ -86,17 +107,14 @@ class TimeMeanOp : public AnalysisOperator {
    const VertCoord *VCoord;                 ///< VertCoord
    MPI_Comm Comm;
 
-   TemporalPhase CompPhase;
-   bool Finalized;
-
    ArrayT InputData;
    ArrayT AccumArray;
    ArrayT OutputData;
-   I4 NumSamples;
+   I4 NumAccum;
    I4 ArraySize;
 
-   Alarm PeriodAlarm;
-   Alarm IntervalAlarm;
+   Alarm *PeriodAlarm;
+   bool IsNewPeriod;
 
 }; // end class TimeMeanOp
 

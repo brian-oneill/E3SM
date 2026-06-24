@@ -134,11 +134,6 @@ void AnalysisGroup::createAnalysisGroupStreams(
          }
       }
       
-      // Store stream information in AnalysisGroup
-      AnalysisManager->OutputStreams.push_back(
-          AnalysisStream(StreamName, PeriodInterval, IsTimeReduction)
-      );
-      
    }
 
 } // end createAnalysisGroupStreams
