@@ -183,10 +183,12 @@ edges, with topological ordering $\pi : \mathcal{V} \to \mathbb{N}$
           \in \text{outputs}(u)$:
             - Add dependency edge: $\mathcal{E} \leftarrow \mathcal{E} \cup
               \{(u, v)\}$
-            - Propagate alarm: If $v.\text{alarm} \neq \texttt{null}$:
-              $u.\text{alarm} \leftarrow \max_{\text{freq}}(u.\text{alarm},
-              v.\text{alarm})$ (producer must compute at least as often as
-              consumer)
+            - Propagate alarms: **For** each $\text{Alarm} \in
+              v.\text{ComputeAlarms}$:
+                - **If** $\text{alarm} \notin u.\text{ComputeAlarms}$:
+                    - $u.\text{ComputeAlarms} \leftarrow
+                      u.\text{ComputeAlarms} \cup \{\text{Alarm}\}$
+                     (upstream nodes observe all downstream alarms)
         - **Else** (field not found): ERROR
 
 **Phase 3**: Validate acyclicity
@@ -329,6 +331,10 @@ alarms rings.
 This design ensures alarms have a clear single owner (stream or Analysis)
 while allowing any number of operator nodes to observe them.
 
+> **v1 constraint:** Temporal reduction periods must be evenly divisible into the
+> restart interval. This is validated during `createAnalysisGroupStreams()` to
+> ensure proper checkpoint/restart behavior.
+
 ### 3.5 AnalysisGroup Configuration
 
 Each child node of `Analysis:` in the configuration file represents an
@@ -448,7 +454,7 @@ Helper utilities for building operator `Config` objects inline:
 ```c++
 // Create a Config from key-value pairs
 // Usage: makeOpConfig(opParam("Period", "1day"), opParam("Layer", 10))
-template<typename T
+template<typename T>
 OpParam<T> opParam(std::string Key, T&& Value);
 
 template<typename T, typename... Args>
@@ -600,9 +606,9 @@ class AnalysisGroup {
  protected:
    /// Metadata about a single operator chain within this group
    struct OpChainInfo {
-      std::string ChainStr;     ///< Operator instance name (output field name)
-      std::string FreqStr;      ///< Period/frequency string, e.g. "1day", "6hour"
-      bool IsTemporalReduction; ///< true = temporal reduction; false = discrete sample
+      std::string ChainStr; ///< Operator instance name (output field name)
+      std::string FreqStr;  ///< Period/frequency string, e.g. "1day", "6hour"
+      bool IsTimeReduction; ///< true = temporal reduction; false = discrete sample
    };
 
    /// Template for constructing an IOStream config for this group's output
@@ -683,9 +689,6 @@ class Analysis {
    /// Get a pointer to the model clock (used by AnalysisGroup for stream creation)
    Clock *&getModelClock();
 
-   /// Get all operator nodes (used by AnalysisGroup for stream association)
-   const std::vector<OperatorNode*> getOpNodes();
-
    /// Check whether a node with FullOpName is already registered
    bool OpNodeExists(const std::string &FullOpName);
 
@@ -711,7 +714,7 @@ class Analysis {
    const HorzMesh *Mesh;
    const VertCoord *VCoord;
 
-   std::vector<OperatorNode> OpNodes;          ///< All registered operator nodes
+   std::vector<std::unique_ptr<OperatorNode>> OpNodes; ///< All registered operator nodes
 
    /// Post-hoc dependency resolution: match input field names against
    /// other nodes' output field names to populate Upstreams vectors.
@@ -759,129 +762,89 @@ results without an explicit signature cache.
 
 ## 5 Verification and Testing
 
+The Analysis module test suite follows a standard testing pyramid: unit tests
+validate individual operators, component tests verify framework mechanisms, and
+integration tests confirm end-to-end functionality. This consolidated approach
+reduces the original test specifications to 6 core tests while maintaining
+complete coverage.
+
 ### 5.1 Test: Individual operator correctness
 
-For each operator type, construct a small test mesh with analytic field
-values. Call `compute()` and verify output against a known-answer solution.
+For each operator type (SpatialMax, SpatialMin, SpatialMean, SpatialStdDev,
+TimeMean in the first batch), construct a small test mesh with analytic field
+values. Call `compute()` directly and verify output against a known-answer
+solution. For TimeMean specifically, verify accumulation over multiple
+timesteps, verify correct mean calculation at period end, and test with
+different `AccumulationInterval` settings. This unit test validates each
+operator in isolation before integration testing.
 
-### 5.2 Test: Time operators accumulation
+### 5.2 Test: Dependency resolution and execution order
 
-Verify that temporal reduction operators correctly accumulate over specified
-periods and produce the correct mean at the end of each period.
+Create configurations with shared intermediate operators (e.g.,
+`Field_SpatialMean_TimeMean1day` and `Field_SpatialStdDev` both requiring
+`Field_SpatialMean`). Verify that `buildOperatorDependencies()` correctly
+populates the `Upstreams` vectors, that intermediate results are computed
+exactly once per timestep (cache validation), and that upstream operators
+complete before downstream operators execute (correct execution order). This
+test verifies DAG construction and cache-based deduplication.
 
-### 5.3 Test: Operator factory and registration
+### 5.3 Test: Alarm system
 
-Verify that all operators register correctly and can be instantiated via the
-factory for all supported array types, ranks, and memory locations.
+Create operators with multiple downstream consumers at different frequencies.
+Verify that `propagateAlarmsUpstream()` correctly propagates alarms from
+terminal nodes to all upstream dependencies. Verify that `setPeriodAlarm()`
+correctly injects period alarms for temporal reduction operators. Verify that
+TimeMeanOp correctly accumulates samples during the accumulation phase and
+finalizes when the period alarm rings. Verify that operators with multiple
+alarms in `ComputeAlarms` trigger when ANY alarm rings. Verify that alarm
+frequency merging ensures upstream operators compute at the highest frequency
+required by any downstream consumer. Verify that intermediate (non-terminal)
+operators with empty `StreamNames` are computed on-demand when downstream
+alarms ring and do not create output files. This test verifies the alarm-driven
+scheduling mechanism.
 
-### 5.4 Test: Dependency resolution
+### 5.4 Test: Factory registration and type dispatch
 
-Create configurations with shared intermediate operators and verify that
-`buildOperatorDependencies()` correctly populates the `Upstreams` vectors
-and that intermediate results are computed exactly once per timestep.
+Verify that all base analysis operators register correctly via
+`registerAllBaseAnalysisOperators()`. Verify that the factory can instantiate
+operators for all supported array types (I4/I8/R4/R8, ranks 1-5,
+Device/Host/Both). Verify that `AnalysisOpFactory::createOp()` correctly
+inspects upstream Field metadata (scalar type, rank, memory location) and
+selects the matching template specialization. Verify that appropriate errors
+are produced when requesting unregistered operator types or array type
+combinations. This test verifies the extensibility mechanism and type-safe
+dispatch.
 
-### 5.5 Test: Cycle detection (future)
-
-Once the full DAG construction algorithm is implemented, create
-configurations with circular dependencies and verify that cycle detection
-produces appropriate errors.
-
-### 5.6 Test: Parser handling
+### 5.5 Test: Configuration parsing and validation
 
 Verify that `parseChainAndBuildOps()` correctly handles valid operator chain
-strings, reuses existing intermediate Fields rather than creating duplicates,
-and produces informative error messages for unrecognized operator names or
-missing input fields.
+strings and reuses existing intermediate Fields rather than creating
+duplicates. Verify that `parseChainAndBuildOps()` produces informative error
+messages for unrecognized operator names or missing input fields. Verify that
+`makeOpConfig()` and `opParam()` helper functions correctly construct Config
+objects for inline parameter passing. Verify that operator constructors
+correctly extract and validate parameters from Config objects, with appropriate
+error handling for missing required parameters or invalid types. Verify that
+`createAnalysisGroupStreams()` correctly groups operator chains by period and
+type, validates temporal reduction periods against the restart interval via
+`TimeInterval::isDivisibleBy()`, and creates the expected set of IOStream
+objects. Verify that `StreamParams::apply()` correctly overrides default stream
+parameters with group-specific configuration. This test verifies the user
+interface and configuration system.
 
-### 5.7 Test: AnalysisGroup stream creation
-
-Verify that `createAnalysisGroupStreams()` correctly groups operator chains
-by period and type, validates temporal reduction periods against the restart
-interval via `TimeInterval::isDivisibleBy()`, and creates the expected set
-of `IOStream` objects with the correct filenames and frequencies.
-
-### 5.8 Test: Alarm propagation and triggering
-
-Verify that `propagateAlarmsUpstream()` correctly propagates alarms from
-terminal nodes to all upstream dependencies. Test that intermediate
-operators receive alarms from multiple downstream consumers. Verify that
-operators with multiple alarms in `ComputeAlarms` trigger when ANY alarm
-rings. Test alarm frequency merging (upstream operators should compute at
-the highest frequency required by any downstream consumer).
-
-### 5.9 Test: TimeMeanOp phase switching
-
-Verify that `TimeMeanOp` correctly accumulates samples during the
-accumulation phase. Test that finalization occurs on the correct timestep
-when the period alarm rings. Verify that the final timestep of a period is
-included in the average (accumulate-then-finalize behavior). Test that
-accumulator and sample counter reset correctly after finalization. Verify
-correct behavior with different `AccumulationInterval` settings (e.g.,
-accumulate every 6 hours vs. every timestep).
-
-### 5.10 Test: Cache validation
-
-Verify that `isCacheValid()` correctly prevents redundant computation when
-multiple downstream operators share an upstream. Test that cache is
-invalidated when the clock advances to a new timestep. Verify that
-`LastComputed` timestamp is updated correctly after each `compute()` call.
-
-### 5.11 Test: Multiple output streams per operator
-
-Test operators whose output fields are written to multiple streams with
-different frequencies. Verify that the operator computes at the highest
-required frequency. Test that the same output field appears correctly in
-multiple output files.
-
-### 5.12 Test: Config parsing and validation
-
-Test `makeOpConfig()` and `opParam()` helper functions for inline config
-construction. Verify that operator constructors correctly extract and
-validate parameters from `Config` objects. Test error handling for missing
-required parameters or invalid parameter types. Verify default parameter
-values are applied correctly.
-
-### 5.13 Test: Field metadata inspection
-
-Test that `AnalysisOpFactory::createOp()` correctly inspects upstream Field
-metadata (scalar type, rank, memory location). Verify correct template
-specialization selection for all combinations of I4/I8/R4/R8, ranks 1-5, and
-Device/Host/Both. Test error handling when requesting an unregistered array
-type combination.
-
-### 5.14 Test: setPeriodAlarm() injection
-
-Verify that `Analysis::setComputeAlarms()` correctly calls `setPeriodAlarm()`
-on temporal reduction operators. Test that non-temporal operators safely
-ignore `setPeriodAlarm()` calls (base class no-op implementation). Verify
-that the correct stream alarm pointer is injected for operators associated
-with multiple streams.
-
-### 5.15 Test: Intermediate operator compute scheduling
-
-Verify that intermediate (non-terminal) operators with empty `StreamNames`
-are computed on-demand when downstream alarms ring. Test that intermediate
-operators don't create unnecessary output files. Verify that intermediate
-results persist in the Field registry for downstream consumption.
-
-### 5.16 Test: AnalysisGroup config override
-
-Test that `StreamParams::apply()` correctly overrides default stream
-parameters. Verify that group-specific stream config (filename, precision,
-frequency) is applied correctly. Test that invalid stream parameter names
-produce appropriate errors.
-
-### 5.17 Test: computeAll() execution order
-
-Verify that operators are computed in correct dependency order (even in v1's
-insertion-order approximation). Test that upstream operators complete before
-downstream operators execute. Verify that `computeRecursive()` (when
-implemented) correctly handles diamond-shaped dependency graphs.
-
-### 5.18 Integration test: End-to-end GlobalStats
+### 5.6 Test: End-to-end integration
 
 Complete system test exercising all components from configuration parsing
-through NetCDF output for global statistics. Initializes the full Omega
-stack, calls `Analysis::init()`, advances the clock through one or more
-output periods, and verifies that output files contain the expected fields
-with correct values.
+through NetCDF output for global statistics. Advance the clock through one
+or more output periods, and verify that output files contain the expected
+fields with correct values. This test validates the complete workflow with
+real mesh and I/O.
+
+### 5.7 Test: Advanced DAG features (future)
+
+Once the full DAG construction algorithm is implemented, create configurations
+with circular dependencies and verify that cycle detection produces appropriate
+errors. Test signature-based deduplication to ensure structurally equivalent
+operators are merged into single nodes. Verify formal topological sort produces
+correct execution ordering for complex DAGs. This test validates future
+enhancements to dependency resolution.
