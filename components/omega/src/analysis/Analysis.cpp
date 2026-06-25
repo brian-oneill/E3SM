@@ -209,11 +209,17 @@ void Analysis::registerAnalysisOp(
 //   std::cout << "register op w name:  " << NewName << "| exists: " << OpNodeExists(NewName) << std::endl;
 
    if (NewOp) {
-
-      OperatorNode Node;
-      Node.Op = std::move(NewOp);
-
+      auto Node = std::make_unique<OperatorNode>();
+      Node->Op = std::move(NewOp);
+      
       OpNodes.push_back(std::move(Node));
+
+
+
+//      OperatorNode Node;
+//      Node.Op = std::move(NewOp);
+
+//      OpNodes.push_back(std::move(Node));
 
    }
 
@@ -224,20 +230,20 @@ void Analysis::registerAnalysisOp(
 //------------------------------------------------------------------------------
 void Analysis::buildOperatorDependencies() {
    for (auto &Node : OpNodes) {
-      auto InputNames = Node.Op->getInputFieldNames();
+      auto InputNames = Node->Op->getInputFieldNames();
       
       for (const auto &InputName : InputNames) {
          for (auto &PotentialUpstream : OpNodes) {
-            auto UpstreamOutputs = PotentialUpstream.Op->getOutputFieldNames();
+            auto UpstreamOutputs = PotentialUpstream->Op->getOutputFieldNames();
             
             for (const auto &UpstreamOutput : UpstreamOutputs) {
                if (UpstreamOutput == InputName) {
                   // Check if already in Upstreams vector
-                  if (std::find(Node.Upstreams.begin(), 
-                               Node.Upstreams.end(), 
-                               &PotentialUpstream) == Node.Upstreams.end()) {
+                  if (std::find(Node->Upstreams.begin(), 
+                               Node->Upstreams.end(), 
+                               PotentialUpstream.get()) == Node->Upstreams.end()) {
                      // Not found, so add it
-                     Node.Upstreams.push_back(&PotentialUpstream);
+                     Node->Upstreams.push_back(PotentialUpstream.get());
                   }
                   break;
                }
@@ -259,10 +265,10 @@ void Analysis::setComputeAlarms() {
    // Set alarms for terminal operators (those that produce output to be
    // written out with streams)
    for (auto &Node : OpNodes) {
-      std::string OpName = Node.Op->getName();
+      std::string OpName = Node->Op->getName();
       bool IsTimeMean = (OpName.find("TimeMean") != std::string::npos);
       
-      if (!Node.StreamName.empty()) {
+      if (!Node->StreamNames.empty()) {
          // This is a terminal operator
          
          if (IsTimeMean) {
@@ -278,20 +284,20 @@ void Analysis::setComputeAlarms() {
             ModelClock->attachAlarm(AccumulationAlarm.get());
 
             // Store pointer and transfer ownership
-            Node.ComputeAlarms.push_back(AccumulationAlarm.get());
+            Node->ComputeAlarms.push_back(AccumulationAlarm.get());
             AccumulationAlarms.push_back(std::move(AccumulationAlarm));
             
 //            std::cout << "terminal time reduction op: " << OpName << std::endl;
          } else {
             // Discrete sampling operators: point to stream alarms
-            for (const auto &StreamName : Node.StreamName) {
+            for (const auto &StreamName : Node->StreamNames) {
                auto StreamAlarm = IOStream::getAlarm(StreamName);
                
                // Check if already added (avoid duplicates)
-               if (std::find(Node.ComputeAlarms.begin(), 
-                            Node.ComputeAlarms.end(), 
-                            StreamAlarm) == Node.ComputeAlarms.end()) {
-                  Node.ComputeAlarms.push_back(StreamAlarm);
+               if (std::find(Node->ComputeAlarms.begin(), 
+                            Node->ComputeAlarms.end(), 
+                            StreamAlarm) == Node->ComputeAlarms.end()) {
+                  Node->ComputeAlarms.push_back(StreamAlarm);
 
 //                  std::cout << "terminal sampling op: " << OpName << std::endl;
                }
@@ -317,15 +323,15 @@ void Analysis::propagateAlarmsUpstream() {
       for (auto &Node : OpNodes) {
          // Find all downstream operators (those that have Node as upstream)
          for (const auto &OtherNode : OpNodes) {
-            for (const auto *Upstream : OtherNode.Upstreams) {
-               if (Upstream == &Node) {
+            for (const auto *Upstream : OtherNode->Upstreams) {
+               if (Upstream == Node.get()) {
                   // Node is upstream of OtherNode
                   // Add OtherNode's alarms to Node (if not already present)
-                  for (auto *DownstreamAlarm : OtherNode.ComputeAlarms) {
-                     if (std::find(Node.ComputeAlarms.begin(), 
-                                  Node.ComputeAlarms.end(), 
-                                  DownstreamAlarm) == Node.ComputeAlarms.end()) {
-                        Node.ComputeAlarms.push_back(DownstreamAlarm);
+                  for (auto *DownstreamAlarm : OtherNode->ComputeAlarms) {
+                     if (std::find(Node->ComputeAlarms.begin(), 
+                                  Node->ComputeAlarms.end(), 
+                                  DownstreamAlarm) == Node->ComputeAlarms.end()) {
+                        Node->ComputeAlarms.push_back(DownstreamAlarm);
                         Changed = true;
 //                        std::cout << "upstream node: " << Node.Op->getName() << " | " << OtherNode.Op->getName() << std::endl;
                      }
@@ -343,8 +349,8 @@ void Analysis::propagateAlarmsUpstream() {
 //
 void Analysis::initializeAllOps() {
 
-   for (OperatorNode &OpNode: OpNodes) {
-      OpNode.Op->initialize( Env, Mesh, VCoord, makeOpConfig());
+   for (auto &OpNode: OpNodes) {
+      OpNode->Op->initialize( Env, Mesh, VCoord, makeOpConfig());
    }
 
 } // end initializeAllOps
@@ -359,8 +365,8 @@ Clock *&Analysis::getModelClock(){
 //------------------------------------------------------------------------------
 const std::vector<OperatorNode*> Analysis::getOpNodes() {
    std::vector<OperatorNode*> OpPtrs;
-   for (OperatorNode &OpNode: OpNodes) {
-      OpPtrs.push_back(&OpNode);
+   for (auto &Node: OpNodes) {
+      OpPtrs.push_back(Node.get());
    }
    return OpPtrs;
 }
@@ -368,8 +374,8 @@ const std::vector<OperatorNode*> Analysis::getOpNodes() {
 //------------------------------------------------------------------------------
 bool Analysis::OpNodeExists(const std::string &FullOpName) {
 
-   for (const auto &OpNode: OpNodes) {
-      if (FullOpName == OpNode.Op->getName()) {
+   for (const auto &Node: OpNodes) {
+      if (FullOpName == Node->Op->getName()) {
          return true;
       }
    }

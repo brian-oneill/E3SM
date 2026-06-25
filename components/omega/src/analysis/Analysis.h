@@ -120,7 +120,7 @@ class Analysis {
    Clock *ModelClock;
 
    /// All registered operator nodes
-   std::vector<OperatorNode> OpNodes;
+   std::vector<std::unique_ptr<OperatorNode>> OpNodes;
 
    ///
    static void registerAllBaseAnalysisOperators();

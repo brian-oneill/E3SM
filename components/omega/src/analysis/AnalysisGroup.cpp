@@ -125,7 +125,7 @@ void AnalysisGroup::createAnalysisGroupStreams(
          // Check if this operator is in our list for this stream
          if (std::find(OpNames.begin(), OpNames.end(), OpInstanceName) != OpNames.end()) {
             // Associate operator with stream
-            Node->StreamName.push_back(StreamName);
+            Node->StreamNames.push_back(StreamName);
             
             // Add operator's output fields to stream contents
             for (const auto &FieldName : Node->Op->getOutputFieldNames()) {
