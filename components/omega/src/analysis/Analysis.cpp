@@ -265,17 +265,17 @@ void Analysis::setComputeAlarms() {
    // Set alarms for terminal operators (those that produce output to be
    // written out with streams)
    for (auto &Node : OpNodes) {
-      std::string OpName = Node->Op->getName();
-      bool IsTimeMean = (OpName.find("TimeMean") != std::string::npos);
+      std::string OpType = Node->Op->getOperatorType();
+      bool IsTimeReduction = (OpType.find("Time") != std::string::npos);
       
       if (!Node->StreamNames.empty()) {
          // This is a terminal operator
          
-         if (IsTimeMean) {
+         if (IsTimeReduction) {
             // TimeMean operators compute every timestep for accumulation
             // Create a unique alarm owned by Analysis
             auto AccumulationAlarm = std::make_unique<Alarm>(
-               "Compute_" + OpName, 
+               "Compute_" + OpType, 
                Timestep,
                CurrentTime
             );
@@ -287,7 +287,7 @@ void Analysis::setComputeAlarms() {
             Node->ComputeAlarms.push_back(AccumulationAlarm.get());
             AccumulationAlarms.push_back(std::move(AccumulationAlarm));
             
-//            std::cout << "terminal time reduction op: " << OpName << std::endl;
+//            std::cout << "terminal time reduction op: " << OpType << std::endl;
          } else {
             // Discrete sampling operators: point to stream alarms
             for (const auto &StreamName : Node->StreamNames) {
@@ -299,7 +299,7 @@ void Analysis::setComputeAlarms() {
                             StreamAlarm) == Node->ComputeAlarms.end()) {
                   Node->ComputeAlarms.push_back(StreamAlarm);
 
-//                  std::cout << "terminal sampling op: " << OpName << std::endl;
+//                  std::cout << "terminal sampling op: " << OpType << std::endl;
                }
             }
          }
