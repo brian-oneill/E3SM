@@ -16,10 +16,8 @@ class TimeMeanOp : public AnalysisOperator {
    using ScalarT = typename ArrayT::non_const_value_type;
 
    ///
-   TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config Options) {
-
-      // Set operator type
-      OperatorTypeName = "TimeMean";
+   TimeMeanOp(const std::vector<std::string> &UpstreamNames, Config Options)
+       : AnalysisOperator("TimeMean") {
 
       InputNames = UpstreamNames;
 
@@ -52,8 +50,6 @@ class TimeMeanOp : public AnalysisOperator {
       );
 
       ArraySize = static_cast<I4>(InputData.size());
-
-      AccumArray = decltype(InputData)(OutputNames[0] + "_accumulator", InputData.layout());
 
       OutputData = decltype(InputData)(OutputNames[0] + "_out", InputData.layout());
 
@@ -102,13 +98,7 @@ class TimeMeanOp : public AnalysisOperator {
 
  private:
 
-   // Member data
-   const HorzMesh *Mesh;                    ///< Horizontal mesh
-   const VertCoord *VCoord;                 ///< VertCoord
-   MPI_Comm Comm;
-
    ArrayT InputData;
-   ArrayT AccumArray;
    ArrayT OutputData;
    I4 NumAccum;
    I4 ArraySize;
