@@ -287,20 +287,13 @@ void Analysis::setComputeAlarms() {
             Node->ComputeAlarms.push_back(AccumulationAlarm.get());
             AccumulationAlarms.push_back(std::move(AccumulationAlarm));
             
-            // Also add the stream's output alarm for finalization
-            for (const auto &StreamName : Node->StreamNames) {
-               auto StreamAlarm = IOStream::getAlarm(StreamName);
-               
-               // Add to ComputeAlarms if not already present
-               if (std::find(Node->ComputeAlarms.begin(), 
-                            Node->ComputeAlarms.end(), 
-                            StreamAlarm) == Node->ComputeAlarms.end()) {
-                  Node->ComputeAlarms.push_back(StreamAlarm);
-               }
-               
-               // Give the operator a pointer to the period alarm for finalization
-               Node->Op->setPeriodAlarm(StreamAlarm);
-            }
+            // Time reduction operators have exactly one associated stream
+            // Add the stream's output alarm for finalization
+            auto StreamAlarm = IOStream::getAlarm(Node->StreamNames[0]);
+            Node->ComputeAlarms.push_back(StreamAlarm);
+            
+            // Give the operator a pointer to the period alarm for finalization
+            Node->Op->setPeriodAlarm(StreamAlarm);
             
 //            std::cout << "terminal time reduction op: " << OpType << std::endl;
          } else {
