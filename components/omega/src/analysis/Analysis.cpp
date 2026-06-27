@@ -116,30 +116,30 @@ Analysis::Analysis(const std::string &InName,
    Err += Options->get(AnalysisCfg);
    CHECK_ERROR_ABORT(Err, "Analysis: Analysis group not in Config");
 
-   for (Config::Iter It = AnalysisCfg.begin(); It != AnalysisCfg.end(); ++It) {
-      std::string GroupName;
-      AnalysisCfg.getName(It, GroupName);
-      Config GroupCfg(GroupName);
-      Err += AnalysisCfg.get(GroupCfg);
-      bool GroupEnabled = false;
-      GroupCfg.get("Enable", GroupEnabled);
-      if (GroupEnabled) {
-//         std::cout << GroupName << " " << GroupEnabled << std::endl;
-         if (GroupName == "GlobalStats") {
-            GlobalStats GlobalStatsGroup(NamePrefix + GroupName, GroupCfg, this);
-
-            continue;
-         }
-         ABORT_ERROR("Analysis: custom analysis group enabled in config, but"
-                     "composable operators are not yet supported.");
-      }
-   } 
-
-   buildOperatorDependencies();
-
-   setComputeAlarms();
-
-   initializeAllOps();
+//   for (Config::Iter It = AnalysisCfg.begin(); It != AnalysisCfg.end(); ++It) {
+//      std::string GroupName;
+//      AnalysisCfg.getName(It, GroupName);
+//      Config GroupCfg(GroupName);
+//      Err += AnalysisCfg.get(GroupCfg);
+//      bool GroupEnabled = false;
+//      GroupCfg.get("Enable", GroupEnabled);
+//      if (GroupEnabled) {
+////         std::cout << GroupName << " " << GroupEnabled << std::endl;
+//         if (GroupName == "GlobalStats") {
+//            GlobalStats GlobalStatsGroup(NamePrefix + GroupName, GroupCfg, this);
+//
+//            continue;
+//         }
+//         ABORT_ERROR("Analysis: custom analysis group enabled in config, but"
+//                     "composable operators are not yet supported.");
+//      }
+//   } 
+//
+//   buildOperatorDependencies();
+//
+//   setComputeAlarms();
+//
+//   initializeAllOps();
 
 } // end constructor
 
