@@ -136,6 +136,9 @@ class Analysis {
 
    ///
    void propagateAlarmsUpstream();
+
+   ///
+   void computeRecursive(OperatorNode *Node, const TimeInstant &TimeStamp);
    
    // Forbid copy and move construction
    Analysis(const Analysis &) = delete;

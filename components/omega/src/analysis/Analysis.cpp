@@ -352,6 +352,50 @@ void Analysis::propagateAlarmsUpstream() {
    
 } // end propagateAlarmsUpstream
 
+//------------------------------------------------------------------------------
+// Main computational loop called every timestep. Checks all operator nodes
+// to see if any of their alarms are ringing, and if so, calls computeRecursive
+// to ensure the operator and all its upstream dependencies are computed.
+void Analysis::computeAll() {
+   
+   TimeInstant CurrentTime = ModelClock->getCurrentTime();
+   
+   for (auto &Node : OpNodes) {
+      // Check if any alarm is ringing for this operator
+      bool ShouldCompute = false;
+      for (auto *Alarm : Node->ComputeAlarms) {
+         if (Alarm->isRinging()) {
+            ShouldCompute = true;
+            break;
+         }
+      }
+      
+      if (ShouldCompute) {
+         computeRecursive(Node.get(), CurrentTime);
+      }
+   }
+   
+} // end computeAll
+
+//------------------------------------------------------------------------------
+// Recursively compute an operator node and all its upstream dependencies.
+// Uses cache validation to avoid redundant computation within a timestep.
+void Analysis::computeRecursive(OperatorNode *Node, const TimeInstant &TimeStamp) {
+   
+   // Check if already computed for this timestep (cache hit)
+   if (Node->Op->isCacheValid(TimeStamp)) {
+      return;
+   }
+   
+   // Recursively compute all upstream dependencies first
+   for (auto *Upstream : Node->Upstreams) {
+      computeRecursive(Upstream, TimeStamp);
+   }
+   
+   // Now compute this operator
+   Node->Op->compute(TimeStamp);
+   
+} // end computeRecursive
 
 //------------------------------------------------------------------------------
 //
