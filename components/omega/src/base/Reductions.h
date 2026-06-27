@@ -1870,33 +1870,37 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      Kokkos::parallel_reduce(
-          Kokkos::RangePolicy<>(0, Arr1.size()),
-          KOKKOS_LAMBDA(const int flat_idx, I4 &lsum) {
-             int remaining = flat_idx;
-             int horizIdx = 0;
-             int vertIdx = 0;
+      Array1DI4 DevRange("IRange", 10);
+      Array1DI8 DevStrides("Strides", 5);
+      copyReduceInfoToDevice(DevRange, DevStrides, IRange, Strides1);
+      OMEGA_SCOPE(LocStrides, DevStrides);
+      OMEGA_SCOPE(LocRange, DevRange);
+      OMEGA_SCOPE(LocArr1, Arr1);
+      OMEGA_SCOPE(LocArr2, Arr2);
 
-             if (arr1Rank == 1) {
-                horizIdx = flat_idx;
-             } else if (arr1Rank == 2) {
-                horizIdx = flat_idx / Arr1.extent(1);
-                vertIdx = flat_idx % Arr1.extent(1);
-             } else {
-                int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
-                                                Arr1.extent(arr1Rank - 1));
-                horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
-                vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
+      parallelReduce(
+          {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
+           IRange[9] + 1},
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I4 &lsum) {
+             if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
+                 L >= LocRange(6) and M >= LocRange(8)) {
+
+                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                              K * LocStrides(2) + L * LocStrides(3) +
+                              M * LocStrides(4);
+
+                size_t addr2 = 0;
+                if (arr2Rank == 1) {
+                    int horizIdx = (arr1Rank == 1) ? I : L;
+                    addr2 = horizIdx;
+                } else { // arr2Rank == 2
+                    int horizIdx = L;
+                    int vertIdx = M;
+                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                }
+
+                lsum += LocArr1.data()[addr1] * LocArr2.data()[addr2];
              }
-
-             int arr2_idx = 0;
-             if (arr2Rank == 1) {
-                arr2_idx = horizIdx;
-             } else {
-                arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
-             }
-
-             lsum += Arr1.data()[flat_idx] * Arr2.data()[arr2_idx];
           },
           LocalSum);
    } // end if onHost
@@ -1986,33 +1990,37 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      Kokkos::parallel_reduce(
-          Kokkos::RangePolicy<>(0, Arr1.size()),
-          KOKKOS_LAMBDA(const int flat_idx, I8 &lsum) {
-             int remaining = flat_idx;
-             int horizIdx = 0;
-             int vertIdx = 0;
+      Array1DI4 DevRange("IRange", 10);
+      Array1DI8 DevStrides("Strides", 5);
+      copyReduceInfoToDevice(DevRange, DevStrides, IRange, Strides1);
+      OMEGA_SCOPE(LocStrides, DevStrides);
+      OMEGA_SCOPE(LocRange, DevRange);
+      OMEGA_SCOPE(LocArr1, Arr1);
+      OMEGA_SCOPE(LocArr2, Arr2);
 
-             if (arr1Rank == 1) {
-                horizIdx = flat_idx;
-             } else if (arr1Rank == 2) {
-                horizIdx = flat_idx / Arr1.extent(1);
-                vertIdx = flat_idx % Arr1.extent(1);
-             } else {
-                int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
-                                                Arr1.extent(arr1Rank - 1));
-                horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
-                vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
+      parallelReduce(
+          {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
+           IRange[9] + 1},
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I8 &lsum) {
+             if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
+                 L >= LocRange(6) and M >= LocRange(8)) {
+
+                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                              K * LocStrides(2) + L * LocStrides(3) +
+                              M * LocStrides(4);
+
+                size_t addr2 = 0;
+                if (arr2Rank == 1) {
+                    int horizIdx = (arr1Rank == 1) ? I : L;
+                    addr2 = horizIdx;
+                } else { // arr2Rank == 2
+                    int horizIdx = L;
+                    int vertIdx = M;
+                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                }
+
+                lsum += LocArr1.data()[addr1] * LocArr2.data()[addr2];
              }
-
-             int arr2_idx = 0;
-             if (arr2Rank == 1) {
-                arr2_idx = horizIdx;
-             } else {
-                arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
-             }
-
-             lsum += Arr1.data()[flat_idx] * Arr2.data()[arr2_idx];
           },
           LocalSum);
    } // end if onHost
@@ -2104,36 +2112,40 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      Kokkos::parallel_reduce(
-          Kokkos::RangePolicy<>(0, Arr1.size()),
-          KOKKOS_LAMBDA(const int flat_idx, R8 &lsum) {
-             int remaining = flat_idx;
-             int horizIdx = 0;
-             int vertIdx = 0;
+      Array1DI4 DevRange("IRange", 10);
+      Array1DI8 DevStrides("Strides", 5);
+      copyReduceInfoToDevice(DevRange, DevStrides, IRange, Strides1);
+      OMEGA_SCOPE(LocStrides, DevStrides);
+      OMEGA_SCOPE(LocRange, DevRange);
+      OMEGA_SCOPE(LocArr1, Arr1);
+      OMEGA_SCOPE(LocArr2, Arr2);
 
-             if (arr1Rank == 1) {
-                horizIdx = flat_idx;
-             } else if (arr1Rank == 2) {
-                horizIdx = flat_idx / Arr1.extent(1);
-                vertIdx = flat_idx % Arr1.extent(1);
-             } else {
-                int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
-                                                Arr1.extent(arr1Rank - 1));
-                horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
-                vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
+      parallelReduce(
+          {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
+           IRange[9] + 1},
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &lsum) {
+             if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
+                 L >= LocRange(6) and M >= LocRange(8)) {
+
+                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                              K * LocStrides(2) + L * LocStrides(3) +
+                              M * LocStrides(4);
+
+                size_t addr2 = 0;
+                if (arr2Rank == 1) {
+                    int horizIdx = (arr1Rank == 1) ? I : L;
+                    addr2 = horizIdx;
+                } else { // arr2Rank == 2
+                    int horizIdx = L;
+                    int vertIdx = M;
+                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                }
+
+                // convert each to R8 to be sure prod is computed in R8
+                R8 DTmp1 = LocArr1.data()[addr1];
+                R8 DTmp2 = static_cast<R8>(LocArr2.data()[addr2]);
+                lsum += DTmp1 * DTmp2;
              }
-
-             int arr2_idx = 0;
-             if (arr2Rank == 1) {
-                arr2_idx = horizIdx;
-             } else {
-                arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
-             }
-
-             // convert each to R8 to be sure prod is computed in R8
-             R8 DTmp1 = Arr1.data()[flat_idx];
-             R8 DTmp2 = Arr2.data()[arr2_idx];
-             lsum += DTmp1 * DTmp2;
           },
           LocalSum);
    } // end if onHost
@@ -2231,34 +2243,39 @@ globalWeightedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       const int arr1Rank = Arr1.rank;
       const int arr2Rank = Arr2.rank;
 
-      Kokkos::parallel_reduce(
-         Kokkos::RangePolicy<>(0, Arr1.size()),
-         KOKKOS_LAMBDA(const int flat_idx, R8& lsum) {
-            int remaining = flat_idx;
-            int horizIdx = 0;
-            int vertIdx = 0;
+      Array1DI4 DevRange("IRange", 10);
+      Array1DI8 DevStrides("Strides", 5);
+      copyReduceInfoToDevice(DevRange, DevStrides, IRange, Strides1);
+      OMEGA_SCOPE(LocStrides, DevStrides);
+      OMEGA_SCOPE(LocRange, DevRange);
+      OMEGA_SCOPE(LocArr1, Arr1);
+      OMEGA_SCOPE(LocArr2, Arr2);
 
-            if (arr1Rank == 1) {
-               horizIdx = flat_idx;
-            } else if (arr1Rank == 2) {
-               horizIdx = flat_idx / Arr1.extent(1);
-               vertIdx = flat_idx % Arr1.extent(1);
-            } else {
-               int idx_last_two = flat_idx % (Arr1.extent(arr1Rank - 2) * 
-                                               Arr1.extent(arr1Rank - 1));
-               horizIdx = idx_last_two / Arr1.extent(arr1Rank - 1);
-               vertIdx = idx_last_two % Arr1.extent(arr1Rank - 1);
-            }
+      parallelReduce(
+          {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
+           IRange[9] + 1},
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &lsum) {
+             if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
+                 L >= LocRange(6) and M >= LocRange(8)) {
 
-            int arr2_idx = 0;
-            if (arr2Rank == 1) {
-               arr2_idx = horizIdx;
-            } else {
-               arr2_idx = horizIdx * Arr2.extent(1) + vertIdx;
-            }
+                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                              K * LocStrides(2) + L * LocStrides(3) +
+                              M * LocStrides(4);
 
-            lsum += Arr1.data()[flat_idx] * static_cast<R8>(Arr2.data()[arr2_idx]);
-         }, LocalSum);
+                size_t addr2 = 0;
+                if (arr2Rank == 1) {
+                    int horizIdx = (arr1Rank == 1) ? I : L;
+                    addr2 = horizIdx;
+                } else { // arr2Rank == 2
+                    int horizIdx = L;
+                    int vertIdx = M;
+                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                }
+
+                lsum += LocArr1.data()[addr1] * static_cast<R8>(LocArr2.data()[addr2]);
+             }
+          },
+          LocalSum);
 
       DDTmp = complex<double>(LocalSum, 0.0);
    }

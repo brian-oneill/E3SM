@@ -68,20 +68,57 @@ class SpatialMeanOp : public AnalysisOperator {
 
       std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
 
+      I4 NCellsOwned = 0;
+      I4 NVertLayers = 0;
+      
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
+         NCellsOwned = Mesh->NCellsOwned;
+         NVertLayers = VCoord->NVertLevels;
       } else if (IndexSpaceName == "NEdges") {
          MaskArray = VCoord->EdgeMask;
+         NCellsOwned = Mesh->NEdgesOwned;
+         NVertLayers = VCoord->NVertLevels;
       } else if (IndexSpaceName == "NVertices") {
          MaskArray = VCoord->VertexMask;
+         NCellsOwned = Mesh->NVerticesOwned;
+         NVertLayers = VCoord->NVertLevels;
       } else {
          ABORT_ERROR("");
       }
 
-//      dispatchFieldArray(*InputField, ComputeSpatialMean{Comm, MaskArray, SpatialMean});
+      // Create IndxRange to exclude halo cells
+      // For InputData: depends on rank (could be 1D, 2D, 3D+)
+      // For MaskArray: always 2D (Horiz, Vert)
+      std::vector<I4> indxRange;
+      
+      if (NDims == 1) {
+         // 1D array: just horizontal dimension
+         indxRange = {0, NCellsOwned - 1};
+      } else if (NDims == 2) {
+         // 2D array: (Horiz, Vert)
+         indxRange = {0, NCellsOwned - 1, 0, NVertLayers - 1};
+      } else {
+         // 3D+ array: (Extra dims..., Horiz, Vert)
+         // Need to include all indices for extra dimensions, then restrict horiz
+         indxRange.resize(2 * NDims);
+         for (I4 i = 0; i < NDims - 2; ++i) {
+            indxRange[2*i] = 0;
+            indxRange[2*i + 1] = InputData.extent(i) - 1;
+         }
+         // Horizontal dimension (second to last)
+         indxRange[2*(NDims-2)] = 0;
+         indxRange[2*(NDims-2) + 1] = NCellsOwned - 1;
+         // Vertical dimension (last)
+         indxRange[2*(NDims-1)] = 0;
+         indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
+      }
+      
+      // IndxRange for mask (always 2D)
+      std::vector<I4> maskIndxRange = {0, NCellsOwned - 1, 0, NVertLayers - 1};
 
-      auto ValSum = globalWeightedSum(InputData, MaskArray, Comm);
-      auto MaskSum = globalSum(MaskArray, Comm);
+      auto ValSum = globalWeightedSum(InputData, MaskArray, Comm, &indxRange);
+      auto MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
 
       SpatialMean = ValSum/MaskSum;
 
