@@ -825,10 +825,10 @@ class Clock {
 
    I4 NumAlarms; ///< current number of attached alarms
 
+ public:
    std::vector<Alarm *>
        Alarms; ///< pointers to alarms associated with this clock
 
- public:
    // constructors/destructors
 
    /// Default clock constructor
