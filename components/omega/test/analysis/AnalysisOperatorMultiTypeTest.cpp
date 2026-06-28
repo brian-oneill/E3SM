@@ -205,36 +205,47 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
    std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMax_" + TypeName;
    
-   // Create test field with values that sum indices
+   // Create test field with values based on global cell IDs for MPI correctness
+   // Get global cell IDs to ensure unique values across all ranks
+   auto Decomp = Decomp::getDefault();
+   auto CellIDH = Decomp->CellIDH;  // Global cell IDs (1-based)
+   
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [](I4 i) -> ScalarT {
-            return static_cast<ScalarT>(i);
+         [CellIDH](I4 i) -> ScalarT {
+            return static_cast<ScalarT>(CellIDH(i) - 1);  // Convert to 0-based
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [](I4 i, I4 j) -> ScalarT {
-            return static_cast<ScalarT>(i + j);
+         [CellIDH](I4 i, I4 j) -> ScalarT {
+            return static_cast<ScalarT>((CellIDH(i) - 1) + j);
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [](I4 i, I4 j, I4 k) -> ScalarT {
-            return static_cast<ScalarT>(i + j + k);
+         [CellIDH](I4 i, I4 j, I4 k) -> ScalarT {
+            return static_cast<ScalarT>(i + (CellIDH(j) - 1) + k);
          });
    }
    
    // Compute expected max. The operator restricts to NCellsOwned via indxRange,
-   // so the max of f(i)=i is NCellsOwned-1 for the horizontal dimension.
-   // For 2D/3D the remaining dims are not restricted.
+   // so we need the maximum global cell ID among owned cells.
+   // For 2D/3D we add the max vertical/tracer indices.
    ScalarT ExpectedMax = 0;
+   I4 MaxOwnedCellID = 0;
+   for (I4 i = 0; i < Mesh->NCellsOwned; ++i) {
+      I4 GlobalID = CellIDH(i) - 1;  // Convert to 0-based
+      if (GlobalID > MaxOwnedCellID) {
+         MaxOwnedCellID = GlobalID;
+      }
+   }
+   
    if constexpr (Rank == 1) {
-      ExpectedMax = static_cast<ScalarT>(Mesh->NCellsOwned - 1);
+      ExpectedMax = static_cast<ScalarT>(MaxOwnedCellID);
    } else if constexpr (Rank == 2) {
-      ExpectedMax = static_cast<ScalarT>((Mesh->NCellsOwned - 1) +
-                                         (VCoord->NVertLayers - 1));
+      ExpectedMax = static_cast<ScalarT>(MaxOwnedCellID + (VCoord->NVertLayers - 1));
    } else if constexpr (Rank == 3) {
       ExpectedMax = static_cast<ScalarT>((Tracers::getNumTracers() - 1) +
-                                         (Mesh->NCellsOwned - 1) +
+                                         MaxOwnedCellID +
                                          (VCoord->NVertLayers - 1));
    }
 
@@ -280,26 +291,36 @@ void testSpatialMinOp_Type(const std::string &TypeName,
    std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMin_" + TypeName;
    
-   // Create test field with values offset by 100
+   // Create test field with values based on global cell IDs for MPI correctness
+   auto Decomp = Decomp::getDefault();
+   auto CellIDH = Decomp->CellIDH;  // Global cell IDs (1-based)
+   
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [](I4 i) -> ScalarT {
-            return static_cast<ScalarT>(i + 100);
+         [CellIDH](I4 i) -> ScalarT {
+            return static_cast<ScalarT>(CellIDH(i) - 1 + 100);  // Convert to 0-based, offset by 100
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [](I4 i, I4 j) -> ScalarT {
-            return static_cast<ScalarT>(i + j + 100);
+         [CellIDH](I4 i, I4 j) -> ScalarT {
+            return static_cast<ScalarT>((CellIDH(i) - 1) + j + 100);
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [](I4 i, I4 j, I4 k) -> ScalarT {
-            return static_cast<ScalarT>(i + j + k + 100);
+         [CellIDH](I4 i, I4 j, I4 k) -> ScalarT {
+            return static_cast<ScalarT>(i + (CellIDH(j) - 1) + k + 100);
          });
    }
    
-   // Expected min is 100 (all indices start at 0)
-   ScalarT ExpectedMin = 100;
+   // Expected min is the minimum global cell ID among owned cells, plus 100
+   I4 MinOwnedCellID = std::numeric_limits<I4>::max();
+   for (I4 i = 0; i < Mesh->NCellsOwned; ++i) {
+      I4 GlobalID = CellIDH(i) - 1;  // Convert to 0-based
+      if (GlobalID < MinOwnedCellID) {
+         MinOwnedCellID = GlobalID;
+      }
+   }
+   ScalarT ExpectedMin = static_cast<ScalarT>(MinOwnedCellID + 100);
    
    // Create and compute operator
    Config EmptyConfig;
