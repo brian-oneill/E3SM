@@ -114,11 +114,6 @@ class SpatialMaxOp : public AnalysisOperator {
 
  private:
 
-   // Member data
-   const HorzMesh *Mesh;                    ///< Horizontal mesh
-   const VertCoord *VCoord;                 ///< VertCoord
-   MPI_Comm Comm;
-
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
    typename Array1D<ScalarT>::type OutputData;
