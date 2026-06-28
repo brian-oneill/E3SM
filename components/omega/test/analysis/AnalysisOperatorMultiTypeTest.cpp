@@ -55,11 +55,11 @@ struct TestHelper {
    // Get dimensions based on rank
    static std::vector<I4> getDims(const HorzMesh *Mesh, const VertCoord *VCoord) {
       if constexpr (Rank == 1) {
-         return {Mesh->NCellsAll};  // 1D horizontal array over cells
+         return {Mesh->NCellsSize};  // 1D horizontal array over cells
       } else if constexpr (Rank == 2) {
-         return {Mesh->NCellsAll, VCoord->NVertLayers};
+         return {Mesh->NCellsSize, VCoord->NVertLayers};
       } else if constexpr (Rank == 3) {
-         return {Tracers::getNumTracers(), Mesh->NCellsAll, VCoord->NVertLayers};
+         return {Tracers::getNumTracers(), Mesh->NCellsSize, VCoord->NVertLayers};
       }
       return {};
    }
