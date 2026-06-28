@@ -223,12 +223,9 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
          });
    }
    
-   // Compute expected max (sum of last owned indices).
-   // For 1D: operator reduces over NCellsOwned, so max of f(i)=i is NCellsOwned-1.
-   // For 2D: horizontal dim restricted to NCellsOwned, max of f(i,j)=i+j is
-   //   (NCellsOwned-1)+(NVertLayers-1).
-   // For 3D: horizontal dim (index 1) restricted to NCellsOwned, max of
-   //   f(i,j,k)=i+j+k is (NTracers-1)+(NCellsOwned-1)+(NVertLayers-1).
+   // Compute expected max. The operator restricts to NCellsOwned via indxRange,
+   // so the max of f(i)=i is NCellsOwned-1 for the horizontal dimension.
+   // For 2D/3D the remaining dims are not restricted.
    ScalarT ExpectedMax = 0;
    if constexpr (Rank == 1) {
       ExpectedMax = static_cast<ScalarT>(Mesh->NCellsOwned - 1);
@@ -240,28 +237,29 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
                                          (Mesh->NCellsOwned - 1) +
                                          (VCoord->NVertLayers - 1));
    }
-   
+
    // Create and compute operator
    Config EmptyConfig;
    auto MaxOp = AnalysisOpFactory::createOp("SpatialMax", {FieldName}, EmptyConfig);
    MaxOp->initialize(Env, Mesh, VCoord, EmptyConfig);
-   
+
    TimeInstant TestTime;
    MaxOp->compute(TestTime);
-   
-   // Get result
+
+   // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
+   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMax");
-   auto ResultData = ResultField->getDataArray<Array1DReal>();
+   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
-   
-   Real ComputedMax = ResultHost(0);
+
+   Real ComputedMax = static_cast<Real>(ResultHost(0));
    Real ExpectedMaxReal = static_cast<Real>(ExpectedMax);
-   
+
    // Verify
-   bool Passed = (std::abs(ComputedMax - ExpectedMaxReal) <= Helper::getTolerance());
+   bool Passed = (std::abs(ComputedMax - ExpectedMaxReal) <= static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMaxOp: " + TypeName, Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  Expected: {}, Got: {}", ExpectedMaxReal, ComputedMax);
    }
@@ -307,23 +305,24 @@ void testSpatialMinOp_Type(const std::string &TypeName,
    Config EmptyConfig;
    auto MinOp = AnalysisOpFactory::createOp("SpatialMin", {FieldName}, EmptyConfig);
    MinOp->initialize(Env, Mesh, VCoord, EmptyConfig);
-   
+
    TimeInstant TestTime;
    MinOp->compute(TestTime);
-   
-   // Get result
+
+   // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
+   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMin");
-   auto ResultData = ResultField->getDataArray<Array1DReal>();
+   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
-   
-   Real ComputedMin = ResultHost(0);
+
+   Real ComputedMin = static_cast<Real>(ResultHost(0));
    Real ExpectedMinReal = static_cast<Real>(ExpectedMin);
-   
+
    // Verify
-   bool Passed = (std::abs(ComputedMin - ExpectedMinReal) <= Helper::getTolerance());
+   bool Passed = (std::abs(ComputedMin - ExpectedMinReal) <= static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMinOp: " + TypeName, Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  Expected: {}, Got: {}", ExpectedMinReal, ComputedMin);
    }
@@ -371,20 +370,21 @@ void testSpatialMeanOp_Type(const std::string &TypeName,
    Config EmptyConfig;
    auto MeanOp = AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
    MeanOp->initialize(Env, Mesh, VCoord, EmptyConfig);
-   
+
    TimeInstant TestTime;
    MeanOp->compute(TestTime);
-   
-   // Get result
+
+   // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
+   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMean");
-   auto ResultData = ResultField->getDataArray<Array1DReal>();
+   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
-   
-   Real ComputedMean = ResultHost(0);
-   
+
+   Real ComputedMean = static_cast<Real>(ResultHost(0));
+
    // Verify
-   bool Passed = (std::abs(ComputedMean - ExpectedMean) <= Helper::getTolerance());
+   bool Passed = (std::abs(ComputedMean - ExpectedMean) <= static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMeanOp: " + TypeName, Passed);
    
    if (!Passed) {
@@ -429,27 +429,34 @@ void testSpatialStdDevOp_Type(const std::string &TypeName,
    
    // Expected standard deviation is 0 (constant field)
    Real ExpectedStdDev = 0.0;
-   
-   // Create and compute operator
+
+   // SpatialStdDevOp requires a pre-existing _SpatialMean field for the input.
+   // Create and compute a SpatialMeanOp first so that field is registered.
    Config EmptyConfig;
+   auto MeanOp = AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
+   MeanOp->initialize(Env, Mesh, VCoord, EmptyConfig);
+
+   TimeInstant TestTime;
+   MeanOp->compute(TestTime);
+
+   // Now create and compute the StdDev operator
    auto StdDevOp = AnalysisOpFactory::createOp("SpatialStdDev", {FieldName}, EmptyConfig);
    StdDevOp->initialize(Env, Mesh, VCoord, EmptyConfig);
-   
-   TimeInstant TestTime;
    StdDevOp->compute(TestTime);
-   
-   // Get result
+
+   // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
+   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialStdDev");
-   auto ResultData = ResultField->getDataArray<Array1DReal>();
+   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
-   
-   Real ComputedStdDev = ResultHost(0);
-   
+
+   Real ComputedStdDev = static_cast<Real>(ResultHost(0));
+
    // Verify
-   bool Passed = (std::abs(ComputedStdDev - ExpectedStdDev) <= Helper::getTolerance());
+   bool Passed = (std::abs(ComputedStdDev - ExpectedStdDev) <= static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialStdDevOp: " + TypeName, Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  Expected: {}, Got: {}", ExpectedStdDev, ComputedStdDev);
    }
@@ -521,27 +528,30 @@ void testTimeMeanOp_Type(const std::string &TypeName,
    // Expected mean is the constant value
    Real ExpectedMean = static_cast<Real>(ConstValue);
    
-   // Verify a sample of values
+   // Verify a sample of values. The TimeMeanOp output field is attached with
+   // the same ArrayType as the input, so retrieve with the matching type.
    bool Passed = true;
    if constexpr (Rank == 1) {
-      auto ResultData = ResultField->getDataArray<Array1DReal>();
+      auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
-      
+
       for (I4 i = 0; i < std::min(10, Dims[0]); ++i) {
-         if (std::abs(ResultHost(i) - ExpectedMean) > Helper::getTolerance()) {
+         if (std::abs(static_cast<Real>(ResultHost(i)) - ExpectedMean) >
+             static_cast<Real>(Helper::getTolerance())) {
             Passed = false;
             break;
          }
       }
    } else if constexpr (Rank == 2) {
-      auto ResultData = ResultField->getDataArray<Array2DReal>();
+      auto ResultData = ResultField->getDataArray<typename Array2D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
-      
+
       for (I4 i = 0; i < std::min(5, Dims[0]); ++i) {
          for (I4 j = 0; j < std::min(5, Dims[1]); ++j) {
-            if (std::abs(ResultHost(i, j) - ExpectedMean) > Helper::getTolerance()) {
+            if (std::abs(static_cast<Real>(ResultHost(i, j)) - ExpectedMean) >
+                static_cast<Real>(Helper::getTolerance())) {
                Passed = false;
                break;
             }
@@ -549,14 +559,15 @@ void testTimeMeanOp_Type(const std::string &TypeName,
          if (!Passed) break;
       }
    } else if constexpr (Rank == 3) {
-      auto ResultData = ResultField->getDataArray<Array3DReal>();
+      auto ResultData = ResultField->getDataArray<typename Array3D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
-      
+
       for (I4 i = 0; i < std::min(3, Dims[0]); ++i) {
          for (I4 j = 0; j < std::min(3, Dims[1]); ++j) {
             for (I4 k = 0; k < std::min(3, Dims[2]); ++k) {
-               if (std::abs(ResultHost(i, j, k) - ExpectedMean) > Helper::getTolerance()) {
+               if (std::abs(static_cast<Real>(ResultHost(i, j, k)) - ExpectedMean) >
+                   static_cast<Real>(Helper::getTolerance())) {
                   Passed = false;
                   break;
                }
