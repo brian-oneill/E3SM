@@ -1890,12 +1890,13 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
@@ -2010,12 +2011,13 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
@@ -2132,12 +2134,13 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
@@ -2263,12 +2266,13 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
@@ -2399,12 +2403,13 @@ localMaskedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
@@ -2629,12 +2634,13 @@ localMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                               M * LocStrides(4);
 
                 size_t addr2 = 0;
+                 int indices[5] = {I, J, K, L, M};
                 if (arr2Rank == 1) {
-                    int horizIdx = (arr1Rank == 1) ? I : L;
-                    addr2 = horizIdx;
+                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
+                    addr2 = indices[horizIdx1];
                 } else { // arr2Rank == 2
-                    int horizIdx = L;
-                    int vertIdx = M;
+                    int horizIdx = indices[arr1Rank - 2];
+                    int vertIdx = indices[arr1Rank - 1];
                     addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
                 }
 
