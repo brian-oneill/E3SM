@@ -69,15 +69,43 @@ class SpatialMinOp : public AnalysisOperator {
 
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
+         NOwned = Mesh->NCellsOwned;
       } else if (IndexSpaceName == "NEdges") {
          MaskArray = VCoord->EdgeMask;
+         NOwned = Mesh->NEdgesOwned;
       } else if (IndexSpaceName == "NVertices") {
          MaskArray = VCoord->VertexMask;
+         NOwned = Mesh->NVerticesOwned;
       } else {
          ABORT_ERROR("");
       }
 
-      SpatialMin = globalMaskedMin(InputData, MaskArray, Comm);
+      // Create IndxRange to exclude halo cells
+      // For InputData: depends on rank (could be 1D, 2D, 3D+)
+      std::vector<I4> indxRange;
+
+      if (NDims == 1) {
+         // 1D array: just horizontal dimension
+         indxRange = {0, NOwned - 1};
+      } else if (NDims == 2) {
+         // 2D array: (Horiz, Vert)
+         indxRange = {0, NOwned - 1, 0, NVertLayers - 1};
+      } else {
+         // 3D+ array: (Extra dims..., Horiz, Vert)
+         indxRange.resize(2 * NDims);
+         for (I4 i = 0; i < NDims - 2; ++i) {
+            indxRange[2*i] = 0;
+            indxRange[2*i + 1] = InputData.extent(i) - 1;
+         }
+         // Horizontal dimension (second to last)
+         indxRange[2*(NDims-2)] = 0;
+         indxRange[2*(NDims-2) + 1] = NOwned - 1;
+         // Vertical dimension (last)
+         indxRange[2*(NDims-1)] = 0;
+         indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
+      }
+
+      SpatialMin = globalMaskedMin(InputData, MaskArray, Comm, &indxRange);
 
       deepCopy(OutputData, SpatialMin);
 
