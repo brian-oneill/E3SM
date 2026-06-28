@@ -304,25 +304,23 @@ void testSpatialMinOp_Type(const std::string &TypeName,
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i, I4 j) -> ScalarT {
-            return static_cast<ScalarT>((CellIDH(i) - 1) + j + 100);
+         [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
+            // Unique value: cellID * NVertLayers + layerIndex + offset
+            return static_cast<ScalarT>((CellIDH(i) - 1) * VCoord->NVertLayers + j + 100);
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i, I4 j, I4 k) -> ScalarT {
-            return static_cast<ScalarT>(i + (CellIDH(j) - 1) + k + 100);
+         [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
+            // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID * NVertLayers + layerIdx + offset
+            return static_cast<ScalarT>(i * (Mesh->NCellsGlobal * VCoord->NVertLayers) + 
+                                        (CellIDH(j) - 1) * VCoord->NVertLayers + k + 100);
          });
    }
    
-   // Expected min is the minimum global cell ID among owned cells, plus 100
-   I4 MinOwnedCellID = std::numeric_limits<I4>::max();
-   for (I4 i = 0; i < Mesh->NCellsOwned; ++i) {
-      I4 GlobalID = CellIDH(i) - 1;  // Convert to 0-based
-      if (GlobalID < MinOwnedCellID) {
-         MinOwnedCellID = GlobalID;
-      }
-   }
-   ScalarT ExpectedMin = static_cast<ScalarT>(MinOwnedCellID + 100);
+   // Compute expected min. The operator performs a global reduction across all ranks
+   // via MPI_Allreduce, so the expected minimum is based on global mesh properties.
+   // The minimum value is always at i=0, j=0 (cell with global ID 0), k=0, plus offset 100.
+   ScalarT ExpectedMin = static_cast<ScalarT>(100);
    
    // Create and compute operator
    Config EmptyConfig;
