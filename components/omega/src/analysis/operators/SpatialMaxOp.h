@@ -110,10 +110,18 @@ class SpatialMaxOp : public AnalysisOperator {
       }
 
       if (NDims == 1) {
-         // For 1D arrays (horizontal only), extract k=0 slice of the 2D mask.
+         // For 1D arrays (horizontal only), use the k=0 column of the 2D mask.
          // k=0 represents whether the column is active at all, which is the
          // correct mask to use when there is no vertical dimension.
-         auto Mask1D = Kokkos::subview(MaskArray, Kokkos::ALL, 0);
+         // We copy into a contiguous Array1D member to avoid LayoutStride views
+         // that are incompatible with the reduction functions.
+         if (Mask1D.size() == 0)
+            Mask1D = typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
+         auto LocalMaskArray = MaskArray;
+         auto LocalMask1D    = Mask1D;
+         parallelFor(
+             {static_cast<I4>(MaskArray.extent(0))},
+             KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
          SpatialMax = globalMaskedMax(InputData, Mask1D, Comm, &indxRange);
       } else {
          SpatialMax = globalMaskedMax(InputData, MaskArray, Comm, &indxRange);
@@ -132,6 +140,11 @@ class SpatialMaxOp : public AnalysisOperator {
    typename Array1D<ScalarT>::type OutputData;
 
    ScalarT SpatialMax;
+
+   /// Contiguous 1D mask array (k=0 column of the 2D mask) used for 1D inputs.
+   /// Allocated lazily on first compute to avoid LayoutStride subviews that are
+   /// incompatible with the reduction functions.
+   typename Array1D<Real>::type Mask1D;
 
 }; // end class SpatialMaxOp
 
