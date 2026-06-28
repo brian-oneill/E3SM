@@ -26,7 +26,6 @@ class SpatialMaxOp : public AnalysisOperator {
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
 
-
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
 
       I4 NDims = 1;
@@ -45,7 +44,6 @@ class SpatialMaxOp : public AnalysisOperator {
          NDims,                  // Dimension lengths
          DimNames                // Dimension names
       );
-//      std::cout << OutputFieldName << " created" << std::endl;
 
       OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
 
@@ -58,9 +56,27 @@ class SpatialMaxOp : public AnalysisOperator {
 
       auto InputData = InputField->getDataArray<ArrayT>();
 
-      SpatialMax = globalMaxVal(InputData, Comm);
+      std::vector<std::string> InputDimNames;
 
-//      dispatchFieldArray(*InputField, ComputeSpatialMax{Comm, SpatialMax});
+      InputField->getDimNames(InputDimNames);
+
+      I4 NDims = InputDimNames.size();
+
+      Array2DReal MaskArray;
+
+      std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
+
+      if (IndexSpaceName == "NCells") {
+         MaskArray = VCoord->CellMask;
+      } else if (IndexSpaceName == "NEdges") {
+         MaskArray = VCoord->EdgeMask;
+      } else if (IndexSpaceName == "NVertices") {
+         MaskArray = VCoord->VertexMask;
+      } else {
+         ABORT_ERROR("");
+      }
+
+      SpatialMax = globalMaskedMax(InputData, MaskArray, Comm);
 
       deepCopy(OutputData, SpatialMax);
 
@@ -69,6 +85,11 @@ class SpatialMaxOp : public AnalysisOperator {
    } // end compute
 
  private:
+
+   // Member data
+   const HorzMesh *Mesh;                    ///< Horizontal mesh
+   const VertCoord *VCoord;                 ///< VertCoord
+   MPI_Comm Comm;
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
