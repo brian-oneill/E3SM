@@ -583,21 +583,24 @@ void testTimeMeanOp_Type(const std::string &TypeName,
       }
       
       Kokkos::deep_copy(TestData, TestDataHost);
-      
+
       // Advance clock to next timestep
       ModelClock->advance();
       TimeInstant CurrentTime = ModelClock->getCurrentTime();
-      
+
+      // Update alarm status based on current time
+      PeriodAlarm.updateStatus(CurrentTime);      
+
       // Compute the time mean (accumulates internally)
       TimeMeanOp->compute(CurrentTime);
-      
+
       // Check if alarm is ringing (should ring after last step)
       if (PeriodAlarm.isRinging()) {
          // Mean should now be finalized
          break;
       }
    }
-   
+
    // Calculate expected mean: average of [BaseValue, BaseValue+1, ..., BaseValue+(NumSteps-1)]
    // For BaseValue=5 and NumSteps=5: avg of [5, 6, 7, 8, 9] = 7.0
    Real Sum = 0.0;
