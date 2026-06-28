@@ -68,6 +68,7 @@ class TimeMeanOp : public AnalysisOperator {
 
    ///
    void compute(const TimeInstant &TimeStamp) override {
+      OMEGA_SCOPE(LocOutputData, OutputData);
 
       auto InputField = Field::get(InputNames[0]);
 
@@ -81,7 +82,7 @@ class TimeMeanOp : public AnalysisOperator {
       } else {
          parallelFor(
              {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
-                OutputData.data()[FlatIdx] += InputData.data()[FlatIdx];
+                LocOutputData.data()[FlatIdx] += InputData.data()[FlatIdx];
              });
          ++NumAccum;
          // Check if we should finalize
@@ -92,7 +93,7 @@ class TimeMeanOp : public AnalysisOperator {
             Real InvNumAccum = 1.0 / static_cast<Real>(NumAccum);
             parallelFor(
                 {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
-                   OutputData.data()[FlatIdx] *= InvNumAccum;
+                   LocOutputData.data()[FlatIdx] *= InvNumAccum;
                 });
             IsNewPeriod = true; // next compute starts fresh
          }

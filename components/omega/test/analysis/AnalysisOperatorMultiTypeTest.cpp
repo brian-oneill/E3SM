@@ -537,9 +537,9 @@ void testTimeMeanOp_Type(const std::string &TypeName,
    // The Period string is just a label used in the output field name
    Config OpConfig;
    std::string PeriodLabel = std::to_string(static_cast<int>(PeriodSeconds)) + "seconds";
-   OpConfig.set("Period", PeriodLabel);
+//   OpConfig.set("Period", PeriodLabel);
    
-   auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean", {FieldName}, OpConfig);
+   auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean", {FieldName}, makeOpConfig(opParam("Period", PeriodLabel)));
    TimeMeanOp->initialize(Env, Mesh, VCoord, OpConfig);
    
    // Create a period alarm that rings after NumSteps
