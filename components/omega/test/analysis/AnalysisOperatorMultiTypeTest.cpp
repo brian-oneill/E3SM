@@ -217,35 +217,37 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i, I4 j) -> ScalarT {
-            return static_cast<ScalarT>((CellIDH(i) - 1) + j);
+         [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
+            // Unique value: cellID * NVertLayers + layerIndex
+            return static_cast<ScalarT>((CellIDH(i) - 1) * VCoord->NVertLayers + j);
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i, I4 j, I4 k) -> ScalarT {
-            return static_cast<ScalarT>(i + (CellIDH(j) - 1) + k);
+         [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
+            // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID * NVertLayers + layerIdx
+            return static_cast<ScalarT>(i * (Mesh->NCellsGlobal * VCoord->NVertLayers) + 
+                                        (CellIDH(j) - 1) * VCoord->NVertLayers + k);
          });
    }
    
-   // Compute expected max. The operator restricts to NCellsOwned via indxRange,
-   // so we need the maximum global cell ID among owned cells.
-   // For 2D/3D we add the max vertical/tracer indices.
+   // Compute expected max. The operator performs a global reduction across all ranks
+   // via MPI_Allreduce, so the expected maximum is based on global mesh properties.
+   // The maximum value corresponds to the largest indices in each dimension.
    ScalarT ExpectedMax = 0;
-   I4 MaxOwnedCellID = 0;
-   for (I4 i = 0; i < Mesh->NCellsOwned; ++i) {
-      I4 GlobalID = CellIDH(i) - 1;  // Convert to 0-based
-      if (GlobalID > MaxOwnedCellID) {
-         MaxOwnedCellID = GlobalID;
-      }
-   }
    
    if constexpr (Rank == 1) {
-      ExpectedMax = static_cast<ScalarT>(MaxOwnedCellID);
+      // 1D: max is just the highest cell ID (0-based)
+      ExpectedMax = static_cast<ScalarT>(Mesh->NCellsGlobal - 1);
    } else if constexpr (Rank == 2) {
-      ExpectedMax = static_cast<ScalarT>(MaxOwnedCellID + (VCoord->NVertLayers - 1));
+      // 2D: max = (NCellsGlobal - 1) * NVertLayers + (NVertLayers - 1)
+      ExpectedMax = static_cast<ScalarT>((Mesh->NCellsGlobal - 1) * VCoord->NVertLayers + 
+                                         (VCoord->NVertLayers - 1));
    } else if constexpr (Rank == 3) {
-      ExpectedMax = static_cast<ScalarT>((Tracers::getNumTracers() - 1) +
-                                         MaxOwnedCellID +
+      // 3D: max = (NTracers - 1) * (NCellsGlobal * NVertLayers) + 
+      //           (NCellsGlobal - 1) * NVertLayers + (NVertLayers - 1)
+      I4 NTracers = Tracers::getNumTracers();
+      ExpectedMax = static_cast<ScalarT>((NTracers - 1) * (Mesh->NCellsGlobal * VCoord->NVertLayers) +
+                                         (Mesh->NCellsGlobal - 1) * VCoord->NVertLayers +
                                          (VCoord->NVertLayers - 1));
    }
 
