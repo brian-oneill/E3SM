@@ -55,7 +55,7 @@ class SpatialMeanOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayT>();
+      auto InputData = InputField->template getDataArray<ArrayT>();
 
       std::vector<std::string> InputDimNames;
 
@@ -135,6 +135,13 @@ class SpatialMeanOp : public AnalysisOperator {
       } else {
          ValSum  = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
          MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+         if (NDims > 2) {
+            I4 ExtraDimSize = 1;
+            for (I4 i = 0; i < NDims - 2; ++i) {
+               ExtraDimSize *= InputData.extent(i);
+            }
+            MaskSum *= ExtraDimSize;
+         }
       }
 
       SpatialMean = ValSum/MaskSum;

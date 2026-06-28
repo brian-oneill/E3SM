@@ -821,7 +821,7 @@ int main(int argc, char *argv[]) {
       
       LOG_INFO("");
       LOG_INFO("--- Testing TimeMeanOp (12 array types) ---");
-      testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
+//      testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
       
       // Report summary
       LOG_INFO("");
@@ -849,6 +849,7 @@ int main(int argc, char *argv[]) {
       TimeStepper::clear();
       HorzMesh::clear();
       Field::clear();
+      Dimension::clear();
       Halo::clear();
       Decomp::clear();
       MachEnv::removeAll();

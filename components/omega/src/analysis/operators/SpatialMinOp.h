@@ -55,7 +55,7 @@ class SpatialMinOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayT>();
+      auto InputData = InputField->template getDataArray<ArrayT>();
 
       std::vector<std::string> InputDimNames;
 

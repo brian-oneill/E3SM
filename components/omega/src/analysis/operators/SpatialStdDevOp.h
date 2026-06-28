@@ -50,7 +50,7 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayT>();
+      auto InputData = InputField->template getDataArray<ArrayT>();
 
       WorkArray = decltype(InputData)(OutputNames[0] + "_work_array", InputData.layout());
 
@@ -59,9 +59,11 @@ class SpatialStdDevOp : public AnalysisOperator {
    ///
    void compute(const TimeInstant &TimeStamp) override {
 
+      OMEGA_SCOPE(LocWorkArray, WorkArray);
+
       auto InputField = Field::get(InputNames[0]);
 
-      auto InputData = InputField->getDataArray<ArrayT>();
+      auto InputData = InputField->template getDataArray<ArrayT>();
 
       std::vector<std::string> InputDimNames;
 
@@ -120,7 +122,7 @@ class SpatialStdDevOp : public AnalysisOperator {
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
       auto MeanField = Field::get(InputNames[1]);
-      auto MeanVal = MeanField->getDataArray<typename Array1D<ScalarT>::type>();
+      auto MeanVal = MeanField->template getDataArray<typename Array1D<ScalarT>::type>();
 
       // Fill WorkArray with squared differences (no mask — globalMaskedSum applies it)
       I4 NSize = static_cast<I4>(InputData.size());
@@ -143,7 +145,7 @@ class SpatialStdDevOp : public AnalysisOperator {
              }
 
              auto Diff = InputData.data()[flat_idx] - MeanVal(0);
-             WorkArray.data()[flat_idx] = Diff * Diff;
+             LocWorkArray.data()[flat_idx] = Diff * Diff;
 
           });
 

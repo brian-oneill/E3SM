@@ -55,7 +55,7 @@ class AnalysisOperator {
    AnalysisOperator(const std::string &OperatorType);
 
 
-   ~AnalysisOperator();
+   virtual ~AnalysisOperator();
 
    /// Return name for this operator type
    const std::string getOperatorType();

@@ -30,7 +30,7 @@ class TimeMeanOp : public AnalysisOperator {
 
       auto InputField = Field::get(InputNames[0]);
 
-      InputData = InputField->getDataArray<ArrayT>();
+      auto InputData = InputField->template getDataArray<ArrayT>();
 
       auto NDims = InputField->getNumDims();
 
@@ -68,6 +68,11 @@ class TimeMeanOp : public AnalysisOperator {
 
    ///
    void compute(const TimeInstant &TimeStamp) override {
+
+      auto InputField = Field::get(InputNames[0]);
+
+      auto InputData = InputField->template getDataArray<ArrayT>();
+
       // Accumulate: add current array state
       if (IsNewPeriod) {
          NumAccum = 1;
@@ -98,7 +103,6 @@ class TimeMeanOp : public AnalysisOperator {
 
  private:
 
-   ArrayT InputData;
    ArrayT OutputData;
    I4 NumAccum;
    I4 ArraySize;
