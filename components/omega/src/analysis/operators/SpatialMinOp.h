@@ -67,6 +67,12 @@ class SpatialMinOp : public AnalysisOperator {
 
       std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
 
+      I4 NOwned = 0;
+      I4 NVertLayers = 0;
+      
+      NVertLayers = VCoord->NVertLayers;
+
+
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
          NOwned = Mesh->NCellsOwned;

@@ -196,15 +196,15 @@ int main(int argc, char *argv[]) {
 //      auto GlobMaxOp = AnalysisOpFactory::createOp("spatial_max_2DR8", "PseudoThickness", *OmegaConfig);
 
 
-//      auto GlobMaxOp = AnalysisOpFactory::createOp("spatial_max", "PseudoThickness", "PseudoThickness", *OmegaConfig);
-//
-//      GlobMaxOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-//
-//      GlobMaxOp->compute(TStamp);
-//
-//      auto GlobMaxArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_spatial_max");
-//
-//      std::cout << GlobMaxArray(0) << std::endl;
+      auto GlobMaxOp = AnalysisOpFactory::createOp("SpatialMax", {"PseudoThickness"}, *OmegaConfig);
+
+      GlobMaxOp->initialize(DefEnv, DefMesh, DefVCoord, *OmegaConfig);
+
+      GlobMaxOp->compute(TStamp);
+
+      auto GlobMaxArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_SpatialMax");
+
+      std::cout << GlobMaxArray(0) << std::endl;
 
 
 //      std::cout << GlobMaxOp->getVal() << std::endl;
@@ -218,15 +218,15 @@ int main(int argc, char *argv[]) {
 //      std::cout << GlobMinOp.getVal() << std::endl;
 
 
-//      auto GlobMinOp = AnalysisOpFactory::createOp("spatial_min", "PseudoThickness", "PseudoThickness", *OmegaConfig);
-//
-//      GlobMinOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-//
-//      GlobMinOp->compute(TStamp);
-//
-//      auto GlobMinArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_spatial_min");
-//
-//      std::cout << GlobMinArray(0) << std::endl;
+      auto GlobMinOp = AnalysisOpFactory::createOp("SpatialMin", {"PseudoThickness"}, *OmegaConfig);
+
+      GlobMinOp->initialize(DefEnv, DefMesh, DefVCoord, *OmegaConfig);
+
+      GlobMinOp->compute(TStamp);
+
+      auto GlobMinArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_SpatialMin");
+
+      std::cout << GlobMinArray(0) << std::endl;
 
 
 //
@@ -251,16 +251,16 @@ int main(int argc, char *argv[]) {
 
       std::cout << GlobMeanArray(0) << std::endl;
 
-//
-//      auto SigmaOp = AnalysisOpFactory::createOp("standard_dev", "PseudoThickness", "PseudoThickness", *OmegaConfig);
-//
-//      SigmaOp->initialize(OmegaConfig, DefEnv, DefMesh, DefVCoord);
-//
-//      SigmaOp->compute(TStamp);
-//
-//      auto SigmaArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_stddev");
-//
-//      std::cout << SigmaArray(0) << std::endl;
+
+      auto SigmaOp = AnalysisOpFactory::createOp("SpatialStdDev", {"PseudoThickness"}, *OmegaConfig);
+
+      SigmaOp->initialize(DefEnv, DefMesh, DefVCoord, *OmegaConfig);
+
+      SigmaOp->compute(TStamp);
+
+      auto SigmaArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_SpatialStdDev");
+
+      std::cout << SigmaArray(0) << std::endl;
 
 
       finalizeAnalysisTest();

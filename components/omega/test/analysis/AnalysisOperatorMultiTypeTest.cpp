@@ -12,6 +12,7 @@
 #include "Halo.h"
 #include "HorzMesh.h"
 #include "IO.h"
+#include "IOStream.h"
 #include "Logging.h"
 #include "TimeStepper.h"
 #include "VertCoord.h"
@@ -56,9 +57,9 @@ struct TestHelper {
       if constexpr (Rank == 1) {
          return {100};  // Simple 1D array
       } else if constexpr (Rank == 2) {
-         return {Mesh->NCellsAll, VCoord->NVertLevels};
+         return {Mesh->NCellsAll, VCoord->NVertLayers};
       } else if constexpr (Rank == 3) {
-         return {Mesh->NCellsAll, VCoord->NVertLevels, 10};
+         return {10, Mesh->NCellsAll, VCoord->NVertLayers};
       }
       return {};
    }
@@ -68,9 +69,9 @@ struct TestHelper {
       if constexpr (Rank == 1) {
          return {"Dim0"};
       } else if constexpr (Rank == 2) {
-         return {"NCells", "NVertLevels"};
+         return {"NCells", "NVertLayers"};
       } else if constexpr (Rank == 3) {
-         return {"NCells", "NVertLevels", "Dim2"};
+         return {"Dim2", "NCells", "NVertLayers"};
       }
       return {};
    }
@@ -498,7 +499,7 @@ void testTimeMeanOp_Type(const std::string &TypeName,
    
    TimeMeanOp->compute(Time1);
    TimeMeanOp->compute(Time2);
-   PeriodAlarm.checkRing(Time3);
+   PeriodAlarm.isRinging();
    TimeMeanOp->compute(Time3);
    
    // Get result
@@ -707,10 +708,12 @@ void testTimeMeanOp(const MachEnv *Env,
 
 int main(int argc, char *argv[]) {
    
-   int ErrCode = 0;
+   int Err = 0;
    
    MPI_Init(&argc, &argv);
    Kokkos::initialize();
+   Pacer::initialize(MPI_COMM_WORLD);
+   Pacer::setPrefix("Omega:");
    {
       // Initialize Omega infrastructure
       MachEnv::init(MPI_COMM_WORLD);
@@ -732,10 +735,23 @@ int main(int argc, char *argv[]) {
       
       IO::init(DefEnv->getComm());
       Decomp::init();
+      IOStream::init(ModelClock);
       Field::init(ModelClock);
-      Halo::init();
+      Err = Halo::init();
+      if (Err != 0)
+         ABORT_ERROR("VertAdvTest: error initializing default halo");
       HorzMesh::init();
       VertCoord::init();
+      Tracers::init();
+      AuxiliaryState::init();
+      Eos::init();
+      PressureGrad::init();
+      Tendencies::init();
+      VertAdv::init();
+      TimeStepper::init2();
+      Err = OceanState::init();
+      if (Err != 0)
+         ABORT_ERROR("ocnInit: Error initializing default state");
       
       auto Mesh = HorzMesh::getDefault();
       auto VCoord = VertCoord::getDefault();
@@ -773,21 +789,29 @@ int main(int argc, char *argv[]) {
       LOG_INFO("=======================================================");
       
       if (NumFailed > 0) {
-         ErrCode = 1;
+         Err = 1;
       }
       
       // Cleanup
       Analysis::finalize();
+      IOStream::finalize();
+      OceanState::clear();
+      Tracers::clear();
+      AuxiliaryState::clear();
+      PressureGrad::clear();
+      Tendencies::clear();
+      VertAdv::clear();
       VertCoord::clear();
+      TimeStepper::clear();
       HorzMesh::clear();
       Field::clear();
       Halo::clear();
       Decomp::clear();
-      TimeStepper::clear();
       MachEnv::removeAll();
    }
+   Pacer::finalize();
    Kokkos::finalize();
    MPI_Finalize();
    
-   return ErrCode;
+   return Err;
 }
