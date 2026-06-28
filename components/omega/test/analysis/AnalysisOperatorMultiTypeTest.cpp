@@ -499,55 +499,116 @@ void testTimeMeanOp_Type(const std::string &TypeName,
    std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldTimeMean_" + TypeName;
    
-   // Create test field with constant value
-   ScalarT ConstValue = static_cast<ScalarT>(5);
+   // Create test field with initial value
+   ScalarT BaseValue = static_cast<ScalarT>(5);
    
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i) -> ScalarT {
-            return ConstValue;
+         [BaseValue](I4 i) -> ScalarT {
+            return BaseValue;
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j) -> ScalarT {
-            return ConstValue;
+         [BaseValue](I4 i, I4 j) -> ScalarT {
+            return BaseValue;
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j, I4 k) -> ScalarT {
-            return ConstValue;
+         [BaseValue](I4 i, I4 j, I4 k) -> ScalarT {
+            return BaseValue;
          });
    }
    
-   // Create TimeMeanOp with 3-timestep period
+   // Get the field and its data array for updating during time loop
+   auto TestField = Field::get(FieldName);
+   auto TestData = TestField->template getDataArray<ArrayType>();
+   
+   // Set up time stepping parameters
+   const int NumSteps = 5;  // Accumulate over 5 timesteps
+   TimeInterval StepInterval = ModelClock->getTimeStep();
+   
+   // Calculate period interval (NumSteps * timestep)
+   R8 StepSeconds;
+   StepInterval.get(StepSeconds, TimeUnits::Seconds);
+   R8 PeriodSeconds = StepSeconds * NumSteps;
+   TimeInterval PeriodInterval(PeriodSeconds, TimeUnits::Seconds);
+   
+   // Create TimeMeanOp with a valid period string (e.g., "5seconds")
+   // The Period string is just a label used in the output field name
    Config OpConfig;
-   OpConfig.set("Period", std::string("3timesteps"));
+   std::string PeriodLabel = std::to_string(static_cast<int>(PeriodSeconds)) + "seconds";
+   OpConfig.set("Period", PeriodLabel);
    
    auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean", {FieldName}, OpConfig);
    TimeMeanOp->initialize(Env, Mesh, VCoord, OpConfig);
    
-   // Create a period alarm for finalization
-   TimeInterval ThreeSteps(3, TimeUnits::Seconds);
+   // Create a period alarm that rings after NumSteps
    TimeInstant StartTime = ModelClock->getCurrentTime();
-   Alarm PeriodAlarm("TestPeriodAlarm_" + TypeName, ThreeSteps, StartTime);
+   Alarm PeriodAlarm("TestPeriodAlarm_" + TypeName, PeriodInterval, StartTime);
    TimeMeanOp->setPeriodAlarm(&PeriodAlarm);
    
-   // Accumulate over 3 timesteps
-   TimeInstant Time1(0, 0, 0, 0, 0, 1);
-   TimeInstant Time2(0, 0, 0, 0, 0, 2);
-   TimeInstant Time3(0, 0, 0, 0, 0, 3);
+   // Time-stepping loop: update field values and compute mean at each step
+   std::vector<ScalarT> ValuesAtEachStep;
    
-   TimeMeanOp->compute(Time1);
-   TimeMeanOp->compute(Time2);
-   PeriodAlarm.isRinging();
-   TimeMeanOp->compute(Time3);
+   for (int step = 0; step < NumSteps; ++step) {
+      // Update field values to simulate time evolution
+      // Value at each step = BaseValue + step (e.g., 5, 6, 7, 8, 9)
+      ScalarT CurrentValue = static_cast<ScalarT>(
+         static_cast<Real>(BaseValue) + static_cast<Real>(step)
+      );
+      ValuesAtEachStep.push_back(CurrentValue);
+      
+      // Update the field data on device
+      auto TestDataHost = Kokkos::create_mirror_view(TestData);
+      Kokkos::deep_copy(TestDataHost, TestData);
+      
+      if constexpr (Rank == 1) {
+         for (I4 i = 0; i < Dims[0]; ++i) {
+            TestDataHost(i) = CurrentValue;
+         }
+      } else if constexpr (Rank == 2) {
+         for (I4 i = 0; i < Dims[0]; ++i) {
+            for (I4 j = 0; j < Dims[1]; ++j) {
+               TestDataHost(i, j) = CurrentValue;
+            }
+         }
+      } else if constexpr (Rank == 3) {
+         for (I4 i = 0; i < Dims[0]; ++i) {
+            for (I4 j = 0; j < Dims[1]; ++j) {
+               for (I4 k = 0; k < Dims[2]; ++k) {
+                  TestDataHost(i, j, k) = CurrentValue;
+               }
+            }
+         }
+      }
+      
+      Kokkos::deep_copy(TestData, TestDataHost);
+      
+      // Advance clock to next timestep
+      ModelClock->advance();
+      TimeInstant CurrentTime = ModelClock->getCurrentTime();
+      
+      // Compute the time mean (accumulates internally)
+      TimeMeanOp->compute(CurrentTime);
+      
+      // Check if alarm is ringing (should ring after last step)
+      if (PeriodAlarm.isRinging()) {
+         // Mean should now be finalized
+         break;
+      }
+   }
    
-   // Get result
-   std::string ResultFieldName = FieldName + "_TimeMean3timesteps";
+   // Calculate expected mean: average of [BaseValue, BaseValue+1, ..., BaseValue+(NumSteps-1)]
+   // For BaseValue=5 and NumSteps=5: avg of [5, 6, 7, 8, 9] = 7.0
+   Real Sum = 0.0;
+   for (const auto &val : ValuesAtEachStep) {
+      Sum += static_cast<Real>(val);
+   }
+   Real ExpectedMean = Sum / static_cast<Real>(NumSteps);
+   
+   // Get result field - output field name includes the Period label
+   std::string ResultFieldName = FieldName + "_TimeMean" + PeriodLabel;
    auto ResultField = Field::get(ResultFieldName);
-   
-   // Expected mean is the constant value
-   Real ExpectedMean = static_cast<Real>(ConstValue);
    
    // Verify a sample of values. The TimeMeanOp output field is attached with
    // the same ArrayType as the input, so retrieve with the matching type.
@@ -558,9 +619,12 @@ void testTimeMeanOp_Type(const std::string &TypeName,
       Kokkos::deep_copy(ResultHost, ResultData);
 
       for (I4 i = 0; i < std::min(10, Dims[0]); ++i) {
-         if (std::abs(static_cast<Real>(ResultHost(i)) - ExpectedMean) >
+         Real ComputedValue = static_cast<Real>(ResultHost(i));
+         if (std::abs(ComputedValue - ExpectedMean) >
              static_cast<Real>(Helper::getTolerance())) {
             Passed = false;
+            LOG_ERROR("  At index {}: Expected {}, Got {}", 
+                     i, ExpectedMean, ComputedValue);
             break;
          }
       }
@@ -571,9 +635,12 @@ void testTimeMeanOp_Type(const std::string &TypeName,
 
       for (I4 i = 0; i < std::min(5, Dims[0]); ++i) {
          for (I4 j = 0; j < std::min(5, Dims[1]); ++j) {
-            if (std::abs(static_cast<Real>(ResultHost(i, j)) - ExpectedMean) >
+            Real ComputedValue = static_cast<Real>(ResultHost(i, j));
+            if (std::abs(ComputedValue - ExpectedMean) >
                 static_cast<Real>(Helper::getTolerance())) {
                Passed = false;
+               LOG_ERROR("  At index ({}, {}): Expected {}, Got {}", 
+                        i, j, ExpectedMean, ComputedValue);
                break;
             }
          }
@@ -587,9 +654,12 @@ void testTimeMeanOp_Type(const std::string &TypeName,
       for (I4 i = 0; i < std::min(3, Dims[0]); ++i) {
          for (I4 j = 0; j < std::min(3, Dims[1]); ++j) {
             for (I4 k = 0; k < std::min(3, Dims[2]); ++k) {
-               if (std::abs(static_cast<Real>(ResultHost(i, j, k)) - ExpectedMean) >
+               Real ComputedValue = static_cast<Real>(ResultHost(i, j, k));
+               if (std::abs(ComputedValue - ExpectedMean) >
                    static_cast<Real>(Helper::getTolerance())) {
                   Passed = false;
+                  LOG_ERROR("  At index ({}, {}, {}): Expected {}, Got {}", 
+                           i, j, k, ExpectedMean, ComputedValue);
                   break;
                }
             }
@@ -602,7 +672,8 @@ void testTimeMeanOp_Type(const std::string &TypeName,
    reportTest("TimeMeanOp: " + TypeName, Passed);
    
    if (!Passed) {
-      LOG_ERROR("  Expected: {}, Got different values", ExpectedMean);
+      LOG_ERROR("  Expected mean: {}", ExpectedMean);
+      LOG_ERROR("  Period label: {}", PeriodLabel);
    }
 }
 
@@ -821,7 +892,7 @@ int main(int argc, char *argv[]) {
       
       LOG_INFO("");
       LOG_INFO("--- Testing TimeMeanOp (12 array types) ---");
-//      testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
+      testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
       
       // Report summary
       LOG_INFO("");
