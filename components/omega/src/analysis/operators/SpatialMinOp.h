@@ -77,7 +77,7 @@ class SpatialMinOp : public AnalysisOperator {
          ABORT_ERROR("");
       }
 
-      SpatialMin = globalWeightedMin(InputData, MaskArray, Comm);
+      SpatialMin = globalMaskedMin(InputData, MaskArray, Comm);
 
       deepCopy(OutputData, SpatialMin);
 

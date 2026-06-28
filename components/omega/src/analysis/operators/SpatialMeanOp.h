@@ -115,7 +115,7 @@ class SpatialMeanOp : public AnalysisOperator {
       // IndxRange for mask (always 2D)
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
-      auto ValSum = globalWeightedSum(InputData, MaskArray, Comm, &indxRange);
+      auto ValSum = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
       auto MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
 
       SpatialMean = ValSum/MaskSum;
