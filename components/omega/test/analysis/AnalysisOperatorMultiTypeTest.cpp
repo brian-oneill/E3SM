@@ -55,11 +55,11 @@ struct TestHelper {
    // Get dimensions based on rank
    static std::vector<I4> getDims(const HorzMesh *Mesh, const VertCoord *VCoord) {
       if constexpr (Rank == 1) {
-         return {100};  // Simple 1D array
+         return {Mesh->NCellsAll};  // 1D horizontal array over cells
       } else if constexpr (Rank == 2) {
          return {Mesh->NCellsAll, VCoord->NVertLayers};
       } else if constexpr (Rank == 3) {
-         return {10, Mesh->NCellsAll, VCoord->NVertLayers};
+         return {Tracers::getNumTracers(), Mesh->NCellsAll, VCoord->NVertLayers};
       }
       return {};
    }
@@ -67,11 +67,11 @@ struct TestHelper {
    // Get dimension names
    static std::vector<std::string> getDimNames() {
       if constexpr (Rank == 1) {
-         return {"Dim0"};
+         return {"NCells"};
       } else if constexpr (Rank == 2) {
          return {"NCells", "NVertLayers"};
       } else if constexpr (Rank == 3) {
-         return {"Dim2", "NCells", "NVertLayers"};
+         return {"NTracers", "NCells", "NVertLayers"};
       }
       return {};
    }
@@ -223,10 +223,22 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
          });
    }
    
-   // Compute expected max (sum of last indices)
+   // Compute expected max (sum of last owned indices).
+   // For 1D: operator reduces over NCellsOwned, so max of f(i)=i is NCellsOwned-1.
+   // For 2D: horizontal dim restricted to NCellsOwned, max of f(i,j)=i+j is
+   //   (NCellsOwned-1)+(NVertLayers-1).
+   // For 3D: horizontal dim (index 1) restricted to NCellsOwned, max of
+   //   f(i,j,k)=i+j+k is (NTracers-1)+(NCellsOwned-1)+(NVertLayers-1).
    ScalarT ExpectedMax = 0;
-   for (auto dim : Dims) {
-      ExpectedMax += static_cast<ScalarT>(dim - 1);
+   if constexpr (Rank == 1) {
+      ExpectedMax = static_cast<ScalarT>(Mesh->NCellsOwned - 1);
+   } else if constexpr (Rank == 2) {
+      ExpectedMax = static_cast<ScalarT>((Mesh->NCellsOwned - 1) +
+                                         (VCoord->NVertLayers - 1));
+   } else if constexpr (Rank == 3) {
+      ExpectedMax = static_cast<ScalarT>((Tracers::getNumTracers() - 1) +
+                                         (Mesh->NCellsOwned - 1) +
+                                         (VCoord->NVertLayers - 1));
    }
    
    // Create and compute operator

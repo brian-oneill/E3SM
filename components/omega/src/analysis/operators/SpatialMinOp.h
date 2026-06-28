@@ -111,7 +111,15 @@ class SpatialMinOp : public AnalysisOperator {
          indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
       }
 
-      SpatialMin = globalMaskedMin(InputData, MaskArray, Comm, &indxRange);
+      if (NDims == 1) {
+         // For 1D arrays (horizontal only), extract k=0 slice of the 2D mask.
+         // k=0 represents whether the column is active at all, which is the
+         // correct mask to use when there is no vertical dimension.
+         auto Mask1D = Kokkos::subview(MaskArray, Kokkos::ALL, 0);
+         SpatialMin = globalMaskedMin(InputData, Mask1D, Comm, &indxRange);
+      } else {
+         SpatialMin = globalMaskedMin(InputData, MaskArray, Comm, &indxRange);
+      }
 
       deepCopy(OutputData, SpatialMin);
 

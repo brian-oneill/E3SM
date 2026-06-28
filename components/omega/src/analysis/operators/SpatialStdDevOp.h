@@ -147,8 +147,19 @@ class SpatialStdDevOp : public AnalysisOperator {
 
           });
 
-      auto WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
-      auto MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+      ScalarT WorkSum;
+      ScalarT MaskSum;
+      if (NDims == 1) {
+         // For 1D arrays (horizontal only), extract k=0 slice of the 2D mask.
+         // k=0 represents whether the column is active at all, which is the
+         // correct mask to use when there is no vertical dimension.
+         auto Mask1D = Kokkos::subview(MaskArray, Kokkos::ALL, 0);
+         WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &indxRange);
+         MaskSum = globalSum(Mask1D, Comm, &indxRange);
+      } else {
+         WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
+         MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+      }
 
       auto Variance = WorkSum / MaskSum;
       auto StdDev = std::sqrt(Variance);

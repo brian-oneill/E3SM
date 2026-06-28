@@ -115,8 +115,19 @@ class SpatialMeanOp : public AnalysisOperator {
       // IndxRange for mask (always 2D)
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
-      auto ValSum = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
-      auto MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+      ScalarT ValSum;
+      ScalarT MaskSum;
+      if (NDims == 1) {
+         // For 1D arrays (horizontal only), extract k=0 slice of the 2D mask.
+         // k=0 represents whether the column is active at all, which is the
+         // correct mask to use when there is no vertical dimension.
+         auto Mask1D = Kokkos::subview(MaskArray, Kokkos::ALL, 0);
+         ValSum  = globalMaskedSum(InputData, Mask1D, Comm, &indxRange);
+         MaskSum = globalSum(Mask1D, Comm, &indxRange);
+      } else {
+         ValSum  = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
+         MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+      }
 
       SpatialMean = ValSum/MaskSum;
 
