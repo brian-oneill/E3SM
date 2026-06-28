@@ -2522,6 +2522,237 @@ globalMaskedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
    return GlobalMin;
 }
 
+///-----------------------------------------------------------------------------
+/// Finds the local maximum of a Kokkos array product with masking
+template <typename T1, typename ML1, typename MS1, typename IT,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<IT, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    void>
+localMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+               const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask (1D or 2D)
+               const MPI_Comm Comm,                    ///< [in] MPI Communicator
+               IT &LocalMaxVal,                        ///< [out] local max
+               const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   using Scalar2 = typename Kokkos::View<T2, ML2, MS2>::value_type;
+
+   // Error checks
+   OMEGA_REQUIRE(Arr2.rank == 1 || Arr2.rank == 2,
+                 "localMaxBroadcast: Arr2 must be 1D or 2D");
+   OMEGA_REQUIRE(Arr1.rank >= Arr2.rank,
+                 "localMaxBroadcast: Arr1 rank must be >= Arr2 rank");
+
+   // Verify dimension matching
+   if (Arr2.rank == 1) {
+       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+                     "localMaxBroadcast: Horizontal dimensions must match");
+   } else { // Arr2.rank == 2
+       OMEGA_REQUIRE(Arr1.rank >= 2,
+                     "localMaxBroadcast: Arr1 must be at least 2D when Arr2 is 2D");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 2) == Arr2.extent(0),
+                     "localMaxBroadcast: Horizontal dimensions must match");
+       OMEGA_REQUIRE(Arr1.extent(Arr1.rank - 1) == Arr2.extent(1),
+                     "localMaxBroadcast: Vertical dimensions must match");
+   }
+
+   // Get array and layout information
+   bool IsHost = isReduceArrayOnHost(Arr1);
+   std::vector<I8> Strides1(5, 0);
+   std::vector<I4> IRange(10, 0);
+   getReduceArrayInfo(IRange, Strides1, Arr1, IndxRange);
+
+   // Compute Arr2 strides
+   I8 Stride2H = (Arr2.rank == 1) ? 1 : Arr2.extent(1);
+   I8 Stride2V = 1;
+
+   // Compute local maximum on host or device
+   IT LocalMax = std::numeric_limits<IT>::lowest();
+
+   if (IsHost) {
+      for (I4 I = IRange[0]; I <= IRange[1]; ++I) {
+         for (I4 J = IRange[2]; J <= IRange[3]; ++J) {
+            for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
+               for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
+                  for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
+
+                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                                   K * Strides1[2] + L * Strides1[3] +
+                                   M * Strides1[4];
+
+                     size_t addr2 = 0;
+                     std::array<I4, 5> indices = {I, J, K, L, M};
+
+                     if (Arr2.rank == 1) {
+                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         addr2 = indices[horizIdx1];
+                     } else {
+                         int horizIdx = indices[Arr1.rank - 2];
+                         int vertIdx = indices[Arr1.rank - 1];
+                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                     }
+
+                     R8 MaskVal = static_cast<R8>(Arr2.data()[addr2]);
+                     if (MaskVal != 0.0) {
+                        IT TestVal = Arr1.data()[addr1] * MaskVal;
+                        if (TestVal > LocalMax)
+                           LocalMax = TestVal;
+                     }
+                  }
+               }
+            }
+         }
+      }
+   } else { // on device
+      const int arr1Rank = Arr1.rank;
+      const int arr2Rank = Arr2.rank;
+
+      Array1DI4 DevRange("IRange", 10);
+      Array1DI8 DevStrides("Strides", 5);
+      copyReduceInfoToDevice(DevRange, DevStrides, IRange, Strides1);
+      OMEGA_SCOPE(LocStrides, DevStrides);
+      OMEGA_SCOPE(LocRange, DevRange);
+      OMEGA_SCOPE(LocArr1, Arr1);
+      OMEGA_SCOPE(LocArr2, Arr2);
+
+      parallelReduce(
+          {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
+           IRange[9] + 1},
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, IT &lmax) {
+             if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
+                 L >= LocRange(6) and M >= LocRange(8)) {
+
+                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                              K * LocStrides(2) + L * LocStrides(3) +
+                              M * LocStrides(4);
+
+                size_t addr2 = 0;
+                if (arr2Rank == 1) {
+                    int horizIdx = (arr1Rank == 1) ? I : L;
+                    addr2 = horizIdx;
+                } else { // arr2Rank == 2
+                    int horizIdx = L;
+                    int vertIdx = M;
+                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                }
+
+                R8 MaskVal = static_cast<R8>(LocArr2.data()[addr2]);
+                if (MaskVal != 0.0) {
+                   IT TestVal = LocArr1.data()[addr1] * MaskVal;
+                   lmax = Kokkos::max(TestVal, lmax);
+                }
+             }
+          },
+          Kokkos::Max<IT>(LocalMax));
+   }
+
+   LocalMaxVal = LocalMax;
+   return;
+}
+
+///-----------------------------------------------------------------------------
+/// Global maximum of masked Kokkos array product (R8 interface)
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    R8>
+globalMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask (1D or 2D)
+                const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local max (also performs error checks)
+   R8 LocalMax;
+   localMaskedMax(Arr1, Arr2, Comm, LocalMax, IndxRange);
+
+   // Compute final maximum across MPI tasks
+   R8 GlobalMax;
+   int Err = MPI_Allreduce(&LocalMax, &GlobalMax, 1, MPI_DOUBLE, MPI_MAX, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMaxBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMax;
+}
+
+/// Specific R4 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<R4, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    R4>
+globalMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask (1D or 2D)
+                const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local max (also performs error checks)
+   R4 LocalMax;
+   localMaskedMax(Arr1, Arr2, Comm, LocalMax, IndxRange);
+
+   // Compute final maximum across MPI tasks
+   R4 GlobalMax;
+   int Err = MPI_Allreduce(&LocalMax, &GlobalMax, 1, MPI_FLOAT, MPI_MAX, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMaxBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMax;
+}
+
+/// Specific I4 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<I4, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    I4>
+globalMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask (1D or 2D)
+                const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local max (also performs error checks)
+   I4 LocalMax;
+   localMaskedMax(Arr1, Arr2, Comm, LocalMax, IndxRange);
+
+   // Compute final maximum across MPI tasks
+   I4 GlobalMax;
+   int Err = MPI_Allreduce(&LocalMax, &GlobalMax, 1, MPI_INT32_T, MPI_MAX, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMaxBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMax;
+}
+
+/// Specific I8 interface
+template <typename T1, typename ML1, typename MS1,
+          typename T2, typename ML2, typename MS2>
+std::enable_if_t<
+    std::is_same_v<I8, typename Kokkos::View<T1, ML1, MS1>::value_type> &&
+    std::is_arithmetic_v<typename Kokkos::View<T2, ML2, MS2>::value_type>,
+    I8>
+globalMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
+                const Kokkos::View<T2, ML2, MS2> Arr2, ///< [in] mask (1D or 2D)
+                const MPI_Comm Comm,                    ///< [in] MPI Communicator
+                const std::vector<I4> *IndxRange = nullptr ///< [in] index range
+) {
+   // Call routine to find local max (also performs error checks)
+   I8 LocalMax;
+   localMaskedMax(Arr1, Arr2, Comm, LocalMax, IndxRange);
+
+   // Compute final maximum across MPI tasks
+   I8 GlobalMax;
+   int Err = MPI_Allreduce(&LocalMax, &GlobalMax, 1, MPI_INT64_T, MPI_MAX, Comm);
+   if (Err != MPI_SUCCESS)
+      ABORT_ERROR("globalMaxBroadcast: Error in MPI_Allreduce");
+
+   return GlobalMax;
+}
+
 //------------------------------------------------------------------------------
 } // end namespace OMEGA
 
