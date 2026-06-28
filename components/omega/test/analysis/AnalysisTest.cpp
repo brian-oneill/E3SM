@@ -164,7 +164,6 @@ int main(int argc, char *argv[]) {
       auto DefMesh = HorzMesh::getDefault();
       auto DefVCoord = VertCoord::getDefault();
       auto DefEnv  = MachEnv::getDefault();
-      std::cout << DefVCoord->NVertLayers << std::endl;
 
       auto OmegaConfig = Config::getOmegaConfig();
 
@@ -244,15 +243,11 @@ int main(int argc, char *argv[]) {
 
 
       auto GlobMeanOp = AnalysisOpFactory::createOp("SpatialMean", {"PseudoThickness"}, *OmegaConfig);
-      std::cout << "1" << std::endl;
       GlobMeanOp->initialize(DefEnv, DefMesh, DefVCoord, *OmegaConfig);
-      std::cout << "2" << std::endl;
 
       GlobMeanOp->compute(TStamp);
-      std::cout << "3" << std::endl;
 
-      auto GlobMeanArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_spatial_mean");
-      std::cout << "4" << std::endl;
+      auto GlobMeanArray =  Field::getFieldDataArray<Array1DReal>("PseudoThickness_SpatialMean");
 
       std::cout << GlobMeanArray(0) << std::endl;
 

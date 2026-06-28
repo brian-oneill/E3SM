@@ -24,7 +24,6 @@ class SpatialMeanOp : public AnalysisOperator {
       InputNames = UpstreamNames;
 
       std::string OutputFieldName = InputNames[0] + "_SpatialMean";
-//      std::cout << OutputFieldName << std::endl;
       OutputNames = {OutputFieldName};
       InstanceName = OutputFieldName;
 
@@ -57,26 +56,22 @@ class SpatialMeanOp : public AnalysisOperator {
       auto InputField = Field::get(InputNames[0]);
 
       auto InputData = InputField->getDataArray<ArrayT>();
-      std::cout << "01" << std::endl;
 
       std::vector<std::string> InputDimNames;
 
       InputField->getDimNames(InputDimNames);
-      std::cout << "02" << std::endl;
 
       I4 NDims = InputDimNames.size();
 
       Array2DReal MaskArray;
 
       std::string IndexSpaceName = InputDimNames[std::max(0, NDims - 2)];
-      std::cout << "03" << std::endl;
 
       I4 NOwned = 0;
       I4 NVertLayers = 0;
       
       NVertLayers = VCoord->NVertLayers;
 
-      std::cout << "04" << std::endl;
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
          NOwned = Mesh->NCellsOwned;
@@ -89,7 +84,6 @@ class SpatialMeanOp : public AnalysisOperator {
       } else {
          ABORT_ERROR("");
       }
-      std::cout << "05" << std::endl;
 
       // Create IndxRange to exclude halo cells
       // For InputData: depends on rank (could be 1D, 2D, 3D+)
@@ -117,22 +111,16 @@ class SpatialMeanOp : public AnalysisOperator {
          indxRange[2*(NDims-1)] = 0;
          indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
       }
-      std::cout << "06" << std::endl;
       
       // IndxRange for mask (always 2D)
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
-      std::cout << "11" << std::endl;
       auto ValSum = globalWeightedSum(InputData, MaskArray, Comm, &indxRange);
-      std::cout << "22" << std::endl;
       auto MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
-      std::cout << "33" << std::endl;
 
       SpatialMean = ValSum/MaskSum;
-      std::cout << "44" << std::endl;
 
       deepCopy(OutputData, SpatialMean);
-      std::cout << "55" << std::endl;
 
       LastComputed = TimeStamp;
       FieldComputed = true;
@@ -141,11 +129,6 @@ class SpatialMeanOp : public AnalysisOperator {
    ScalarT getVal() {return SpatialMean;}
 
  private:
-
-   // Member data
-   const HorzMesh *Mesh;                    ///< Horizontal mesh
-   const VertCoord *VCoord;                 ///< VertCoord
-   MPI_Comm Comm;
 
    /// Output data storage - holds exactly one 1D array of data type
    /// matching input
