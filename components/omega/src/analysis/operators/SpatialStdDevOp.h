@@ -78,7 +78,7 @@ class SpatialStdDevOp : public AnalysisOperator {
          "Standard deviation of " + InputNames[0], // Description
          "",                                        // Units
          "",                                        // Standard name
-         static_cast<scalrT>(0),                   // Min valid value
+         static_cast<ScalarT>(0),                   // Min valid value
          std::numeric_limits<ScalarT>::max(),      // Max valid value
          -std::numeric_limits<ScalarT>::max(),     // Fill value
          NDims,                                     // Dimension lengths

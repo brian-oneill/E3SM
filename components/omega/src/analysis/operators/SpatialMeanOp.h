@@ -231,8 +231,8 @@ class SpatialMeanOp : public AnalysisOperator {
 
    /// Cached mask sum computed on first pass and reused for subsequent calls.
    /// The mask is constant in time, so this optimization avoids redundant
-   /// global reduction operations. Initialized to -1.0 to indicate not yet computed.
-   ScalarT CachedMaskSum{-1.0};
+   /// global reduction operations. Initialized to -1 to indicate not yet computed.
+   ScalarT CachedMaskSum{static_cast<ScalarT>(-1)};
 
 }; // end class SpatialMeanOp
 
