@@ -75,9 +75,9 @@ class SpatialStdDevOp : public AnalysisOperator {
       auto OutputField = Field::create(
          OutputNames[0],
          "Standard deviation of " + InputNames[0], // Description
-         "",                                        // Units (inherited from input)
+         "",                                        // Units
          "",                                        // Standard name
-         0,                                         // Min valid value (std dev >= 0)
+         static_cast<scalrT>(0),                   // Min valid value
          std::numeric_limits<ScalarT>::max(),      // Max valid value
          -std::numeric_limits<ScalarT>::max(),     // Fill value
          NDims,                                     // Dimension lengths
