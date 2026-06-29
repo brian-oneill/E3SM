@@ -6,24 +6,24 @@
 /// \file
 /// \brief Defines the SpatialStdDevOp operator for computing standard deviation
 ///
-/// SpatialStdDevOp computes the standard deviation of a field across all owned
-/// mesh entities (cells, edges, or vertices), excluding halo regions. The
-/// operator requires the spatial mean as input (computed by SpatialMeanOp),
-/// computes squared differences from the mean in a work array, calculates the
-/// masked sum of squared differences and sum of mask (area), divides to get
-/// variance, and takes the square root to get standard deviation.
+/// SpatialStdDevOp computes the standard deviation of a field across all
+/// owned mesh entities (cells, edges, or vertices), excluding halo regions.
+/// The operator requires the spatial mean as input (computed by
+/// SpatialMeanOp), computes squared differences from the mean in a work array,
+/// calculates the masked sum of squared differences and sum of mask values,
+/// divides to get variance, and takes the square root to get standard
+/// deviation.
 ///
 /// The operator is templated on the Kokkos array type (ArrayT) of the input
 /// field, supporting 1D (horizontal only), 2D (horizontal + vertical), and 3D+
 /// (extra dimensions + horizontal + vertical) fields. The output is a scalar
 /// (1D array with single element) stored in a Field with dimension "Scalar".
 ///
-/// For 1D inputs, the horizontal-only mask (k=0 layer of the full mask
-/// by default) is used. For 2D+ inputs, the full 2D mask (horizontal ×
-/// vertical) is applied. The mask represents active area, enabling proper
-/// area-weighted averaging. Unlike simpler operators, SpatialStdDevOp allocates
-/// a work array matching the input field layout to store squared differences
-/// before reduction.
+/// For 1D inputs, the horizontal-only mask (k=0 layer of the full mask by
+/// default) is used. For 2D+ inputs, the full 2D mask (horizontal × vertical)
+/// is applied. Unlike simpler operators, SpatialStdDevOp allocates a work
+/// array matching the input field layout to store squared differences before
+/// reduction.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -32,10 +32,10 @@
 
 namespace OMEGA {
 
-/// SpatialStdDevOp computes the global spatial standard deviation
-/// of a field across all owned mesh entities and active vertical layers. The
-/// operator requires spatial mean as input, computes squared differences in a
-/// work array, performs masked sum reduction, and takes square root of the
+/// SpatialStdDevOp computes the global spatial standard deviation of a field
+/// across all owned mesh entities and active vertical layers. The operator
+/// requires spatial mean as input, computes squared differences in a work
+/// array, performs masked sum reduction, and takes square root of the
 /// variance. Output is a scalar Field.
 template<typename ArrayT>
 class SpatialStdDevOp : public AnalysisOperator {
@@ -96,12 +96,12 @@ class SpatialStdDevOp : public AnalysisOperator {
 
    } // end constructor
 
-   /// Computes the area-weighted spatial standard deviation by retrieving input
-   /// data and spatial mean, determining the appropriate mesh index space and
-   /// vertical mask, constructing index ranges to exclude halo regions, filling
-   /// work array with squared differences from mean, computing masked sum of
-   /// squared differences and sum of mask (area), dividing to get variance, and
-   /// taking square root. Updates output data, timestamp, and computed flag.
+   /// Computes the spatial standard deviation by retrieving input data and
+   /// spatial mean, determining the appropriate mesh index space and vertical
+   /// mask, constructing index ranges to exclude halo regions, filling work
+   /// array with squared differences from mean, computing masked sum of squared
+   /// differences and sum of mask values, dividing to get variance, and taking
+   /// square root. Updates output data, timestamp, and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
    ) override {
 
@@ -205,7 +205,7 @@ class SpatialStdDevOp : public AnalysisOperator {
 
           });
 
-      // Compute masked sum of squared differences and sum of mask (area)
+      // Compute masked sum of squared differences and sum of mask values
       ScalarT WorkSum;
       ScalarT MaskSum;
       

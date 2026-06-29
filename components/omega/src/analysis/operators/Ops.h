@@ -14,9 +14,9 @@
 ///
 /// Currently available operators:
 /// - SpatialMaxOp: Computes spatial maximum over all cells
-/// - SpatialMeanOp: Computes area-weighted spatial mean
+/// - SpatialMeanOp: Computes spatial mean
 /// - SpatialMinOp: Computes spatial minimum over all cells
-/// - SpatialStdDevOp: Computes area-weighted spatial standard deviation
+/// - SpatialStdDevOp: Computes spatial standard deviation
 /// - TimeMeanOp: Computes time-averaged mean over a specified period
 ///
 /// All operators are templated on Kokkos array type to support multiple scalar

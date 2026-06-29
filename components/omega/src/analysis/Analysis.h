@@ -1,7 +1,7 @@
 #ifndef OMEGA_ANALYSIS_H
 #define OMEGA_ANALYSIS_H
 
-//===-- analysis/Analysis.h - OMEGA Analysis --------------------*- C++ -*-===//
+//===-- analysis/Analysis.h - OMEGA Analysis ----------*- C++ -*-===//
 //
 /// \file
 /// \brief Defines core Analysis framework for in-situ computation
@@ -9,21 +9,23 @@
 /// The Analysis module provides in-situ computation of analysis fields from
 /// the ocean model state during simulation runtime. Analysis fields are
 /// computed on-the-fly and written to output streams at user-specified
-/// intervals, providing an alternative to extensive offline post-processing.
+/// intervals, providing an alternative to extensive offline
+/// post-processing.
 ///
 /// The framework is built on a composable operator architecture where
 /// operators can be chained together to produce analysis outputs. Each
 /// operator performs a single, well-defined transformation (e.g., spatial
 /// reduction, temporal averaging, binary operations). Operators declare
 /// their input field dependencies at construction, and the Analysis
-/// orchestrator resolves dependencies to form a directed acyclic graph (DAG).
+/// orchestrator resolves dependencies to form a directed acyclic graph
+/// (DAG).
 ///
-/// The orchestrator uses an alarm-based scheduling model to trigger operator
-/// computation. Each operator node contains pointers to one or more alarms;
-/// when any alarm rings, the operator computes its output. Upstream
-/// dependencies are computed recursively on-demand, with timestamp-based
-/// caching to prevent redundant computation when multiple downstream
-/// operators share an intermediate result.
+/// The orchestrator uses an alarm-based scheduling model to trigger
+/// operator computation. Each operator node contains pointers to one or
+/// more alarms; when any alarm rings, the operator computes its output.
+/// Upstream dependencies are computed recursively on-demand, with
+/// timestamp-based caching to prevent redundant computation when multiple
+/// downstream operators share an intermediate result.
 ///
 /// For detailed design documentation including algorithmic formulation,
 /// dependency resolution, and operator registration, see
@@ -54,36 +56,39 @@ namespace OMEGA {
 
 /// Parses a frequency string into numeric and unit components
 /// Frequency strings are of the form "1day", "6hour", "1month", etc.
-/// Returns a vector with two elements: [0] = numeric part, [1] = units part
-/// If units do not end with 's', appends 's' for consistency with TimeInterval
-std::vector<std::string> parseFreqStr(const std::string &FreqStr ///< [in] frequency string to parse
+/// Returns a vector with two elements: [0] = numeric part, [1] = units
+/// If units do not end with 's', appends 's' for consistency with
+/// TimeInterval
+std::vector<std::string> parseFreqStr(
+   const std::string &FreqStr ///< [in] frequency string to parse
 );
 
-/// Internal representation of a node in the Analysis operator dependency graph
-/// Each node contains an operator instance, pointers to its upstream
+/// Internal representation of a node in the Analysis operator dependency
+/// graph. Each node contains an operator instance, pointers to its upstream
 /// dependencies, the names of output streams that consume its output, and
 /// non-owning pointers to alarms that trigger its computation.
 struct OperatorNode {
-   std::unique_ptr<AnalysisOperator> Op; ///< Operator instance (owned by node)
-   std::vector<OperatorNode*> Upstreams; ///< Upstream dependencies (non-owning)
-   std::vector<std::string> StreamNames; ///< Output stream names; empty for intermediate operators
-   std::vector<Alarm*> ComputeAlarms;    ///< Alarms triggering compute (non-owning)
+   std::unique_ptr<AnalysisOperator> Op; ///< Operator instance (owned)
+   std::vector<OperatorNode*> Upstreams; ///< Upstream deps (non-owning)
+   std::vector<std::string> StreamNames; ///< Output streams; empty if
+                                         ///< intermediate operator
+   std::vector<Alarm*> ComputeAlarms;    ///< Compute alarms (non-owning)
 };
 
-/// The Analysis class is the top-level orchestrator for the in-situ analysis
-/// framework. It is responsible for:
+/// The Analysis class is the top-level orchestrator for the in-situ
+/// analysis framework. It is responsible for:
 /// - Reading analysis configuration and constructing AnalysisGroup instances
-/// - Parsing operator chain strings and instantiating operators via the factory
+/// - Parsing operator chain strings and instantiating operators via factory
 /// - Resolving operator dependencies to form a directed acyclic graph (DAG)
 /// - Managing the alarm-based scheduling system for operator computation
 /// - Owning accumulation alarms for temporal reduction operators
 /// - Triggering recursive operator computation on each timestep
 ///
 /// The class maintains a vector of OperatorNode instances representing all
-/// registered operators. Each node stores pointers to its upstream dependencies
-/// and the alarms that trigger its computation. The Analysis object owns
-/// accumulation alarms for temporal reduction operators, while output alarms
-/// are borrowed from IOStream instances.
+/// registered operators. Each node stores pointers to its upstream
+/// dependencies and the alarms that trigger its computation. The Analysis
+/// object owns accumulation alarms for temporal reduction operators, while
+/// output alarms are borrowed from IOStream instances.
 class Analysis {
  public:
 
@@ -142,8 +147,9 @@ class Analysis {
 
    /// Checks whether an operator node with the given full instance name
    /// already exists in the OpNodes vector. Returns true if found, false
-   /// otherwise. Used during chain parsing to avoid creating duplicate operators.
-   bool OpNodeExists(const std::string &FullOpName ///< [in] full operator name
+   /// otherwise. Used during chain parsing to avoid creating duplicate
+   /// operators.
+   bool OpNodeExists(const std::string &FullOpName ///< [in] full op name
    );
 
    /// Retrieves the default Analysis instance. The preference is to pass
@@ -159,10 +165,11 @@ class Analysis {
 
  private:
 
-   /// Accumulation alarms owned by Analysis for temporal reduction operators.
-   /// These alarms control how frequently samples are added to running sums
-   /// (e.g., every timestep or at a coarser interval). Output alarms are
-   /// borrowed from IOStream instances and stored in OperatorNode::ComputeAlarms.
+   /// Accumulation alarms owned by Analysis for temporal reduction
+   /// operators. These alarms control how frequently samples are added to
+   /// running sums (e.g., every timestep or at a coarser interval). Output
+   /// alarms are borrowed from IOStream instances and stored in
+   /// OperatorNode::ComputeAlarms.
    std::vector<std::unique_ptr<Alarm>> AccumulationAlarms;
 
    /// Pointer to the default Analysis instance for easy retrieval
@@ -172,8 +179,9 @@ class Analysis {
    static std::map<std::string, std::unique_ptr<Analysis>> AllAnalysisObjects;
 
    /// Private constructor for creating a new Analysis instance.
-   /// Called by the create() factory method. Reads configuration, constructs
-   /// AnalysisGroup instances, and builds the operator dependency graph.
+   /// Called by the create() factory method. Reads configuration,
+   /// constructs AnalysisGroup instances, and builds the operator
+   /// dependency graph.
    Analysis(const std::string &Name,   ///< [in] name for new instance
             const MachEnv *Env,         ///< [in] machine environment
             const HorzMesh *Mesh,       ///< [in] horizontal mesh
@@ -182,11 +190,11 @@ class Analysis {
             Config *Options             ///< [in] configuration options
    );
 
-   std::string Name;          ///< Name of this Analysis instance
-   const MachEnv *Env;        ///< Machine environment for MPI operations
-   const HorzMesh *Mesh;      ///< Horizontal mesh for spatial operations
-   const VertCoord *VCoord;   ///< Vertical coordinate for vertical operations
-   Clock *ModelClock;         ///< Pointer to model clock for time management
+   std::string Name;         ///< Name of this Analysis instance
+   const MachEnv *Env;       ///< Machine environment for MPI operations
+   const HorzMesh *Mesh;     ///< Horizontal mesh for spatial operations
+   const VertCoord *VCoord;  ///< Vertical coordinate for vertical ops
+   Clock *ModelClock;        ///< Pointer to model clock for time mgmt
 
    /// All registered operator nodes forming the dependency graph
    std::vector<std::unique_ptr<OperatorNode>> OpNodes;
@@ -199,20 +207,22 @@ class Analysis {
 
    /// Post-hoc dependency resolution: iterates over all operator nodes and
    /// matches input field names against other nodes' output field names to
-   /// populate the Upstreams vectors. This forms the edges of the dependency
-   /// graph. In future versions, this will be replaced by signature-based
-   /// deduplication during graph construction.
+   /// populate the Upstreams vectors. This forms the edges of the
+   /// dependency graph. In future versions, this will be replaced by
+   /// signature-based deduplication during graph construction.
    void buildOperatorDependencies();
 
    /// Sets ComputeAlarms on terminal nodes by borrowing alarm pointers from
    /// associated IOStream instances. For temporal reduction operators, also
-   /// creates accumulation alarms and adds them to ComputeAlarms. Then calls
-   /// propagateAlarmsUpstream() to propagate alarms to upstream dependencies.
+   /// creates accumulation alarms and adds them to ComputeAlarms. Then
+   /// calls propagateAlarmsUpstream() to propagate alarms to upstream
+   /// dependencies.
    void setComputeAlarms();
 
    /// Calls initialize() on all operators after the dependency graph is
-   /// complete and all Fields exist. This allows operators to store pointers
-   /// to mesh, environment, and other resources needed during compute().
+   /// complete and all Fields exist. This allows operators to store
+   /// pointers to mesh, environment, and other resources needed during
+   /// compute().
    void initializeAllOps();
 
    /// Iteratively propagates alarm pointers from downstream operators to
@@ -222,14 +232,16 @@ class Analysis {
    /// until no further changes occur (fixed point).
    void propagateAlarmsUpstream();
 
-   /// Recursively computes an operator node and all its upstream dependencies.
-   /// Uses timestamp-based cache validation to prevent redundant computation
-   /// when multiple downstream operators share an intermediate result. If the
-   /// node's LastComputed timestamp matches the current TimeStamp, returns
-   /// immediately (cache hit). Otherwise, recursively computes all upstream
-   /// dependencies first, then calls the node's compute() method.
-   void computeRecursive(OperatorNode *Node,         ///< [in] node to compute
-                         const TimeInstant &TimeStamp ///< [in] current timestamp
+   /// Recursively computes an operator node and all its upstream
+   /// dependencies. Uses timestamp-based cache validation to prevent
+   /// redundant computation when multiple downstream operators share an
+   /// intermediate result. If the node's LastComputed timestamp matches the
+   /// current TimeStamp, returns immediately (cache hit). Otherwise,
+   /// recursively computes all upstream dependencies first, then calls the
+   /// node's compute() method.
+   void computeRecursive(
+      OperatorNode *Node,              ///< [in] node to compute
+      const TimeInstant &TimeStamp     ///< [in] current timestamp
    );
    
    // Forbid copy and move construction

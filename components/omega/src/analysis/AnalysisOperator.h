@@ -1,28 +1,29 @@
 #ifndef OMEGA_ANALYSISOP_H
 #define OMEGA_ANALYSISOP_H
 
-//===-- analysis/AnalysisOperator.h - AnalysisOperator base ----*- C++ -*-===//
+//===-- analysis/AnalysisOperator.h - AnalysisOperator ---*- C++ -*-===//
 //
 /// \file
 /// \brief Defines the AnalysisOperator base class and configuration helpers
 ///
-/// AnalysisOperator is the abstract base class from which all concrete analysis
-/// operators are derived. Each operator performs a single, well-defined
-/// transformation on input fields (e.g., spatial reduction, temporal averaging).
-/// Derived classes are templated on the Kokkos array type of their primary
-/// input field, enabling type-safe dispatch based on scalar type, rank, and
-/// memory location.
+/// AnalysisOperator is the abstract base class from which all concrete
+/// analysis operators are derived. Each operator performs a single,
+/// well-defined transformation on input fields (e.g., spatial reduction,
+/// temporal averaging). Derived classes are templated on the Kokkos array
+/// type of their primary input field, enabling type-safe dispatch based on
+/// scalar type, rank, and memory location.
 ///
-/// Operators declare their input field dependencies at construction and create
-/// their output Fields in the Field registry. The initialize() method is called
-/// after all Fields exist to store mesh/environment pointers needed during
-/// compute(). The compute() method retrieves input data from the Field registry
-/// and writes results to operator-owned output arrays.
+/// Operators declare their input field dependencies at construction and
+/// create their output Fields in the Field registry. The initialize()
+/// method is called after all Fields exist to store mesh/environment
+/// pointers needed during compute(). The compute() method retrieves input
+/// data from the Field registry and writes results to operator-owned output
+/// arrays.
 ///
 /// This file also provides helper functions (opParam, makeOpConfig) for
-/// constructing Config objects inline when instantiating operators, providing
-/// a uniform parameter-passing mechanism whether operators are created from
-/// user config or programmatically by bundled AnalysisGroups.
+/// constructing Config objects inline when instantiating operators,
+/// providing a uniform parameter-passing mechanism whether operators are
+/// created from user config or programmatically by bundled AnalysisGroups.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -49,16 +50,18 @@ inline Config makeOpConfig() {
     return Config();
 }
 
-/// Constructs a Config object from variadic key-value pairs using recursive
-/// template expansion. Enables inline operator parameter specification:
+/// Constructs a Config object from variadic key-value pairs using
+/// recursive template expansion. Enables inline operator parameter
+/// specification:
 /// \code
 ///   makeOpConfig(opParam("Period", "1day"), opParam("Layer", 10))
 /// \endcode
 /// This provides a uniform parameter interface whether operators are
 /// instantiated from user config or programmatically by AnalysisGroups.
 template<typename T, typename... Args>
-Config makeOpConfig(const std::pair<std::string, T>& Param, Args... OtherArgs) {
-    Config Cfg = makeOpConfig(OtherArgs...);  // Recurse to build from end
+Config makeOpConfig(const std::pair<std::string, T>& Param,
+                    Args... OtherArgs) {
+    Config Cfg = makeOpConfig(OtherArgs...);  // Recurse from end
     Cfg.add(Param.first, Param.second);
     return Cfg;
 }
@@ -68,9 +71,10 @@ Config makeOpConfig(const std::pair<std::string, T>& Param, Args... OtherArgs) {
 template<typename T>
 using OpParam = std::pair<std::string, std::decay_t<T>>;
 
-/// Helper function to create operator parameter pairs with perfect forwarding.
-/// Usage: opParam("Key", Value) creates a pair suitable for makeOpConfig().
-/// Type decay ensures no reference issues when pairs are passed to Config.
+/// Helper function to create operator parameter pairs with perfect
+/// forwarding. Usage: opParam("Key", Value) creates a pair suitable for
+/// makeOpConfig(). Type decay ensures no reference issues when pairs are
+/// passed to Config.
 template<typename T>
 OpParam<T> opParam(std::string Key,      ///< [in] parameter name
                    T&& Value              ///< [in] parameter value
@@ -82,16 +86,16 @@ OpParam<T> opParam(std::string Key,      ///< [in] parameter name
 }
 
 /// AnalysisOperator is the abstract base class for all concrete analysis
-/// operators. Derived classes are templated on the Kokkos array type of their
-/// primary input field, enabling type-safe factory dispatch. Each operator
-/// performs a single, well-defined transformation (spatial reduction, temporal
-/// averaging, binary operations, etc.).
+/// operators. Derived classes are templated on the Kokkos array type of
+/// their primary input field, enabling type-safe factory dispatch. Each
+/// operator performs a single, well-defined transformation (spatial
+/// reduction, temporal averaging, binary operations, etc.).
 ///
-/// Operators allocate their output data arrays as members and register output
-/// Fields in the Field registry during construction. The initialize() method
-/// stores mesh/environment pointers after all Fields exist. The compute()
-/// method retrieves input data from the Field registry by name and writes
-/// results to the operator-owned output arrays.
+/// Operators allocate their output data arrays as members and register
+/// output Fields in the Field registry during construction. The
+/// initialize() method stores mesh/environment pointers after all Fields
+/// exist. The compute() method retrieves input data from the Field registry
+/// by name and writes results to the operator-owned output arrays.
 ///
 /// Cache validation via isCacheValid() prevents redundant computation when
 /// multiple downstream operators share an intermediate result.
@@ -102,7 +106,8 @@ class AnalysisOperator {
    AnalysisOperator();
    
    /// Constructor with operator type name
-   AnalysisOperator(const std::string &OperatorType ///< [in] operator type name
+   AnalysisOperator(
+      const std::string &OperatorType ///< [in] operator type name
    );
 
    /// Virtual destructor allows polymorphic deletion of derived classes
@@ -113,7 +118,8 @@ class AnalysisOperator {
 
    /// Returns the unique instance name for this operator, derived from the
    /// concatenated upstream field names and operator type. For example,
-   /// "Temperature_SpatialMean" for a SpatialMean operator with Temperature input.
+   /// "Temperature_SpatialMean" for a SpatialMean operator with
+   /// Temperature input.
    const std::string getName();
 
    /// Returns the names of input fields required by this operator. These
@@ -128,7 +134,8 @@ class AnalysisOperator {
    /// Returns true if the operator's output is already valid for the given
    /// timestamp (cache hit). Used by computeRecursive to avoid redundant
    /// computation when multiple downstream operators share this result.
-   bool isCacheValid(const TimeInstant &TimeStamp ///< [in] timestamp to check
+   bool isCacheValid(
+      const TimeInstant &TimeStamp ///< [in] timestamp to check
    );
 
    /// Initializes the operator after all Fields exist in the registry.
@@ -143,33 +150,35 @@ class AnalysisOperator {
    );
 
    /// Sets the period alarm for temporal reduction operators. The alarm
-   /// pointer is used to detect when the accumulation period ends and
-   /// the operator should finalize its output (divide sum by sample count).
-   /// Default implementation does nothing; only temporal operators override this.
-   virtual void setPeriodAlarm(Alarm *Alarm ///< [in] period alarm pointer
+   /// pointer is used to detect when the accumulation period ends and the
+   /// operator should finalize its output (divide sum by sample count).
+   /// Default implementation does nothing; only temporal operators override.
+   virtual void setPeriodAlarm(Alarm *Alarm ///< [in] period alarm ptr
    ) {}
 
-   /// Pure virtual compute method - must be implemented by all derived classes.
-   /// Retrieves input field data from the Field registry, performs the
-   /// operator's transformation, and writes results to operator-owned output
-   /// arrays. Updates LastComputed timestamp and FieldComputed flag for caching.
-   virtual void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
+   /// Pure virtual compute method - must be implemented by all derived
+   /// classes. Retrieves input field data from the Field registry, performs
+   /// the operator's transformation, and writes results to operator-owned
+   /// output arrays. Updates LastComputed timestamp and FieldComputed flag
+   /// for caching.
+   virtual void compute(
+      const TimeInstant &TimeStamp ///< [in] current timestamp
    ) = 0;
 
 
- protected:
+  protected:
 
-   const HorzMesh *Mesh;      ///< Horizontal mesh for spatial operations
-   const VertCoord *VCoord;   ///< Vertical coordinate for vertical operations
-   MPI_Comm Comm;             ///< MPI communicator for parallel reductions
+   const HorzMesh *Mesh;     ///< Horizontal mesh for spatial operations
+   const VertCoord *VCoord;  ///< Vertical coordinate for vertical ops
+   MPI_Comm Comm;            ///< MPI communicator for parallel reductions
 
-   std::string OperatorTypeName;  ///< Operator type (e.g., "SpatialMean")
-   std::string InstanceName;      ///< Unique instance name (e.g., "Temperature_SpatialMean")
-   std::vector<std::string> InputNames;   ///< Names of required input fields
-   std::vector<std::string> OutputNames;  ///< Names of produced output fields
+   std::string OperatorTypeName; ///< Operator type (e.g., "SpatialMean")
+   std::string InstanceName;     ///< Unique instance name
+   std::vector<std::string> InputNames;  ///< Required input field names
+   std::vector<std::string> OutputNames; ///< Produced output field names
   
-   TimeInstant LastComputed;  ///< Timestamp of last computation for cache validation
-   bool FieldComputed;        ///< Flag indicating whether output is valid
+   TimeInstant LastComputed; ///< Timestamp of last compute for caching
+   bool FieldComputed;       ///< Flag indicating whether output is valid
 
 }; // end class AnalysisOperator
 

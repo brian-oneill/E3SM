@@ -4,22 +4,21 @@
 //===-- analysis/operators/SpatialMeanOp.h - SpatialMeanOp ------*- C++ -*-===//
 //
 /// \file
-/// \brief Defines the SpatialMeanOp operator for computing area-weighted spatial mean
+/// \brief Defines the SpatialMeanOp operator for computing spatial mean
 ///
-/// SpatialMeanOp computes the mean of a field across all
-/// owned mesh entities (cells, edges, or vertices), excluding halo regions.
-/// The operator computes the masked sum of field values and the sum of mask
-/// values (representing area), then divides to get the weighted mean. For 3D+
-/// fields, the mask sum is multiplied by the product of extra dimension sizes.
+/// SpatialMeanOp computes the mean of a field across all owned mesh entities
+/// (cells, edges, or vertices), excluding halo regions. The operator computes
+/// the masked sum of field values and the sum of mask values, then divides to
+/// get the mean. For 3D+ fields, the mask sum is multiplied by the product of
+/// extra dimension sizes.
 ///
 /// The operator is templated on the Kokkos array type (ArrayT) of the input
 /// field, supporting 1D (horizontal only), 2D (horizontal + vertical), and 3D+
 /// (extra dimensions + horizontal + vertical) fields. The output is a scalar
 /// (1D array with single element) stored in a Field with dimension "Scalar".
 ///
-/// For 1D inputs, the horizontal-only mask (k=0 column of the 2D mask) is used.
-/// For 2D+ inputs, the full 2D mask (horizontal × vertical) is applied. The
-/// mask represents active area, enabling proper area-weighted averaging.
+/// For 1D inputs, the horizontal-only mask (k=0 column of the 2D mask) is
+/// used. For 2D+ inputs, the full 2D mask (horizontal × vertical) is applied.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -28,11 +27,11 @@
 
 namespace OMEGA {
 
-/// SpatialMeanOp computes the global area-weighted spatial mean of a field across
-/// all owned mesh entities and active vertical layers. The operator handles 1D,
-/// 2D, and 3D+ input fields, computes masked sum of values and sum of mask
-/// (area), and divides to get the weighted mean. For 3D+ fields, accounts for
-/// extra dimensions in the normalization. Output is a scalar Field.
+/// SpatialMeanOp computes the global spatial mean of a field across all owned
+/// mesh entities and active vertical layers. The operator handles 1D, 2D, and
+/// 3D+ input fields, computes masked sum of values and sum of mask values, and
+/// divides to get the mean. For 3D+ fields, accounts for extra dimensions in
+/// the normalization. Output is a scalar Field.
 template<typename ArrayT>
 class SpatialMeanOp : public AnalysisOperator {
  public:
@@ -84,12 +83,12 @@ class SpatialMeanOp : public AnalysisOperator {
 
    }  // end constructor
 
-   /// Computes the area-weighted spatial mean by retrieving input data,
-   /// determining the appropriate mesh index space and vertical mask,
-   /// constructing index ranges to exclude halo regions, computing the masked
-   /// sum of values and sum of mask (representing area), and dividing to get
-   /// the weighted mean. For 3D+ fields, scales mask sum by the product of
-   /// extra dimension sizes. Updates output data, timestamp, and computed flag.
+   /// Computes the spatial mean by retrieving input data, determining the
+   /// appropriate mesh index space and vertical mask, constructing index ranges
+   /// to exclude halo regions, computing the masked sum of values and sum of
+   /// mask values, and dividing to get the mean. For 3D+ fields, scales mask
+   /// sum by the product of extra dimension sizes. Updates output data,
+   /// timestamp, and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
    ) override {
 
@@ -157,7 +156,7 @@ class SpatialMeanOp : public AnalysisOperator {
       // Index range for mask array (always 2D: horizontal × vertical)
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
-      // Compute masked sum of values and sum of mask (representing area)
+      // Compute masked sum of values and sum of mask values
       ScalarT ValSum;
       ScalarT MaskSum;
       
@@ -174,24 +173,34 @@ class SpatialMeanOp : public AnalysisOperator {
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
          
          ValSum  = globalMaskedSum(InputData, Mask1D, Comm, &indxRange);
-         MaskSum = globalSum(Mask1D, Comm, &indxRange);
+         
+         // Use cached mask sum if available, otherwise compute and cache it
+         if (CachedMaskSum < 0.0) {
+            CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
+         }
+         MaskSum = CachedMaskSum;
       } else {
          // For 2D+ arrays, use full 2D mask
          ValSum  = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
-         MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
          
-         // For 3D+ arrays, scale mask sum by product of extra dimension sizes
-         // This accounts for replication of the 2D mask across extra dimensions
-         if (NDims > 2) {
-            I4 ExtraDimSize = 1;
-            for (I4 i = 0; i < NDims - 2; ++i) {
-               ExtraDimSize *= InputData.extent(i);
+         // Use cached mask sum if available, otherwise compute and cache it
+         if (CachedMaskSum < 0.0) {
+            CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+            
+            // For 3D+ arrays, scale mask sum by product of extra dimension sizes
+            // This accounts for replication of the 2D mask across extra dimensions
+            if (NDims > 2) {
+               I4 ExtraDimSize = 1;
+               for (I4 i = 0; i < NDims - 2; ++i) {
+                  ExtraDimSize *= InputData.extent(i);
+               }
+               CachedMaskSum *= ExtraDimSize;
             }
-            MaskSum *= ExtraDimSize;
          }
+         MaskSum = CachedMaskSum;
       }
 
-      // Compute area-weighted mean: sum of masked values / sum of mask (area)
+      // Compute mean: sum of masked values / sum of mask values
       SpatialMean = ValSum / MaskSum;
 
       // Write result to output array
@@ -219,6 +228,11 @@ class SpatialMeanOp : public AnalysisOperator {
    /// Stores k=0 column of the 2D mask. Allocated lazily on first compute
    /// to avoid LayoutStride subviews incompatible with reduction functions.
    typename Array1D<Real>::type Mask1D;
+
+   /// Cached mask sum computed on first pass and reused for subsequent calls.
+   /// The mask is constant in time, so this optimization avoids redundant
+   /// global reduction operations. Initialized to -1.0 to indicate not yet computed.
+   ScalarT CachedMaskSum{-1.0};
 
 }; // end class SpatialMeanOp
 
