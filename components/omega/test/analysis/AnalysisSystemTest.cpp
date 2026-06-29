@@ -262,6 +262,43 @@ void testAlarmPropagation() {
 //===----------------------------------------------------------------------===//
 
 //------------------------------------------------------------------------------
+// Helper: Create a test field for factory testing
+void createFactoryTestField(const std::string &FieldName,
+                            const HorzMesh *Mesh,
+                            const VertCoord *VCoord) {
+   
+   I4 NCells = Mesh->NCellsSize;
+   I4 NVertLevels = VCoord->NVertLevels;
+   
+   // Create a 2D test field
+   std::vector<std::string> DimNames = {"NCells", "NVertLevels"};
+   auto TestField = Field::create(
+      FieldName,
+      "Test field for factory validation",
+      "units",
+      "",
+      -1.0e30,
+      1.0e30,
+      -1.0e30,
+      2,
+      DimNames
+   );
+   
+   // Allocate and attach data with known values
+   Array2DReal TestData(FieldName + "_data", NCells, NVertLevels);
+   TestField->attachData<Array2DReal>(TestData);
+   
+   // Fill with simple pattern: value = Cell + K
+   auto TestDataHost = Kokkos::create_mirror_view(TestData);
+   for (I4 Cell = 0; Cell < NCells; ++Cell) {
+      for (I4 K = 0; K < NVertLevels; ++K) {
+         TestDataHost(Cell, K) = static_cast<Real>(Cell + K);
+      }
+   }
+   Kokkos::deep_copy(TestData, TestDataHost);
+}
+
+//------------------------------------------------------------------------------
 // Test 5.4.1: Verify all base operators are registered
 void testFactoryRegistration() {
    
@@ -288,53 +325,92 @@ void testFactoryRegistration() {
 }
 
 //------------------------------------------------------------------------------
-// Test 5.4.2: Verify type dispatch for different array types
-void testFactoryTypeDispatch() {
+// Test 5.4.2: Verify type dispatch and operator creation
+void testFactoryTypeDispatch(const MachEnv *Env,
+                             const HorzMesh *Mesh,
+                             const VertCoord *VCoord) {
    
    LOG_INFO("Testing factory type dispatch...");
+   
+   // Create a test field specifically for this test
+   std::string TestFieldName = "FactoryTestField";
+   createFactoryTestField(TestFieldName, Mesh, VCoord);
    
    Config EmptyConfig;
    bool Passed = true;
    
    try {
-      // Verify factory can create operators for fields that exist
-      // We know Temperature exists from the initial state read
-      auto Op1 = AnalysisOpFactory::createOp("SpatialMax",
-                                             {"Temperature"},
-                                             EmptyConfig);
-      if (!Op1) {
-         LOG_ERROR("  Failed to create SpatialMax operator for Temperature");
+      // Create operator using the factory
+      auto MaxOp = AnalysisOpFactory::createOp("SpatialMax",
+                                               {TestFieldName},
+                                               EmptyConfig);
+      if (!MaxOp) {
+         LOG_ERROR("  Failed to create SpatialMax operator");
          Passed = false;
-      }
-      
-      // Verify operator type is correct
-      if (Op1 && Op1->getOperatorType() != "SpatialMax") {
-         LOG_ERROR("  Operator type mismatch: expected SpatialMax, got {}",
-                   Op1->getOperatorType());
-         Passed = false;
+      } else {
+         // Verify operator type is correct
+         if (MaxOp->getOperatorType() != "SpatialMax") {
+            LOG_ERROR("  Operator type mismatch: expected SpatialMax, got {}",
+                      MaxOp->getOperatorType());
+            Passed = false;
+         }
+         
+         // Initialize and compute to verify full functionality
+         MaxOp->initialize(Env, Mesh, VCoord, EmptyConfig);
+         
+         TimeInstant TestTime(0, 0, 0, 0, 0, 0);
+         MaxOp->compute(TestTime);
+         
+         // Verify output field was created
+         std::string OutputFieldName = TestFieldName + "_SpatialMax";
+         if (!Field::exists(OutputFieldName)) {
+            LOG_ERROR("  Output field {} was not created", OutputFieldName);
+            Passed = false;
+         } else {
+            // Verify output contains expected value
+            auto ResultField = Field::get(OutputFieldName);
+            auto ResultData = ResultField->getDataArray<Array1DReal>();
+            auto ResultHost = Kokkos::create_mirror_view(ResultData);
+            Kokkos::deep_copy(ResultHost, ResultData);
+            
+            // Expected max: (NCells-1) + (NVertLevels-1)
+            Real ExpectedMax = static_cast<Real>(Mesh->NCellsSize - 1 + 
+                                                 VCoord->NVertLevels - 1);
+            Real ComputedMax = ResultHost(0);
+            
+            if (std::abs(ComputedMax - ExpectedMax) > 1.0e-10) {
+               LOG_ERROR("  Computed max {} differs from expected {}",
+                        ComputedMax, ExpectedMax);
+               Passed = false;
+            }
+         }
       }
    } catch (const std::exception &e) {
-      LOG_ERROR("  Exception during operator creation: {}", e.what());
+      LOG_ERROR("  Exception during operator creation/execution: {}", e.what());
       Passed = false;
    }
    
-   reportTest("Factory: Type dispatch for valid field", Passed);
+   reportTest("Factory: Type dispatch creates functional operator", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.4.3: Verify error handling for invalid operator types
-void testFactoryErrorHandling() {
+void testFactoryErrorHandling(const HorzMesh *Mesh,
+                              const VertCoord *VCoord) {
    
    LOG_INFO("Testing factory error handling...");
+   
+   // Create a test field for error testing
+   std::string TestFieldName = "FactoryErrorTestField";
+   createFactoryTestField(TestFieldName, Mesh, VCoord);
    
    Config EmptyConfig;
    bool Passed = true;
    
-   // Try to create an operator that doesn't exist
-   // This should either return nullptr or throw an exception
+   // Test 1: Try to create an operator that doesn't exist
    try {
       auto InvalidOp = AnalysisOpFactory::createOp("NonExistentOperator",
-                                                    {"Temperature"},
+                                                    {TestFieldName},
                                                     EmptyConfig);
       if (InvalidOp) {
          LOG_ERROR("  Factory created operator for invalid type");
@@ -346,37 +422,78 @@ void testFactoryErrorHandling() {
       // This is also acceptable error handling
    }
    
-   reportTest("Factory: Error handling for invalid operator type", Passed);
+   // Test 2: Try to create operator with non-existent field
+   try {
+      auto Op2 = AnalysisOpFactory::createOp("SpatialMax",
+                                             {"NonExistentField"},
+                                             EmptyConfig);
+      if (Op2) {
+         LOG_ERROR("  Factory created operator for non-existent field");
+         Passed = false;
+      }
+   } catch (...) {
+      // Expected behavior - should fail gracefully
+   }
+   
+   reportTest("Factory: Error handling for invalid inputs", Passed);
 }
 
 //------------------------------------------------------------------------------
-// Test 5.4.4: Verify factory can instantiate all registered operator types
-void testFactoryInstantiateAll() {
+// Test 5.4.4: Verify factory instantiates all operator types
+void testFactoryInstantiateAll(const MachEnv *Env,
+                               const HorzMesh *Mesh,
+                               const VertCoord *VCoord) {
    
    LOG_INFO("Testing factory instantiation for all operator types...");
    
-   std::vector<std::string> AllOps = {
+   // Create a test field for all operators
+   std::string TestFieldName = "FactoryInstantiateTestField";
+   createFactoryTestField(TestFieldName, Mesh, VCoord);
+   
+   std::vector<std::string> SpatialOps = {
       "SpatialMax",
       "SpatialMin",
       "SpatialMean",
       "SpatialStdDev"
-      // TimeMean requires Period config parameter, tested separately
    };
    
    Config EmptyConfig;
    bool Passed = true;
    
-   for (const auto &OpName : AllOps) {
+   // Test each spatial operator
+   for (const auto &OpName : SpatialOps) {
       try {
          auto Op = AnalysisOpFactory::createOp(OpName,
-                                               {"Temperature"},
+                                               {TestFieldName},
                                                EmptyConfig);
          if (!Op) {
-            LOG_ERROR("  Failed to instantiate {} operator", OpName);
+            LOG_ERROR("  Failed to create {} operator", OpName);
             Passed = false;
+            continue;
+         }
+         
+         // Initialize and compute to verify full functionality
+         Op->initialize(Env, Mesh, VCoord, EmptyConfig);
+         
+         TimeInstant TestTime(0, 0, 0, 0, 0, 0);
+         Op->compute(TestTime);
+         
+         // Verify output field was created
+         auto OutputNames = Op->getOutputFieldNames();
+         if (OutputNames.empty()) {
+            LOG_ERROR("  Operator {} produced no output fields", OpName);
+            Passed = false;
+         } else {
+            for (const auto &OutputName : OutputNames) {
+               if (!Field::exists(OutputName)) {
+                  LOG_ERROR("  Output field {} does not exist", OutputName);
+                  Passed = false;
+               }
+            }
          }
       } catch (const std::exception &e) {
-         LOG_ERROR("  Exception creating {} operator: {}", OpName, e.what());
+         LOG_ERROR("  Exception creating/executing {} operator: {}", 
+                   OpName, e.what());
          Passed = false;
       }
    }
@@ -386,18 +503,28 @@ void testFactoryInstantiateAll() {
       Config TimeMeanConfig;
       TimeMeanConfig.set("Period", std::string("1day"));
       auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean",
-                                                     {"Temperature"},
+                                                     {TestFieldName},
                                                      TimeMeanConfig);
       if (!TimeMeanOp) {
-         LOG_ERROR("  Failed to instantiate TimeMean operator");
+         LOG_ERROR("  Failed to create TimeMean operator");
          Passed = false;
+      } else {
+         // Initialize to verify it doesn't crash
+         TimeMeanOp->initialize(Env, Mesh, VCoord, TimeMeanConfig);
+         
+         // Verify output field naming
+         auto OutputNames = TimeMeanOp->getOutputFieldNames();
+         if (OutputNames.empty()) {
+            LOG_ERROR("  TimeMean operator produced no output fields");
+            Passed = false;
+         }
       }
    } catch (const std::exception &e) {
-      LOG_ERROR("  Exception creating TimeMean operator: {}", e.what());
+      LOG_ERROR("  Exception creating/executing TimeMean operator: {}", e.what());
       Passed = false;
    }
    
-   reportTest("Factory: Instantiate all registered operator types", Passed);
+   reportTest("Factory: Instantiate and execute all operator types", Passed);
 }
 
 //===----------------------------------------------------------------------===//
@@ -647,10 +774,12 @@ int main(int argc, char *argv[]) {
       
       LOG_INFO("");
       LOG_INFO("--- Test 5.4: Factory Registration and Type Dispatch ---");
+      auto Mesh = HorzMesh::getDefault();
+      auto VCoord = VertCoord::getDefault();
       testFactoryRegistration();
-      testFactoryTypeDispatch();
-      testFactoryErrorHandling();
-      testFactoryInstantiateAll();
+      testFactoryTypeDispatch(DefEnv, Mesh, VCoord);
+      testFactoryErrorHandling(Mesh, VCoord);
+      testFactoryInstantiateAll(DefEnv, Mesh, VCoord);
       
       LOG_INFO("");
       LOG_INFO("--- Test 5.5: Configuration Parsing and Validation ---");
