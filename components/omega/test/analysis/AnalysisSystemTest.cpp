@@ -1,7 +1,7 @@
-//===-- Test 5.2, 5.3, 5.5, 5.6: Analysis system tests ---------*- C++ -*-===//
+//===-- Test 5.2, 5.3, 5.4, 5.5, 5.6: Analysis system tests ----*- C++ -*-===//
 //
 // System tests for Analysis framework: dependency resolution, alarm system,
-// configuration parsing, and end-to-end integration
+// factory registration, configuration parsing, and end-to-end integration
 //
 //===-----------------------------------------------------------------------===//
 
@@ -258,6 +258,149 @@ void testAlarmPropagation() {
 }
 
 //===----------------------------------------------------------------------===//
+// Test 5.4: Factory Registration and Type Dispatch
+//===----------------------------------------------------------------------===//
+
+//------------------------------------------------------------------------------
+// Test 5.4.1: Verify all base operators are registered
+void testFactoryRegistration() {
+   
+   LOG_INFO("Testing factory registration...");
+   
+   // Check that all required operators are registered
+   std::vector<std::string> RequiredOps = {
+      "SpatialMax",
+      "SpatialMin",
+      "SpatialMean",
+      "SpatialStdDev",
+      "TimeMean"
+   };
+   
+   bool AllRegistered = true;
+   for (const auto &OpName : RequiredOps) {
+      if (!AnalysisOpFactory::hasOperator(OpName)) {
+         LOG_ERROR("  Operator {} not registered", OpName);
+         AllRegistered = false;
+      }
+   }
+   
+   reportTest("Factory: All base operators registered", AllRegistered);
+}
+
+//------------------------------------------------------------------------------
+// Test 5.4.2: Verify type dispatch for different array types
+void testFactoryTypeDispatch() {
+   
+   LOG_INFO("Testing factory type dispatch...");
+   
+   Config EmptyConfig;
+   bool Passed = true;
+   
+   try {
+      // Verify factory can create operators for fields that exist
+      // We know Temperature exists from the initial state read
+      auto Op1 = AnalysisOpFactory::createOp("SpatialMax",
+                                             {"Temperature"},
+                                             EmptyConfig);
+      if (!Op1) {
+         LOG_ERROR("  Failed to create SpatialMax operator for Temperature");
+         Passed = false;
+      }
+      
+      // Verify operator type is correct
+      if (Op1 && Op1->getOperatorType() != "SpatialMax") {
+         LOG_ERROR("  Operator type mismatch: expected SpatialMax, got {}",
+                   Op1->getOperatorType());
+         Passed = false;
+      }
+   } catch (const std::exception &e) {
+      LOG_ERROR("  Exception during operator creation: {}", e.what());
+      Passed = false;
+   }
+   
+   reportTest("Factory: Type dispatch for valid field", Passed);
+}
+
+//------------------------------------------------------------------------------
+// Test 5.4.3: Verify error handling for invalid operator types
+void testFactoryErrorHandling() {
+   
+   LOG_INFO("Testing factory error handling...");
+   
+   Config EmptyConfig;
+   bool Passed = true;
+   
+   // Try to create an operator that doesn't exist
+   // This should either return nullptr or throw an exception
+   try {
+      auto InvalidOp = AnalysisOpFactory::createOp("NonExistentOperator",
+                                                    {"Temperature"},
+                                                    EmptyConfig);
+      if (InvalidOp) {
+         LOG_ERROR("  Factory created operator for invalid type");
+         Passed = false;
+      }
+      // If we get here without exception and InvalidOp is null, that's acceptable
+   } catch (...) {
+      // Expected behavior - exception thrown for invalid operator
+      // This is also acceptable error handling
+   }
+   
+   reportTest("Factory: Error handling for invalid operator type", Passed);
+}
+
+//------------------------------------------------------------------------------
+// Test 5.4.4: Verify factory can instantiate all registered operator types
+void testFactoryInstantiateAll() {
+   
+   LOG_INFO("Testing factory instantiation for all operator types...");
+   
+   std::vector<std::string> AllOps = {
+      "SpatialMax",
+      "SpatialMin",
+      "SpatialMean",
+      "SpatialStdDev"
+      // TimeMean requires Period config parameter, tested separately
+   };
+   
+   Config EmptyConfig;
+   bool Passed = true;
+   
+   for (const auto &OpName : AllOps) {
+      try {
+         auto Op = AnalysisOpFactory::createOp(OpName,
+                                               {"Temperature"},
+                                               EmptyConfig);
+         if (!Op) {
+            LOG_ERROR("  Failed to instantiate {} operator", OpName);
+            Passed = false;
+         }
+      } catch (const std::exception &e) {
+         LOG_ERROR("  Exception creating {} operator: {}", OpName, e.what());
+         Passed = false;
+      }
+   }
+   
+   // Test TimeMean with required Period parameter
+   try {
+      Config TimeMeanConfig;
+      TimeMeanConfig.set("Period", std::string("1day"));
+      auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean",
+                                                     {"Temperature"},
+                                                     TimeMeanConfig);
+      if (!TimeMeanOp) {
+         LOG_ERROR("  Failed to instantiate TimeMean operator");
+         Passed = false;
+      }
+   } catch (const std::exception &e) {
+      LOG_ERROR("  Exception creating TimeMean operator: {}", e.what());
+      Passed = false;
+   }
+   
+   reportTest("Factory: Instantiate all registered operator types", Passed);
+}
+
+//===----------------------------------------------------------------------===//
 // Test 5.5: Configuration Parsing and Validation
 //===----------------------------------------------------------------------===//
 
@@ -448,7 +591,7 @@ int main(int argc, char *argv[]) {
       initLogging(DefEnv);
       
       LOG_INFO("=======================================================");
-      LOG_INFO("Analysis System Tests (5.2, 5.3, 5.5, 5.6)");
+      LOG_INFO("Analysis System Tests (5.2, 5.3, 5.4, 5.5, 5.6)");
       LOG_INFO("=======================================================");
       
       Config("Omega");
@@ -501,6 +644,13 @@ int main(int argc, char *argv[]) {
       testTerminalOperatorAlarms();
       testTemporalOperatorAlarms();
       testAlarmPropagation();
+      
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.4: Factory Registration and Type Dispatch ---");
+      testFactoryRegistration();
+      testFactoryTypeDispatch();
+      testFactoryErrorHandling();
+      testFactoryInstantiateAll();
       
       LOG_INFO("");
       LOG_INFO("--- Test 5.5: Configuration Parsing and Validation ---");
