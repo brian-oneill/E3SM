@@ -491,11 +491,9 @@ void testFactoryInstantiateAll(const MachEnv *Env,
    }
    
    // Test TimeMean with required Period parameter
-   Config TimeMeanConfig;
-   TimeMeanConfig.set("Period", std::string("1day"));
    auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean",
                                                   {TestFieldName},
-                                                  TimeMeanConfig);
+                                                  makeOpConfig(opParam("Period", std::string("1day"))));
    if (!TimeMeanOp) {
       LOG_ERROR("  Failed to instantiate TimeMean operator");
       Passed = false;
