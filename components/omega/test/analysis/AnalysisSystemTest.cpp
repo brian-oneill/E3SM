@@ -63,6 +63,7 @@ void testSharedIntermediates() {
    std::map<std::string, int> OpCounts;
    for (const auto *Node : OpNodes) {
       std::string OpName = Node->Op->getName();
+      std::cout << " 5.2: " << OpName << " exists" << std::endl;
       OpCounts[OpName]++;
    }
    
@@ -139,10 +140,16 @@ void testCacheValidation() {
       reportTest("Cache: Validation (no operators to test)", true);
       return;
    }
+
+   auto AnalysisClock = DefAnalysis->getModelClock();
+   auto CurTime = AnalysisClock->getCurrentTime();
+   auto TimeStep = AnalysisClock->getTimeStep();
+
+   auto TestTime = CurTime + TimeStep;
    
    // Get first operator
    auto *FirstNode = OpNodes[0];
-   TimeInstant TestTime(0, 0, 0, 0, 0, 1);
+//   TimeInstant TestTime(0, 0, 0, 0, 0, 1);
    
    // Initially should not be valid
    bool InitiallyInvalid = !FirstNode->Op->isCacheValid(TestTime);
@@ -154,7 +161,8 @@ void testCacheValidation() {
    bool NowValid = FirstNode->Op->isCacheValid(TestTime);
    
    // Should be invalid for different timestamp
-   TimeInstant DifferentTime(0, 0, 0, 0, 0, 2);
+   auto DifferentTime = TestTime + TimeStep;
+//  TimeInstant DifferentTime(0, 0, 0, 0, 0, 2);
    bool InvalidForDifferentTime = !FirstNode->Op->isCacheValid(DifferentTime);
    
    bool Passed = InitiallyInvalid && NowValid && InvalidForDifferentTime;
@@ -345,24 +353,16 @@ void testComputeAllExecution(Clock *ModelClock) {
    auto DefAnalysis = Analysis::getDefault();
    
    bool Passed = true;
-   try {
-      // Advance clock to trigger alarms
-      TimeInstant CurrentTime = ModelClock->getCurrentTime();
-      TimeInterval OneStep = ModelClock->getTimeStep();
-      TimeInstant NextTime = CurrentTime + OneStep;
-      ModelClock->advance();
-      
-      // Call computeAll
-      DefAnalysis->computeAll();
-      
-   } catch (const std::exception &e) {
-      LOG_ERROR("  Exception during computeAll: {}", e.what());
-      Passed = false;
-   } catch (...) {
-      LOG_ERROR("  Unknown exception during computeAll");
-      Passed = false;
-   }
+
+   // Advance clock to trigger alarms
+   TimeInstant CurrentTime = ModelClock->getCurrentTime();
+   TimeInterval OneStep = ModelClock->getTimeStep();
+   TimeInstant NextTime = CurrentTime + OneStep;
+   ModelClock->advance();
    
+   // Call computeAll
+   DefAnalysis->computeAll();
+      
    reportTest("Integration: computeAll executes without errors", Passed);
 }
 
@@ -410,7 +410,8 @@ void testStreamOutput() {
       if (!Node->StreamNames.empty()) {
          // Verify the stream exists
          for (const auto &StreamName : Node->StreamNames) {
-            if (IOStream::exists(StreamName)) {
+            auto NodeStream = IOStream::get(StreamName);
+            if (NodeStream) {
                Passed = true;
                break;
             }
@@ -436,6 +437,8 @@ int main(int argc, char *argv[]) {
    
    MPI_Init(&argc, &argv);
    Kokkos::initialize();
+   Pacer::initialize(MPI_COMM_WORLD);
+   Pacer::setPrefix("Omega:");
    {
       // Initialize full Omega infrastructure for integration tests
       MachEnv::init(MPI_COMM_WORLD);
@@ -480,7 +483,7 @@ int main(int argc, char *argv[]) {
       // Read initial state
       Metadata ReqMeta;
       Error Err1 = IOStream::read("InitialState", ModelClock, ReqMeta);
-      if (Err1 != Error::OK) {
+      if (Err1.isFail()) {
          LOG_ERROR("Failed to read initial state");
       }
       
@@ -542,6 +545,7 @@ int main(int argc, char *argv[]) {
       Decomp::clear();
       MachEnv::removeAll();
    }
+   Pacer::finalize();
    Kokkos::finalize();
    MPI_Finalize();
    
