@@ -63,7 +63,6 @@ void testSharedIntermediates() {
    std::map<std::string, int> OpCounts;
    for (const auto *Node : OpNodes) {
       std::string OpName = Node->Op->getName();
-      std::cout << " 5.2: " << OpName << " exists" << std::endl;
       OpCounts[OpName]++;
    }
    
