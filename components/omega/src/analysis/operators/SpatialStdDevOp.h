@@ -222,11 +222,21 @@ class SpatialStdDevOp : public AnalysisOperator {
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
          
          WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &indxRange);
-         MaskSum = globalSum(Mask1D, Comm, &indxRange);
+         
+         // Use cached mask sum if available, otherwise compute and cache it
+         if (CachedMaskSum < static_cast<ScalarT>(0.0)) {
+            CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
+         }
+         MaskSum = CachedMaskSum;
       } else {
          // For 2D+ arrays, use full 2D mask
          WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
-         MaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+         
+         // Use cached mask sum if available, otherwise compute and cache it
+         if (CachedMaskSum < static_cast<ScalarT>(0.0)) {
+            CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+         }
+         MaskSum = CachedMaskSum;
       }
 
       // Compute variance: mean of squared differences
@@ -260,6 +270,11 @@ class SpatialStdDevOp : public AnalysisOperator {
    /// Stores k=0 column of the 2D mask. Allocated lazily on first compute
    /// to avoid LayoutStride subviews incompatible with reduction functions.
    typename Array1D<Real>::type Mask1D;
+
+   /// Cached mask sum computed on first pass and reused for subsequent calls.
+   /// The mask is constant in time, so this optimization avoids redundant
+   /// global reduction operations. Initialized to -1.0 to indicate not yet computed.
+   ScalarT CachedMaskSum{static_cast<ScalarT>(-1.0)};
 
 }; // end class SpatialStdDevOp
 
