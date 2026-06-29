@@ -57,7 +57,7 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
       InstanceName                = OutputFieldName;
 
       // Allocate output data array (single scalar value)
-      OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
+      OutputData = Array1D_t<ScalarT>(OutputNames[0], 1);
 
       // Create scalar dimension for output Field
       I4 NDims = 1;
@@ -79,7 +79,7 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
           );
 
       // Attach output data array to Field
-      OutputField->template attachData<typename Array1D<ScalarT>::type>(
+      OutputField->template attachData<Array1D_t<ScalarT>>(
           OutputData);
 
    } // end constructor
@@ -160,7 +160,7 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
          // Copy to contiguous 1D array to avoid LayoutStride incompatibility
          if (Mask1D.size() == 0)
             Mask1D =
-                typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
+                Array1D_t<Real>("Mask1D", MaskArray.extent(0));
 
          auto LocalMaskArray = MaskArray;
          auto LocalMask1D    = Mask1D;
@@ -186,7 +186,7 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
  private:
    /// Output data array holding the computed spatial minimum (single scalar
    /// value)
-   typename Array1D<ScalarT>::type OutputData;
+   Array1D_t<ScalarT> OutputData;
 
    /// Temporary storage for the computed minimum value before copying to
    /// OutputData
@@ -195,7 +195,7 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
    /// Contiguous 1D mask for horizontal-only operations (1D inputs).
    /// Stores k=0 column of the 2D mask. Allocated lazily on first compute
    /// to avoid LayoutStride subviews incompatible with reduction functions.
-   typename Array1D<Real>::type Mask1D;
+   Array1D_t<Real> Mask1D;
 
 }; // end class SpatialMinOp
 
