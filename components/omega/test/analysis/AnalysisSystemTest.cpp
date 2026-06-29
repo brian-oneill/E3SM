@@ -268,10 +268,10 @@ void createFactoryTestField(const std::string &FieldName,
                             const VertCoord *VCoord) {
    
    I4 NCells = Mesh->NCellsSize;
-   I4 NVertLevels = VCoord->NVertLevels;
+   I4 NVertLayers = VCoord->NVertLayers;
    
    // Create a 2D test field
-   std::vector<std::string> DimNames = {"NCells", "NVertLevels"};
+   std::vector<std::string> DimNames = {"NCells", "NVertLayers"};
    auto TestField = Field::create(
       FieldName,
       "Test field for factory validation",
@@ -285,13 +285,13 @@ void createFactoryTestField(const std::string &FieldName,
    );
    
    // Allocate and attach data with known values
-   Array2DReal TestData(FieldName + "_data", NCells, NVertLevels);
+   Array2DReal TestData(FieldName + "_data", NCells, NVertLayers);
    TestField->attachData<Array2DReal>(TestData);
    
    // Fill with simple pattern: value = Cell + K
    auto TestDataHost = Kokkos::create_mirror_view(TestData);
    for (I4 Cell = 0; Cell < NCells; ++Cell) {
-      for (I4 K = 0; K < NVertLevels; ++K) {
+      for (I4 K = 0; K < NVertLayers; ++K) {
          TestDataHost(Cell, K) = static_cast<Real>(Cell + K);
       }
    }
@@ -358,7 +358,7 @@ void testFactoryTypeDispatch(const MachEnv *Env,
          // Initialize and compute to verify full functionality
          MaxOp->initialize(Env, Mesh, VCoord, EmptyConfig);
          
-         TimeInstant TestTime(0, 0, 0, 0, 0, 0);
+         TimeInstant TestTime;
          MaxOp->compute(TestTime);
          
          // Verify output field was created
@@ -373,9 +373,9 @@ void testFactoryTypeDispatch(const MachEnv *Env,
             auto ResultHost = Kokkos::create_mirror_view(ResultData);
             Kokkos::deep_copy(ResultHost, ResultData);
             
-            // Expected max: (NCells-1) + (NVertLevels-1)
+            // Expected max: (NCells-1) + (NVertLayers-1)
             Real ExpectedMax = static_cast<Real>(Mesh->NCellsSize - 1 + 
-                                                 VCoord->NVertLevels - 1);
+                                                 VCoord->NVertLayers - 1);
             Real ComputedMax = ResultHost(0);
             
             if (std::abs(ComputedMax - ExpectedMax) > 1.0e-10) {
