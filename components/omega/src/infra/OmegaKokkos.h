@@ -21,6 +21,8 @@ namespace OMEGA {
 
 #define OMEGA_SCOPE(a, b) auto &a = b
 
+// Array type traits: Map scalar types to concrete OMEGA array types
+// Usage: Array1D<R8>::type -> Array1DR8
 template<typename T> struct Array1D;
 template<> struct Array1D<I4> { using type = Array1DI4; };
 template<> struct Array1D<I8> { using type = Array1DI8; };
