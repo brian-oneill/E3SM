@@ -175,7 +175,7 @@ class SpatialMeanOp : public AnalysisOperator {
          ValSum  = globalMaskedSum(InputData, Mask1D, Comm, &indxRange);
          
          // Use cached mask sum if available, otherwise compute and cache it
-         if (CachedMaskSum < 0.0) {
+         if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
          }
          MaskSum = CachedMaskSum;
@@ -184,7 +184,7 @@ class SpatialMeanOp : public AnalysisOperator {
          ValSum  = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
          
          // Use cached mask sum if available, otherwise compute and cache it
-         if (CachedMaskSum < 0.0) {
+         if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
             
             // For 3D+ arrays, scale mask sum by product of extra dimension sizes

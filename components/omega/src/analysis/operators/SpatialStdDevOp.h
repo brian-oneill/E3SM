@@ -224,7 +224,7 @@ class SpatialStdDevOp : public AnalysisOperator {
          WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &indxRange);
          
          // Use cached mask sum if available, otherwise compute and cache it
-         if (CachedMaskSum < static_cast<ScalarT>(0.0)) {
+         if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
          }
          MaskSum = CachedMaskSum;
@@ -233,7 +233,7 @@ class SpatialStdDevOp : public AnalysisOperator {
          WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
          
          // Use cached mask sum if available, otherwise compute and cache it
-         if (CachedMaskSum < static_cast<ScalarT>(0.0)) {
+         if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
          }
          MaskSum = CachedMaskSum;
