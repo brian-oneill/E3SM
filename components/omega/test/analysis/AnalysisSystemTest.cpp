@@ -39,7 +39,6 @@ void reportTest(const std::string &TestName, bool Passed) {
    NumTests++;
    if (Passed) {
       NumPassed++;
-      LOG_INFO("PASS: {}", TestName);
    } else {
       NumFailed++;
       LOG_ERROR("FAIL: {}", TestName);

@@ -532,7 +532,7 @@ add_omega_test(
 add_omega_test(
     ANALYSIS_OP_TEST
     testAnalysisOps.exe
-    analysis/AnalysisOperatorMultiTypeTest.cpp
+    analysis/AnalysisOperatorTest.cpp
     "-n;8"
 )
 
