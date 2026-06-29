@@ -90,6 +90,18 @@ template<> struct Array_t<4, I8> { using type = Array4DI8; };
 template<> struct Array_t<4, R4> { using type = Array4DR4; };
 template<> struct Array_t<4, R8> { using type = Array4DR8; };
 
+// Modern C++14-style helper aliases for cleaner syntax
+template<typename T>
+using Array1D_t = typename Array1D<T>::type;
+
+template<typename T>
+using Array2D_t = typename Array2D<T>::type;
+
+template<typename T>
+using Array3D_t = typename Array3D<T>::type;
+
+template<typename T>
+using Array4D_t = typename Array4D<T>::type;
 
 using ExecSpace     = MemSpace::execution_space;
 using HostExecSpace = HostMemSpace::execution_space;
