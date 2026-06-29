@@ -9,9 +9,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "operators/Ops.h"
 #include "Analysis.h"
 #include "AnalysisOpFactory.h"
-#include "operators/Ops.h"
 
 namespace OMEGA {
 
@@ -22,13 +22,14 @@ namespace OMEGA {
 // array type combinations (scalar type, rank, memory location), enabling
 // type-safe dispatch at operator creation time.
 void Analysis::registerAllBaseAnalysisOperators() {
-   
+
    AnalysisOpFactory::registerAllArrayVariants<SpatialMaxOp>("SpatialMax");
    AnalysisOpFactory::registerAllArrayVariants<SpatialMinOp>("SpatialMin");
    AnalysisOpFactory::registerAllArrayVariants<SpatialMeanOp>("SpatialMean");
-   AnalysisOpFactory::registerAllArrayVariants<SpatialStdDevOp>("SpatialStdDev");
+   AnalysisOpFactory::registerAllArrayVariants<SpatialStdDevOp>(
+       "SpatialStdDev");
    AnalysisOpFactory::registerAllArrayVariants<TimeMeanOp>("TimeMean");
-   
+
 } // end registerAllBaseAnalysisOperators
 
 } // end namespace OMEGA

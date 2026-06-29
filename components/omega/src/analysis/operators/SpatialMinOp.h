@@ -33,10 +33,8 @@ namespace OMEGA {
 /// 3D+ input fields, constructs appropriate index ranges to exclude halos,
 /// applies vertical masking, and performs MPI reduction to find the minimum
 /// across all ranks. Output is a scalar Field.
-template<typename ArrayT>
-class SpatialMinOp : public AnalysisOperator {
+template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
  public:
-
    /// Scalar type extracted from the input array type
    using ScalarT = typename ArrayT::non_const_value_type;
 
@@ -44,17 +42,19 @@ class SpatialMinOp : public AnalysisOperator {
    /// (1D array with single element), allocates output data array, and
    /// registers the output Field in the Field registry. The output Field
    /// name is constructed as InputName + "_SpatialMin".
-   SpatialMinOp(const std::vector<std::string> &UpstreamNames, ///< [in] input field names
-                Config Options                                 ///< [in] operator config
-   ) : AnalysisOperator("SpatialMin") {
+   SpatialMinOp(const std::vector<std::string>
+                    &UpstreamNames, ///< [in] input field names
+                Config Options      ///< [in] operator config
+                )
+       : AnalysisOperator("SpatialMin") {
 
       // Store input field names
       InputNames = UpstreamNames;
 
       // Construct output field name and set instance name
       std::string OutputFieldName = InputNames[0] + "_SpatialMin";
-      OutputNames = {OutputFieldName};
-      InstanceName = OutputFieldName;
+      OutputNames                 = {OutputFieldName};
+      InstanceName                = OutputFieldName;
 
       // Allocate output data array (single scalar value)
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
@@ -62,24 +62,25 @@ class SpatialMinOp : public AnalysisOperator {
       // Create scalar dimension for output Field
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
-      DimNames[0] = "Scalar";
+      DimNames[0]    = "Scalar";
       auto ScalarDim = Dimension::create(DimNames[0], 1);
 
       // Register output Field with metadata
-      auto OutputField = Field::create(
-         OutputNames[0],
-         "Spatial minimum of " + InputNames[0],    // Description
-         "",                                        // Units
-         "",                                        // Standard name
-         -std::numeric_limits<ScalarT>::max(),     // Min valid value
-         std::numeric_limits<ScalarT>::max(),      // Max valid value
-         -std::numeric_limits<ScalarT>::max(),     // Fill value
-         NDims,                                     // Dimension lengths
-         DimNames                                   // Dimension names
-      );
+      auto OutputField =
+          Field::create(OutputNames[0],
+                        "Spatial minimum of " + InputNames[0], // Description
+                        "",                                    // Units
+                        "",                                    // Standard name
+                        -std::numeric_limits<ScalarT>::max(), // Min valid value
+                        std::numeric_limits<ScalarT>::max(),  // Max valid value
+                        -std::numeric_limits<ScalarT>::max(), // Fill value
+                        NDims,   // Dimension lengths
+                        DimNames // Dimension names
+          );
 
       // Attach output data array to Field
-      OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+      OutputField->template attachData<typename Array1D<ScalarT>::type>(
+          OutputData);
 
    } // end constructor
 
@@ -90,11 +91,11 @@ class SpatialMinOp : public AnalysisOperator {
    /// mask; for 2D+ inputs, uses full 2D mask. Updates output data, timestamp,
    /// and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
-   ) override {
+                ) override {
 
       // Retrieve input Field and extract data array
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
+      auto InputData  = InputField->template getDataArray<ArrayT>();
 
       // Get dimension names to determine array structure
       std::vector<std::string> InputDimNames;
@@ -108,18 +109,18 @@ class SpatialMinOp : public AnalysisOperator {
 
       // Get appropriate mask and owned entity count for this index space
       Array2DReal MaskArray;
-      I4 NOwned = 0;
+      I4 NOwned      = 0;
       I4 NVertLayers = VCoord->NVertLayers;
 
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
-         NOwned = Mesh->NCellsOwned;
+         NOwned    = Mesh->NCellsOwned;
       } else if (IndexSpaceName == "NEdges") {
          MaskArray = VCoord->EdgeMask;
-         NOwned = Mesh->NEdgesOwned;
+         NOwned    = Mesh->NEdgesOwned;
       } else if (IndexSpaceName == "NVertices") {
          MaskArray = VCoord->VertexMask;
-         NOwned = Mesh->NVerticesOwned;
+         NOwned    = Mesh->NVerticesOwned;
       } else {
          ABORT_ERROR("SpatialMinOp: Unknown index space {}", IndexSpaceName);
       }
@@ -137,20 +138,20 @@ class SpatialMinOp : public AnalysisOperator {
       } else {
          // 3D+ array: (extra dims..., horizontal, vertical)
          indxRange.resize(2 * NDims);
-         
+
          // Extra dimensions: include full extent
          for (I4 i = 0; i < NDims - 2; ++i) {
-            indxRange[2*i] = 0;
-            indxRange[2*i + 1] = InputData.extent(i) - 1;
+            indxRange[2 * i]     = 0;
+            indxRange[2 * i + 1] = InputData.extent(i) - 1;
          }
-         
+
          // Horizontal dimension (second to last): exclude halo
-         indxRange[2*(NDims-2)] = 0;
-         indxRange[2*(NDims-2) + 1] = NOwned - 1;
-         
+         indxRange[2 * (NDims - 2)]     = 0;
+         indxRange[2 * (NDims - 2) + 1] = NOwned - 1;
+
          // Vertical dimension (last): all layers
-         indxRange[2*(NDims-1)] = 0;
-         indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
+         indxRange[2 * (NDims - 1)]     = 0;
+         indxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
       }
 
       // Compute global masked minimum
@@ -158,14 +159,15 @@ class SpatialMinOp : public AnalysisOperator {
          // For 1D arrays, use horizontal-only mask (k=0 column of 2D mask)
          // Copy to contiguous 1D array to avoid LayoutStride incompatibility
          if (Mask1D.size() == 0)
-            Mask1D = typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
-         
+            Mask1D =
+                typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
+
          auto LocalMaskArray = MaskArray;
          auto LocalMask1D    = Mask1D;
          parallelFor(
              {static_cast<I4>(MaskArray.extent(0))},
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
-         
+
          SpatialMin = globalMaskedMin(InputData, Mask1D, Comm, &indxRange);
       } else {
          // For 2D+ arrays, use full 2D mask
@@ -176,17 +178,18 @@ class SpatialMinOp : public AnalysisOperator {
       deepCopy(OutputData, SpatialMin);
 
       // Update cache validity markers
-      LastComputed = TimeStamp;
+      LastComputed  = TimeStamp;
       FieldComputed = true;
-      
+
    } // end compute
 
  private:
-
-   /// Output data array holding the computed spatial minimum (single scalar value)
+   /// Output data array holding the computed spatial minimum (single scalar
+   /// value)
    typename Array1D<ScalarT>::type OutputData;
 
-   /// Temporary storage for the computed minimum value before copying to OutputData
+   /// Temporary storage for the computed minimum value before copying to
+   /// OutputData
    ScalarT SpatialMin;
 
    /// Contiguous 1D mask for horizontal-only operations (1D inputs).

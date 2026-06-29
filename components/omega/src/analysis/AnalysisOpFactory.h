@@ -34,34 +34,34 @@ namespace OMEGA {
 /// combinations of scalar type, rank, and memory location. The macro takes a
 /// single argument X which should be a macro that processes each
 /// (DType, Rank, MemLoc, ArrayT) tuple.
-#define OMEGA_ANALYSIS_ARRAY_TYPES(X)                                    \
-   /* 1D Arrays */                                                       \
-   X(ArrayDataType::I4, 1, ArrayMemLoc::Both, Array1DI4)                 \
-   X(ArrayDataType::I4, 1, ArrayMemLoc::Device, Array1DI4)               \
-   X(ArrayDataType::I8, 1, ArrayMemLoc::Both, Array1DI8)                 \
-   X(ArrayDataType::I8, 1, ArrayMemLoc::Device, Array1DI8)               \
-   X(ArrayDataType::R4, 1, ArrayMemLoc::Both, Array1DR4)                 \
-   X(ArrayDataType::R4, 1, ArrayMemLoc::Device, Array1DR4)               \
-   X(ArrayDataType::R8, 1, ArrayMemLoc::Both, Array1DR8)                 \
-   X(ArrayDataType::R8, 1, ArrayMemLoc::Device, Array1DR8)               \
-   /* 2D Arrays */                                                       \
-   X(ArrayDataType::I4, 2, ArrayMemLoc::Both, Array2DI4)                 \
-   X(ArrayDataType::I4, 2, ArrayMemLoc::Device, Array2DI4)               \
-   X(ArrayDataType::I8, 2, ArrayMemLoc::Both, Array2DI8)                 \
-   X(ArrayDataType::I8, 2, ArrayMemLoc::Device, Array2DI8)               \
-   X(ArrayDataType::R4, 2, ArrayMemLoc::Both, Array2DR4)                 \
-   X(ArrayDataType::R4, 2, ArrayMemLoc::Device, Array2DR4)               \
-   X(ArrayDataType::R8, 2, ArrayMemLoc::Both, Array2DR8)                 \
-   X(ArrayDataType::R8, 2, ArrayMemLoc::Device, Array2DR8)               \
-   /* 3D Arrays */                                                       \
-   X(ArrayDataType::I4, 3, ArrayMemLoc::Both, Array3DI4)                 \
-   X(ArrayDataType::I4, 3, ArrayMemLoc::Device, Array3DI4)               \
-   X(ArrayDataType::I8, 3, ArrayMemLoc::Both, Array3DI8)                 \
-   X(ArrayDataType::I8, 3, ArrayMemLoc::Device, Array3DI8)               \
-   X(ArrayDataType::R4, 3, ArrayMemLoc::Both, Array3DR4)                 \
-   X(ArrayDataType::R4, 3, ArrayMemLoc::Device, Array3DR4)               \
-   X(ArrayDataType::R8, 3, ArrayMemLoc::Both, Array3DR8)                 \
-   X(ArrayDataType::R8, 3, ArrayMemLoc::Device, Array3DR8)//               \
+#define OMEGA_ANALYSIS_ARRAY_TYPES(X)                      \
+   /* 1D Arrays */                                         \
+   X(ArrayDataType::I4, 1, ArrayMemLoc::Both, Array1DI4)   \
+   X(ArrayDataType::I4, 1, ArrayMemLoc::Device, Array1DI4) \
+   X(ArrayDataType::I8, 1, ArrayMemLoc::Both, Array1DI8)   \
+   X(ArrayDataType::I8, 1, ArrayMemLoc::Device, Array1DI8) \
+   X(ArrayDataType::R4, 1, ArrayMemLoc::Both, Array1DR4)   \
+   X(ArrayDataType::R4, 1, ArrayMemLoc::Device, Array1DR4) \
+   X(ArrayDataType::R8, 1, ArrayMemLoc::Both, Array1DR8)   \
+   X(ArrayDataType::R8, 1, ArrayMemLoc::Device, Array1DR8) \
+   /* 2D Arrays */                                         \
+   X(ArrayDataType::I4, 2, ArrayMemLoc::Both, Array2DI4)   \
+   X(ArrayDataType::I4, 2, ArrayMemLoc::Device, Array2DI4) \
+   X(ArrayDataType::I8, 2, ArrayMemLoc::Both, Array2DI8)   \
+   X(ArrayDataType::I8, 2, ArrayMemLoc::Device, Array2DI8) \
+   X(ArrayDataType::R4, 2, ArrayMemLoc::Both, Array2DR4)   \
+   X(ArrayDataType::R4, 2, ArrayMemLoc::Device, Array2DR4) \
+   X(ArrayDataType::R8, 2, ArrayMemLoc::Both, Array2DR8)   \
+   X(ArrayDataType::R8, 2, ArrayMemLoc::Device, Array2DR8) \
+   /* 3D Arrays */                                         \
+   X(ArrayDataType::I4, 3, ArrayMemLoc::Both, Array3DI4)   \
+   X(ArrayDataType::I4, 3, ArrayMemLoc::Device, Array3DI4) \
+   X(ArrayDataType::I8, 3, ArrayMemLoc::Both, Array3DI8)   \
+   X(ArrayDataType::I8, 3, ArrayMemLoc::Device, Array3DI8) \
+   X(ArrayDataType::R4, 3, ArrayMemLoc::Both, Array3DR4)   \
+   X(ArrayDataType::R4, 3, ArrayMemLoc::Device, Array3DR4) \
+   X(ArrayDataType::R8, 3, ArrayMemLoc::Both, Array3DR8)   \
+   X(ArrayDataType::R8, 3, ArrayMemLoc::Device, Array3DR8) //               \
 //   /* 4D Arrays */                                                       \
 //   X(ArrayDataType::I4, 4, ArrayMemLoc::Both, Array4DI4)                 \
 //   X(ArrayDataType::I4, 4, ArrayMemLoc::Device, Array4DI4)               \
@@ -92,11 +92,11 @@ namespace OMEGA {
 /// All methods are static; the underlying registry is a Meyer's singleton
 /// guaranteed to be initialized before first use. Operators self-register
 /// during program initialization via registerAllArrayVariants().
-class AnalysisOpFactory{
+class AnalysisOpFactory {
  public:
-
    /// Function signature for operator constructors. Takes upstream field names
-   /// and configuration options, returns a unique_ptr to a new operator instance.
+   /// and configuration options, returns a unique_ptr to a new operator
+   /// instance.
    using CreatorFunc = std::function<std::unique_ptr<AnalysisOperator>(
        const std::vector<std::string> &UpstreamNames, Config Options)>;
 
@@ -114,10 +114,11 @@ class AnalysisOpFactory{
    /// type key, looking up the constructor in the registry, and invoking it
    /// with the provided arguments. Aborts if the operator type or array variant
    /// is not registered.
-   static std::unique_ptr<AnalysisOperator> createOp(
-       const std::string &OpType,                    ///< [in] operator type name
-       const std::vector<std::string> &UpstreamNames, ///< [in] upstream field names
-       Config Options                                ///< [in] operator configuration
+   static std::unique_ptr<AnalysisOperator>
+   createOp(const std::string &OpType, ///< [in] operator type name
+            const std::vector<std::string>
+                &UpstreamNames, ///< [in] upstream field names
+            Config Options      ///< [in] operator configuration
    );
 
    /// Returns a list of all registered operator variant keys. Useful for
@@ -127,7 +128,8 @@ class AnalysisOpFactory{
 
    /// Checks whether an operator variant with the given key is registered.
    /// Returns true if found, false otherwise.
-   static bool hasOperator(const std::string &Type ///< [in] operator variant key
+   static bool
+   hasOperator(const std::string &Type ///< [in] operator variant key
    );
 
    /// Registers all array type variants of a templated operator class by
@@ -136,29 +138,29 @@ class AnalysisOpFactory{
    /// from baseName + "_" + ArrayT + "_" + MemLoc and registers a lambda
    /// that instantiates OperatorTemplate<ArrayT>. This enables a single call
    /// to register dozens of operator variants.
-   template<template<typename> class OperatorTemplate>
-   static void registerAllArrayVariants(const std::string& baseName ///< [in] base operator name
+   template <template <typename> class OperatorTemplate>
+   static void registerAllArrayVariants(
+       const std::string &baseName ///< [in] base operator name
    ) {
-      // Define a macro that registers one variant
-      #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT) \
-         registerOperator( \
-            baseName + "_" #ArrayT + "_" #memloc, \
-            [](const std::vector<std::string> &names, Config c) { \
-               return std::make_unique<OperatorTemplate<ArrayT>>(names, c); \
-            });
-      
+// Define a macro that registers one variant
+#define REGISTER_VARIANT(dtype, rank, memloc, ArrayT)                     \
+   registerOperator(baseName + "_" #ArrayT + "_" #memloc,                 \
+                    [](const std::vector<std::string> &names, Config c) { \
+                       return std::make_unique<OperatorTemplate<ArrayT>>( \
+                           names, c);                                     \
+                    });
+
       // Expand the macro over all array type combinations
       OMEGA_ANALYSIS_ARRAY_TYPES(REGISTER_VARIANT)
-      #undef REGISTER_VARIANT
+#undef REGISTER_VARIANT
    } // end registerAllArrayVariants
-
 
  private:
    /// Returns a reference to the static registry map (Meyer's singleton).
    /// The map associates operator variant keys with constructor functions.
    /// Static local variable ensures the registry is initialized exactly once
    /// before first use, avoiding static initialization order problems.
-   static std::map<std::string, CreatorFunc>& registry() {
+   static std::map<std::string, CreatorFunc> &registry() {
       static std::map<std::string, CreatorFunc> Registry;
       return Registry;
    }
@@ -166,9 +168,10 @@ class AnalysisOpFactory{
    /// Helper function to construct an array type name string from Field
    /// metadata (data type, rank, memory location). Returns a string like
    /// "Array2DR8" used as part of the operator variant key.
-   static std::string getArrayTypeName(ArrayDataType DType, ///< [in] scalar data type
-                                       I4 Rank,              ///< [in] array rank
-                                       ArrayMemLoc MemLoc    ///< [in] memory location
+   static std::string
+   getArrayTypeName(ArrayDataType DType, ///< [in] scalar data type
+                    I4 Rank,             ///< [in] array rank
+                    ArrayMemLoc MemLoc   ///< [in] memory location
    );
 
 }; // end class AnalysisOpFactory

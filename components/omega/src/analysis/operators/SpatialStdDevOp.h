@@ -37,10 +37,8 @@ namespace OMEGA {
 /// requires spatial mean as input, computes squared differences in a work
 /// array, performs masked sum reduction, and takes square root of the
 /// variance. Output is a scalar Field.
-template<typename ArrayT>
-class SpatialStdDevOp : public AnalysisOperator {
+template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
  public:
-
    /// Scalar type extracted from the input array type
    using ScalarT = typename ArrayT::non_const_value_type;
 
@@ -50,9 +48,11 @@ class SpatialStdDevOp : public AnalysisOperator {
    /// array and work array matching input layout, and registers the output
    /// Field in the Field registry. The output Field name is constructed as
    /// InputName + "_SpatialStdDev".
-   SpatialStdDevOp(const std::vector<std::string> &UpstreamNames, ///< [in] input field names
-                   Config Options                                 ///< [in] operator config
-   ) : AnalysisOperator("SpatialStdDev") {
+   SpatialStdDevOp(const std::vector<std::string>
+                       &UpstreamNames, ///< [in] input field names
+                   Config Options      ///< [in] operator config
+                   )
+       : AnalysisOperator("SpatialStdDev") {
 
       // Declare two inputs: field and its spatial mean
       // Mean must be computed first (e.g., by SpatialMeanOp in the chain)
@@ -60,8 +60,8 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       // Construct output field name and set instance name
       std::string OutputFieldName = InputNames[0] + "_SpatialStdDev";
-      OutputNames = {OutputFieldName};
-      InstanceName = OutputFieldName;
+      OutputNames                 = {OutputFieldName};
+      InstanceName                = OutputFieldName;
 
       // Allocate output data array (single scalar value)
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
@@ -69,30 +69,32 @@ class SpatialStdDevOp : public AnalysisOperator {
       // Create scalar dimension for output Field
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
-      DimNames[0] = "Scalar";
+      DimNames[0]    = "Scalar";
       auto ScalarDim = Dimension::create(DimNames[0], 1);
 
       // Register output Field with metadata
-      auto OutputField = Field::create(
-         OutputNames[0],
-         "Standard deviation of " + InputNames[0], // Description
-         "",                                        // Units
-         "",                                        // Standard name
-         static_cast<ScalarT>(0),                   // Min valid value
-         std::numeric_limits<ScalarT>::max(),      // Max valid value
-         -std::numeric_limits<ScalarT>::max(),     // Fill value
-         NDims,                                     // Dimension lengths
-         DimNames                                   // Dimension names
-      );
+      auto OutputField =
+          Field::create(OutputNames[0],
+                        "Standard deviation of " + InputNames[0], // Description
+                        "",                                       // Units
+                        "",                                   // Standard name
+                        static_cast<ScalarT>(0),              // Min valid value
+                        std::numeric_limits<ScalarT>::max(),  // Max valid value
+                        -std::numeric_limits<ScalarT>::max(), // Fill value
+                        NDims,   // Dimension lengths
+                        DimNames // Dimension names
+          );
 
       // Attach output data array to Field
-      OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+      OutputField->template attachData<typename Array1D<ScalarT>::type>(
+          OutputData);
 
       // Allocate work array matching input field layout
       // Used to store squared differences: (x - mean)^2
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
-      WorkArray = decltype(InputData)(OutputNames[0] + "_work_array", InputData.layout());
+      auto InputData  = InputField->template getDataArray<ArrayT>();
+      WorkArray       = decltype(InputData)(OutputNames[0] + "_work_array",
+                                      InputData.layout());
 
    } // end constructor
 
@@ -103,14 +105,14 @@ class SpatialStdDevOp : public AnalysisOperator {
    /// differences and sum of mask values, dividing to get variance, and taking
    /// square root. Updates output data, timestamp, and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
-   ) override {
+                ) override {
 
       // Create local scope reference to work array for kernel capture
       OMEGA_SCOPE(LocWorkArray, WorkArray);
 
       // Retrieve input Field and extract data array
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
+      auto InputData  = InputField->template getDataArray<ArrayT>();
 
       // Get dimension names to determine array structure
       std::vector<std::string> InputDimNames;
@@ -124,24 +126,24 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       // Get appropriate mask and owned entity count for this index space
       Array2DReal MaskArray;
-      I4 NOwned = 0;
+      I4 NOwned      = 0;
       I4 NVertLayers = VCoord->NVertLayers;
 
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
-         NOwned = Mesh->NCellsOwned;
+         NOwned    = Mesh->NCellsOwned;
       } else if (IndexSpaceName == "NEdges") {
          MaskArray = VCoord->EdgeMask;
-         NOwned = Mesh->NEdgesOwned;
+         NOwned    = Mesh->NEdgesOwned;
       } else if (IndexSpaceName == "NVertices") {
          MaskArray = VCoord->VertexMask;
-         NOwned = Mesh->NVerticesOwned;
+         NOwned    = Mesh->NVerticesOwned;
       } else {
          ABORT_ERROR("SpatialStdDevOp: Unknown index space {}", IndexSpaceName);
       }
 
-      // Construct index range for input data to exclude halo cells and inactive layers
-      // Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
+      // Construct index range for input data to exclude halo cells and inactive
+      // layers Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
       std::vector<I4> indxRange;
 
       if (NDims == 1) {
@@ -153,20 +155,20 @@ class SpatialStdDevOp : public AnalysisOperator {
       } else {
          // 3D+ array: (extra dims..., horizontal, vertical)
          indxRange.resize(2 * NDims);
-         
+
          // Extra dimensions: include full extent
          for (I4 i = 0; i < NDims - 2; ++i) {
-            indxRange[2*i]     = 0;
-            indxRange[2*i + 1] = InputData.extent(i) - 1;
+            indxRange[2 * i]     = 0;
+            indxRange[2 * i + 1] = InputData.extent(i) - 1;
          }
-         
+
          // Horizontal dimension (second to last): exclude halo
-         indxRange[2*(NDims-2)]     = 0;
-         indxRange[2*(NDims-2) + 1] = NOwned - 1;
-         
+         indxRange[2 * (NDims - 2)]     = 0;
+         indxRange[2 * (NDims - 2) + 1] = NOwned - 1;
+
          // Vertical dimension (last): all layers
-         indxRange[2*(NDims-1)]     = 0;
-         indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
+         indxRange[2 * (NDims - 1)]     = 0;
+         indxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
       }
 
       // Index range for mask array (always 2D: horizontal × vertical)
@@ -174,18 +176,20 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       // Retrieve spatial mean value computed by upstream SpatialMeanOp
       auto MeanField = Field::get(InputNames[1]);
-      auto MeanVal = MeanField->template getDataArray<typename Array1D<ScalarT>::type>();
+      auto MeanVal =
+          MeanField->template getDataArray<typename Array1D<ScalarT>::type>();
 
       // Fill work array with squared differences: (x - mean)^2
       // Mask will be applied later during reduction
-      I4 NSize = static_cast<I4>(InputData.size());
+      I4 NSize           = static_cast<I4>(InputData.size());
       const int Arr1Rank = InputData.rank;
       parallelFor(
           {NSize}, KOKKOS_LAMBDA(const int flat_idx) {
              // Compute horizontal and vertical indices from flat index
-             // (used for debugging/validation, though not needed for this computation)
+             // (used for debugging/validation, though not needed for this
+             // computation)
              int horizIdx = 0;
-             int vertIdx = 0;
+             int vertIdx  = 0;
 
              if (Arr1Rank == 1) {
                 horizIdx = flat_idx;
@@ -202,27 +206,27 @@ class SpatialStdDevOp : public AnalysisOperator {
              // Compute squared difference and store in work array
              auto Diff = InputData.data()[flat_idx] - MeanVal(0);
              LocWorkArray.data()[flat_idx] = Diff * Diff;
-
           });
 
       // Compute masked sum of squared differences and sum of mask values
       ScalarT WorkSum;
       ScalarT MaskSum;
-      
+
       if (NDims == 1) {
          // For 1D arrays, use horizontal-only mask (k=0 column of 2D mask)
          // Copy to contiguous 1D array to avoid LayoutStride incompatibility
          if (Mask1D.size() == 0)
-            Mask1D = typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
-         
+            Mask1D =
+                typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
+
          auto LocalMaskArray = MaskArray;
          auto LocalMask1D    = Mask1D;
          parallelFor(
              {static_cast<I4>(MaskArray.extent(0))},
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
-         
+
          WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &indxRange);
-         
+
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
@@ -231,7 +235,7 @@ class SpatialStdDevOp : public AnalysisOperator {
       } else {
          // For 2D+ arrays, use full 2D mask
          WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
-         
+
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
@@ -241,7 +245,7 @@ class SpatialStdDevOp : public AnalysisOperator {
 
       // Compute variance: mean of squared differences
       auto Variance = WorkSum / MaskSum;
-      
+
       // Compute standard deviation: square root of variance
       auto StdDev = std::sqrt(Variance);
 
@@ -249,21 +253,22 @@ class SpatialStdDevOp : public AnalysisOperator {
       deepCopy(OutputData, StdDev);
 
       // Update cache validity markers
-      LastComputed = TimeStamp;
+      LastComputed  = TimeStamp;
       FieldComputed = true;
-      
+
    } // end compute
 
  private:
-
-   /// Output data array holding the computed standard deviation (single scalar value)
+   /// Output data array holding the computed standard deviation (single scalar
+   /// value)
    typename Array1D<ScalarT>::type OutputData;
 
    /// Work array matching input field layout, used to store squared differences
    /// (x - mean)^2 before masked reduction
    ArrayT WorkArray;
 
-   /// Temporary storage for the computed standard deviation before copying to OutputData
+   /// Temporary storage for the computed standard deviation before copying to
+   /// OutputData
    ScalarT StdDev;
 
    /// Contiguous 1D mask for horizontal-only operations (1D inputs).
@@ -273,7 +278,8 @@ class SpatialStdDevOp : public AnalysisOperator {
 
    /// Cached mask sum computed on first pass and reused for subsequent calls.
    /// The mask is constant in time, so this optimization avoids redundant
-   /// global reduction operations. Initialized to -1.0 to indicate not yet computed.
+   /// global reduction operations. Initialized to -1.0 to indicate not yet
+   /// computed.
    ScalarT CachedMaskSum{static_cast<ScalarT>(-1.0)};
 
 }; // end class SpatialStdDevOp

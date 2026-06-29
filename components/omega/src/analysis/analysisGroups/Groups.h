@@ -1,7 +1,8 @@
 #ifndef OMEGA_GROUPS_H
 #define OMEGA_GROUPS_H
 
-//===-- analysis/analysisGroups/Groups.h - AnalysisGroup includes -*- C++ -*-===//
+//===-- analysis/analysisGroups/Groups.h - AnalysisGroup includes -*- C++
+//-*-===//
 //
 /// \file
 /// \brief Convenience header that includes all bundled AnalysisGroup classes

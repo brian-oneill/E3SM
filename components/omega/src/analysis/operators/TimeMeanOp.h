@@ -36,10 +36,8 @@ namespace OMEGA {
 /// the period alarm rings, divides by the accumulation count to produce the
 /// mean. Output Field has the same dimensions and layout as input. Maintains
 /// state across timesteps for accumulation.
-template<typename ArrayT>
-class TimeMeanOp : public AnalysisOperator {
+template <typename ArrayT> class TimeMeanOp : public AnalysisOperator {
  public:
-
    /// Scalar type extracted from the input array type
    using ScalarT = typename ArrayT::non_const_value_type;
 
@@ -49,9 +47,11 @@ class TimeMeanOp : public AnalysisOperator {
    /// the Field registry. Initializes accumulation state. The output Field
    /// name is constructed as InputName + "_TimeMean" + Period (e.g.,
    /// "Temperature_TimeMean1day").
-   TimeMeanOp(const std::vector<std::string> &UpstreamNames, ///< [in] input field names
-              Config Options                                 ///< [in] operator config
-   ) : AnalysisOperator("TimeMean") {
+   TimeMeanOp(const std::vector<std::string>
+                  &UpstreamNames, ///< [in] input field names
+              Config Options      ///< [in] operator config
+              )
+       : AnalysisOperator("TimeMean") {
 
       // Store input field names
       InputNames = UpstreamNames;
@@ -59,15 +59,15 @@ class TimeMeanOp : public AnalysisOperator {
       // Read averaging period from configuration (e.g., "1day", "1month")
       std::string AvgPeriod;
       Options.get("Period", AvgPeriod);
-      
+
       // Construct output field name and set instance name
       std::string OutputFieldName = InputNames[0] + "_TimeMean" + AvgPeriod;
-      OutputNames = {OutputFieldName};
-      InstanceName = OutputFieldName;
+      OutputNames                 = {OutputFieldName};
+      InstanceName                = OutputFieldName;
 
       // Retrieve input Field to extract metadata
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
+      auto InputData  = InputField->template getDataArray<ArrayT>();
 
       // Get dimension info (number of dims and dimension names)
       auto NDims = InputField->getNumDims();
@@ -75,29 +75,30 @@ class TimeMeanOp : public AnalysisOperator {
       InputField->getDimNames(DimNames);
 
       // Register output Field with same dimensions as input
-      auto OutputField = Field::create(
-         OutputNames[0],
-         "Time average of " + InputNames[0],       // Description
-         "",                                        // Units
-         "",                                        // Standard name
-         -std::numeric_limits<ScalarT>::max(),     // Min valid value
-         std::numeric_limits<ScalarT>::max(),      // Max valid value
-         -std::numeric_limits<ScalarT>::max(),     // Fill value
-         NDims,                                     // Dimension lengths
-         DimNames                                   // Dimension names
-      );
+      auto OutputField =
+          Field::create(OutputNames[0],
+                        "Time average of " + InputNames[0],   // Description
+                        "",                                   // Units
+                        "",                                   // Standard name
+                        -std::numeric_limits<ScalarT>::max(), // Min valid value
+                        std::numeric_limits<ScalarT>::max(),  // Max valid value
+                        -std::numeric_limits<ScalarT>::max(), // Fill value
+                        NDims,   // Dimension lengths
+                        DimNames // Dimension names
+          );
 
       // Store array size for parallel iteration
       ArraySize = static_cast<I4>(InputData.size());
 
       // Allocate output data array matching input layout
-      OutputData = decltype(InputData)(OutputNames[0] + "_out", InputData.layout());
+      OutputData =
+          decltype(InputData)(OutputNames[0] + "_out", InputData.layout());
 
       // Attach output data array to Field
       OutputField->template attachData<ArrayT>(OutputData);
 
       // Initialize accumulation state
-      NumAccum = 0;
+      NumAccum    = 0;
       PeriodAlarm = nullptr;
       IsNewPeriod = true;
 
@@ -107,7 +108,7 @@ class TimeMeanOp : public AnalysisOperator {
    /// Called by Analysis during initialization to provide the alarm associated
    /// with the averaging period specified in the constructor config.
    void setPeriodAlarm(Alarm *Alarm ///< [in] alarm for averaging period
-   ) override {
+                       ) override {
       PeriodAlarm = Alarm;
    }
 
@@ -118,13 +119,13 @@ class TimeMeanOp : public AnalysisOperator {
    /// count to finalize mean and resets state for next period. Updates
    /// timestamp and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
-   ) override {
+                ) override {
       // Create local scope reference to output array for kernel capture
       OMEGA_SCOPE(LocOutputData, OutputData);
 
       // Retrieve input Field and extract data array
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
+      auto InputData  = InputField->template getDataArray<ArrayT>();
 
       // Accumulate input values into output array
       if (IsNewPeriod) {
@@ -139,11 +140,11 @@ class TimeMeanOp : public AnalysisOperator {
                 LocOutputData.data()[FlatIdx] += InputData.data()[FlatIdx];
              });
          ++NumAccum;
-         
+
          // Check if period alarm is ringing (time to finalize average)
          bool ShouldFinalize =
              (PeriodAlarm != nullptr && PeriodAlarm->isRinging());
-         
+
          if (ShouldFinalize) {
             // Finalize: divide accumulated sum by count to get mean
             Real InvNumAccum = 1.0 / static_cast<Real>(NumAccum);
@@ -151,34 +152,35 @@ class TimeMeanOp : public AnalysisOperator {
                 {ArraySize}, KOKKOS_LAMBDA(const int FlatIdx) {
                    LocOutputData.data()[FlatIdx] *= InvNumAccum;
                 });
-            
+
             // Reset state for next averaging period
             IsNewPeriod = true;
          }
       }
-      
+
       // Update cache validity markers
-      LastComputed = TimeStamp;
+      LastComputed  = TimeStamp;
       FieldComputed = true;
-      
+
    } // end compute
 
  private:
-
    /// Output data array matching input layout, used to accumulate sum and
    /// store the final time-averaged mean
    ArrayT OutputData;
-   
+
    /// Number of timesteps accumulated in current averaging period
    I4 NumAccum;
-   
+
    /// Total size of input/output arrays for parallel iteration
    I4 ArraySize;
 
-   /// Alarm that signals when averaging period is complete (e.g., end of day/month)
+   /// Alarm that signals when averaging period is complete (e.g., end of
+   /// day/month)
    Alarm *PeriodAlarm;
-   
-   /// Flag indicating whether the next compute() should start a new averaging period
+
+   /// Flag indicating whether the next compute() should start a new averaging
+   /// period
    bool IsNewPeriod;
 
 }; // end class TimeMeanOp

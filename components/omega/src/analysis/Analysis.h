@@ -33,9 +33,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "operators/Ops.h"
-#include "AnalysisOperator.h"
 #include "AnalysisOpFactory.h"
+#include "AnalysisOperator.h"
 #include "Config.h"
 #include "DataTypes.h"
 #include "Dimension.h"
@@ -46,6 +45,7 @@
 #include "MachEnv.h"
 #include "TimeMgr.h"
 #include "VertCoord.h"
+#include "operators/Ops.h"
 
 #include <memory>
 #include <string>
@@ -59,8 +59,8 @@ namespace OMEGA {
 /// Returns a vector with two elements: [0] = numeric part, [1] = units
 /// If units do not end with 's', appends 's' for consistency with
 /// TimeInterval
-std::vector<std::string> parseFreqStr(
-   const std::string &FreqStr ///< [in] frequency string to parse
+std::vector<std::string>
+parseFreqStr(const std::string &FreqStr ///< [in] frequency string to parse
 );
 
 /// Internal representation of a node in the Analysis operator dependency
@@ -68,11 +68,11 @@ std::vector<std::string> parseFreqStr(
 /// dependencies, the names of output streams that consume its output, and
 /// non-owning pointers to alarms that trigger its computation.
 struct OperatorNode {
-   std::unique_ptr<AnalysisOperator> Op; ///< Operator instance (owned)
-   std::vector<OperatorNode*> Upstreams; ///< Upstream deps (non-owning)
-   std::vector<std::string> StreamNames; ///< Output streams; empty if
-                                         ///< intermediate operator
-   std::vector<Alarm*> ComputeAlarms;    ///< Compute alarms (non-owning)
+   std::unique_ptr<AnalysisOperator> Op;  ///< Operator instance (owned)
+   std::vector<OperatorNode *> Upstreams; ///< Upstream deps (non-owning)
+   std::vector<std::string> StreamNames;  ///< Output streams; empty if
+                                          ///< intermediate operator
+   std::vector<Alarm *> ComputeAlarms;    ///< Compute alarms (non-owning)
 };
 
 /// The Analysis class is the top-level orchestrator for the in-situ
@@ -91,7 +91,6 @@ struct OperatorNode {
 /// output alarms are borrowed from IOStream instances.
 class Analysis {
  public:
-
    /// Initializes the Analysis module by registering all base operators
    /// and creating the default Analysis instance. This function must be
    /// called after HorzMesh, VertCoord, and TimeStepper are initialized,
@@ -101,13 +100,13 @@ class Analysis {
    /// Creates a new named Analysis instance and registers it in the
    /// AllAnalysisObjects map. Each Analysis instance maintains its own
    /// set of operators and dependency graph.
-   static Analysis * create(
-       const std::string &Name,        ///< [in] name for new Analysis instance
-       const MachEnv *Env,              ///< [in] machine environment
-       const HorzMesh *Mesh,            ///< [in] horizontal mesh
-       const VertCoord *VCoord,         ///< [in] vertical coordinate
-       Clock *ModelClock,               ///< [in] pointer to model clock
-       Config *Options                  ///< [in] configuration options
+   static Analysis *
+   create(const std::string &Name, ///< [in] name for new Analysis instance
+          const MachEnv *Env,      ///< [in] machine environment
+          const HorzMesh *Mesh,    ///< [in] horizontal mesh
+          const VertCoord *VCoord, ///< [in] vertical coordinate
+          Clock *ModelClock,       ///< [in] pointer to model clock
+          Config *Options          ///< [in] configuration options
    );
 
    /// Computes all analysis fields whose alarms are ringing at the current
@@ -122,18 +121,18 @@ class Analysis {
    /// operators. If intermediate operators already exist (shared by other
    /// chains), they are reused rather than duplicated.
    void parseChainAndBuildOps(
-      const std::string &OpChainStr  ///< [in] underscore-delimited chain string
+       const std::string &OpChainStr ///< [in] underscore-delimited chain string
    );
-
 
    /// Instantiates a single operator via the factory and appends it as
    /// an OperatorNode. The factory selects the correct templated
    /// specialization based on the primary upstream Field's metadata
    /// (scalar type, rank, memory location).
-   void registerAnalysisOp(
-       const std::string &OpName,                   ///< [in] operator type name
-       const std::vector<std::string> &UpstreamNames, ///< [in] upstream field names
-       Config Options                               ///< [in] operator configuration
+   void
+   registerAnalysisOp(const std::string &OpName, ///< [in] operator type name
+                      const std::vector<std::string>
+                          &UpstreamNames, ///< [in] upstream field names
+                      Config Options      ///< [in] operator configuration
    );
 
    /// Returns a reference to the model clock pointer. This is used by
@@ -143,7 +142,7 @@ class Analysis {
 
    /// Returns a vector of non-owning pointers to all registered operator
    /// nodes. Used primarily for testing and validation of the dependency graph.
-   const std::vector<OperatorNode*> getOpNodes();
+   const std::vector<OperatorNode *> getOpNodes();
 
    /// Checks whether an operator node with the given full instance name
    /// already exists in the OpNodes vector. Returns true if found, false
@@ -164,7 +163,6 @@ class Analysis {
    static void finalize();
 
  private:
-
    /// Accumulation alarms owned by Analysis for temporal reduction
    /// operators. These alarms control how frequently samples are added to
    /// running sums (e.g., every timestep or at a coarser interval). Output
@@ -182,19 +180,19 @@ class Analysis {
    /// Called by the create() factory method. Reads configuration,
    /// constructs AnalysisGroup instances, and builds the operator
    /// dependency graph.
-   Analysis(const std::string &Name,   ///< [in] name for new instance
-            const MachEnv *Env,         ///< [in] machine environment
-            const HorzMesh *Mesh,       ///< [in] horizontal mesh
-            const VertCoord *VCoord,    ///< [in] vertical coordinate
-            Clock *ModelClock,          ///< [in] pointer to model clock
-            Config *Options             ///< [in] configuration options
+   Analysis(const std::string &Name, ///< [in] name for new instance
+            const MachEnv *Env,      ///< [in] machine environment
+            const HorzMesh *Mesh,    ///< [in] horizontal mesh
+            const VertCoord *VCoord, ///< [in] vertical coordinate
+            Clock *ModelClock,       ///< [in] pointer to model clock
+            Config *Options          ///< [in] configuration options
    );
 
-   std::string Name;         ///< Name of this Analysis instance
-   const MachEnv *Env;       ///< Machine environment for MPI operations
-   const HorzMesh *Mesh;     ///< Horizontal mesh for spatial operations
-   const VertCoord *VCoord;  ///< Vertical coordinate for vertical ops
-   Clock *ModelClock;        ///< Pointer to model clock for time mgmt
+   std::string Name;        ///< Name of this Analysis instance
+   const MachEnv *Env;      ///< Machine environment for MPI operations
+   const HorzMesh *Mesh;    ///< Horizontal mesh for spatial operations
+   const VertCoord *VCoord; ///< Vertical coordinate for vertical ops
+   Clock *ModelClock;       ///< Pointer to model clock for time mgmt
 
    /// All registered operator nodes forming the dependency graph
    std::vector<std::unique_ptr<OperatorNode>> OpNodes;
@@ -239,11 +237,11 @@ class Analysis {
    /// current TimeStamp, returns immediately (cache hit). Otherwise,
    /// recursively computes all upstream dependencies first, then calls the
    /// node's compute() method.
-   void computeRecursive(
-      OperatorNode *Node,              ///< [in] node to compute
-      const TimeInstant &TimeStamp     ///< [in] current timestamp
+   void
+   computeRecursive(OperatorNode *Node,          ///< [in] node to compute
+                    const TimeInstant &TimeStamp ///< [in] current timestamp
    );
-   
+
    // Forbid copy and move construction
    Analysis(const Analysis &) = delete;
    Analysis(Analysis &&)      = delete;

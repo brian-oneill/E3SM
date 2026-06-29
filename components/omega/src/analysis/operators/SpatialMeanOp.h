@@ -32,10 +32,8 @@ namespace OMEGA {
 /// 3D+ input fields, computes masked sum of values and sum of mask values, and
 /// divides to get the mean. For 3D+ fields, accounts for extra dimensions in
 /// the normalization. Output is a scalar Field.
-template<typename ArrayT>
-class SpatialMeanOp : public AnalysisOperator {
+template <typename ArrayT> class SpatialMeanOp : public AnalysisOperator {
  public:
-
    /// Scalar type extracted from the input array type
    using ScalarT = typename ArrayT::non_const_value_type;
 
@@ -43,18 +41,19 @@ class SpatialMeanOp : public AnalysisOperator {
    /// (1D array with single element), allocates output data array, and
    /// registers the output Field in the Field registry. The output Field
    /// name is constructed as InputName + "_SpatialMean".
-   SpatialMeanOp(const std::vector<std::string> &UpstreamNames, ///< [in] input field names
-                 Config Options                                 ///< [in] operator config
-   ) : AnalysisOperator("SpatialMean") {
-
+   SpatialMeanOp(const std::vector<std::string>
+                     &UpstreamNames, ///< [in] input field names
+                 Config Options      ///< [in] operator config
+                 )
+       : AnalysisOperator("SpatialMean") {
 
       // Store input field names
       InputNames = UpstreamNames;
 
       // Construct output field name and set instance name
       std::string OutputFieldName = InputNames[0] + "_SpatialMean";
-      OutputNames = {OutputFieldName};
-      InstanceName = OutputFieldName;
+      OutputNames                 = {OutputFieldName};
+      InstanceName                = OutputFieldName;
 
       // Allocate output data array (single scalar value)
       OutputData = typename Array1D<ScalarT>::type(OutputNames[0], 1);
@@ -62,26 +61,27 @@ class SpatialMeanOp : public AnalysisOperator {
       // Create scalar dimension for output Field
       I4 NDims = 1;
       std::vector<std::string> DimNames(NDims);
-      DimNames[0] = "Scalar";
+      DimNames[0]    = "Scalar";
       auto ScalarDim = Dimension::create(DimNames[0], 1);
 
       // Register output Field with metadata
-      auto OutputField = Field::create(
-         OutputNames[0],
-         "Spatial mean of " + InputNames[0],       // Description
-         "",                                        // Units
-         "",                                        // Standard name
-         -std::numeric_limits<ScalarT>::max(),     // Min valid value
-         std::numeric_limits<ScalarT>::max(),      // Max valid value
-         -std::numeric_limits<ScalarT>::max(),     // Fill value
-         NDims,                                     // Dimension lengths
-         DimNames                                   // Dimension names
-      );
+      auto OutputField =
+          Field::create(OutputNames[0],
+                        "Spatial mean of " + InputNames[0],   // Description
+                        "",                                   // Units
+                        "",                                   // Standard name
+                        -std::numeric_limits<ScalarT>::max(), // Min valid value
+                        std::numeric_limits<ScalarT>::max(),  // Max valid value
+                        -std::numeric_limits<ScalarT>::max(), // Fill value
+                        NDims,   // Dimension lengths
+                        DimNames // Dimension names
+          );
 
       // Attach output data array to Field
-      OutputField->template attachData<typename Array1D<ScalarT>::type>(OutputData);
+      OutputField->template attachData<typename Array1D<ScalarT>::type>(
+          OutputData);
 
-   }  // end constructor
+   } // end constructor
 
    /// Computes the spatial mean by retrieving input data, determining the
    /// appropriate mesh index space and vertical mask, constructing index ranges
@@ -90,11 +90,11 @@ class SpatialMeanOp : public AnalysisOperator {
    /// sum by the product of extra dimension sizes. Updates output data,
    /// timestamp, and computed flag.
    void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
-   ) override {
+                ) override {
 
       // Retrieve input Field and extract data array
       auto InputField = Field::get(InputNames[0]);
-      auto InputData = InputField->template getDataArray<ArrayT>();
+      auto InputData  = InputField->template getDataArray<ArrayT>();
 
       // Get dimension names to determine array structure
       std::vector<std::string> InputDimNames;
@@ -108,26 +108,26 @@ class SpatialMeanOp : public AnalysisOperator {
 
       // Get appropriate mask and owned entity count for this index space
       Array2DReal MaskArray;
-      I4 NOwned = 0;
+      I4 NOwned      = 0;
       I4 NVertLayers = VCoord->NVertLayers;
 
       if (IndexSpaceName == "NCells") {
          MaskArray = VCoord->CellMask;
-         NOwned = Mesh->NCellsOwned;
+         NOwned    = Mesh->NCellsOwned;
       } else if (IndexSpaceName == "NEdges") {
          MaskArray = VCoord->EdgeMask;
-         NOwned = Mesh->NEdgesOwned;
+         NOwned    = Mesh->NEdgesOwned;
       } else if (IndexSpaceName == "NVertices") {
          MaskArray = VCoord->VertexMask;
-         NOwned = Mesh->NVerticesOwned;
+         NOwned    = Mesh->NVerticesOwned;
       } else {
          ABORT_ERROR("SpatialMeanOp: Unknown index space {}", IndexSpaceName);
       }
 
-      // Construct index range for input data to exclude halo cells and inactive layers
-      // Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
+      // Construct index range for input data to exclude halo cells and inactive
+      // layers Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
       std::vector<I4> indxRange;
-      
+
       if (NDims == 1) {
          // 1D array: horizontal dimension only
          indxRange = {0, NOwned - 1};
@@ -137,43 +137,44 @@ class SpatialMeanOp : public AnalysisOperator {
       } else {
          // 3D+ array: (extra dims..., horizontal, vertical)
          indxRange.resize(2 * NDims);
-         
+
          // Extra dimensions: include full extent
          for (I4 i = 0; i < NDims - 2; ++i) {
-            indxRange[2*i] = 0;
-            indxRange[2*i + 1] = InputData.extent(i) - 1;
+            indxRange[2 * i]     = 0;
+            indxRange[2 * i + 1] = InputData.extent(i) - 1;
          }
-         
+
          // Horizontal dimension (second to last): exclude halo
-         indxRange[2*(NDims-2)] = 0;
-         indxRange[2*(NDims-2) + 1] = NOwned - 1;
-         
+         indxRange[2 * (NDims - 2)]     = 0;
+         indxRange[2 * (NDims - 2) + 1] = NOwned - 1;
+
          // Vertical dimension (last): all layers
-         indxRange[2*(NDims-1)] = 0;
-         indxRange[2*(NDims-1) + 1] = NVertLayers - 1;
+         indxRange[2 * (NDims - 1)]     = 0;
+         indxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
       }
-      
+
       // Index range for mask array (always 2D: horizontal × vertical)
       std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
       // Compute masked sum of values and sum of mask values
       ScalarT ValSum;
       ScalarT MaskSum;
-      
+
       if (NDims == 1) {
          // For 1D arrays, use horizontal-only mask (k=0 column of 2D mask)
          // Copy to contiguous 1D array to avoid LayoutStride incompatibility
          if (Mask1D.size() == 0)
-            Mask1D = typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
-         
+            Mask1D =
+                typename Array1D<Real>::type("Mask1D", MaskArray.extent(0));
+
          auto LocalMaskArray = MaskArray;
          auto LocalMask1D    = Mask1D;
          parallelFor(
              {static_cast<I4>(MaskArray.extent(0))},
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
-         
-         ValSum  = globalMaskedSum(InputData, Mask1D, Comm, &indxRange);
-         
+
+         ValSum = globalMaskedSum(InputData, Mask1D, Comm, &indxRange);
+
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
@@ -181,14 +182,15 @@ class SpatialMeanOp : public AnalysisOperator {
          MaskSum = CachedMaskSum;
       } else {
          // For 2D+ arrays, use full 2D mask
-         ValSum  = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
-         
+         ValSum = globalMaskedSum(InputData, MaskArray, Comm, &indxRange);
+
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
-            
-            // For 3D+ arrays, scale mask sum by product of extra dimension sizes
-            // This accounts for replication of the 2D mask across extra dimensions
+
+            // For 3D+ arrays, scale mask sum by product of extra dimension
+            // sizes This accounts for replication of the 2D mask across extra
+            // dimensions
             if (NDims > 2) {
                I4 ExtraDimSize = 1;
                for (I4 i = 0; i < NDims - 2; ++i) {
@@ -207,9 +209,9 @@ class SpatialMeanOp : public AnalysisOperator {
       deepCopy(OutputData, SpatialMean);
 
       // Update cache validity markers
-      LastComputed = TimeStamp;
+      LastComputed  = TimeStamp;
       FieldComputed = true;
-      
+
    } // end compute
 
    /// Returns the computed spatial mean value. Used for accessing the result
@@ -217,11 +219,11 @@ class SpatialMeanOp : public AnalysisOperator {
    ScalarT getVal() { return SpatialMean; }
 
  private:
-
    /// Output data array holding the computed spatial mean (single scalar value)
    typename Array1D<ScalarT>::type OutputData;
 
-   /// Temporary storage for the computed mean value before copying to OutputData
+   /// Temporary storage for the computed mean value before copying to
+   /// OutputData
    ScalarT SpatialMean;
 
    /// Contiguous 1D mask for horizontal-only operations (1D inputs).
@@ -231,7 +233,8 @@ class SpatialMeanOp : public AnalysisOperator {
 
    /// Cached mask sum computed on first pass and reused for subsequent calls.
    /// The mask is constant in time, so this optimization avoids redundant
-   /// global reduction operations. Initialized to -1 to indicate not yet computed.
+   /// global reduction operations. Initialized to -1 to indicate not yet
+   /// computed.
    ScalarT CachedMaskSum{static_cast<ScalarT>(-1)};
 
 }; // end class SpatialMeanOp

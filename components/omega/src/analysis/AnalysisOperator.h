@@ -46,9 +46,7 @@ namespace OMEGA {
 
 /// Base case for variadic template recursion - returns an empty Config.
 /// This terminates the recursive construction in makeOpConfig.
-inline Config makeOpConfig() {
-    return Config();
-}
+inline Config makeOpConfig() { return Config(); }
 
 /// Constructs a Config object from variadic key-value pairs using
 /// recursive template expansion. Enables inline operator parameter
@@ -58,31 +56,26 @@ inline Config makeOpConfig() {
 /// \endcode
 /// This provides a uniform parameter interface whether operators are
 /// instantiated from user config or programmatically by AnalysisGroups.
-template<typename T, typename... Args>
-Config makeOpConfig(const std::pair<std::string, T>& Param,
-                    Args... OtherArgs) {
-    Config Cfg = makeOpConfig(OtherArgs...);  // Recurse from end
-    Cfg.add(Param.first, Param.second);
-    return Cfg;
+template <typename T, typename... Args>
+Config makeOpConfig(const std::pair<std::string, T> &Param, Args... OtherArgs) {
+   Config Cfg = makeOpConfig(OtherArgs...); // Recurse from end
+   Cfg.add(Param.first, Param.second);
+   return Cfg;
 }
 
 /// Type alias for operator parameter pairs. Used with opParam() helper
 /// to construct key-value pairs for makeOpConfig().
-template<typename T>
-using OpParam = std::pair<std::string, std::decay_t<T>>;
+template <typename T> using OpParam = std::pair<std::string, std::decay_t<T>>;
 
 /// Helper function to create operator parameter pairs with perfect
 /// forwarding. Usage: opParam("Key", Value) creates a pair suitable for
 /// makeOpConfig(). Type decay ensures no reference issues when pairs are
 /// passed to Config.
-template<typename T>
-OpParam<T> opParam(std::string Key,      ///< [in] parameter name
-                   T&& Value              ///< [in] parameter value
+template <typename T>
+OpParam<T> opParam(std::string Key, ///< [in] parameter name
+                   T &&Value        ///< [in] parameter value
 ) {
-    return {
-        std::move(Key),
-        std::forward<T>(Value)
-    };
+   return {std::move(Key), std::forward<T>(Value)};
 }
 
 /// AnalysisOperator is the abstract base class for all concrete analysis
@@ -104,10 +97,9 @@ class AnalysisOperator {
  public:
    /// Default constructor
    AnalysisOperator();
-   
+
    /// Constructor with operator type name
-   AnalysisOperator(
-      const std::string &OperatorType ///< [in] operator type name
+   AnalysisOperator(const std::string &OperatorType ///< [in] operator type name
    );
 
    /// Virtual destructor allows polymorphic deletion of derived classes
@@ -134,19 +126,18 @@ class AnalysisOperator {
    /// Returns true if the operator's output is already valid for the given
    /// timestamp (cache hit). Used by computeRecursive to avoid redundant
    /// computation when multiple downstream operators share this result.
-   bool isCacheValid(
-      const TimeInstant &TimeStamp ///< [in] timestamp to check
+   bool isCacheValid(const TimeInstant &TimeStamp ///< [in] timestamp to check
    );
 
    /// Initializes the operator after all Fields exist in the registry.
    /// Stores pointers to mesh, environment, and other resources needed
    /// during compute() calls. Called once during Analysis construction
    /// after the dependency graph is built.
-   virtual void initialize(
-       const MachEnv *Env,        ///< [in] machine environment
-       const HorzMesh *Mesh,      ///< [in] horizontal mesh
-       const VertCoord *VCoord,   ///< [in] vertical coordinate
-       Config Options             ///< [in] operator-specific options
+   virtual void
+   initialize(const MachEnv *Env,      ///< [in] machine environment
+              const HorzMesh *Mesh,    ///< [in] horizontal mesh
+              const VertCoord *VCoord, ///< [in] vertical coordinate
+              Config Options           ///< [in] operator-specific options
    );
 
    /// Sets the period alarm for temporal reduction operators. The alarm
@@ -161,22 +152,19 @@ class AnalysisOperator {
    /// the operator's transformation, and writes results to operator-owned
    /// output arrays. Updates LastComputed timestamp and FieldComputed flag
    /// for caching.
-   virtual void compute(
-      const TimeInstant &TimeStamp ///< [in] current timestamp
-   ) = 0;
+   virtual void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
+                        ) = 0;
 
+ protected:
+   const HorzMesh *Mesh;    ///< Horizontal mesh for spatial operations
+   const VertCoord *VCoord; ///< Vertical coordinate for vertical ops
+   MPI_Comm Comm;           ///< MPI communicator for parallel reductions
 
-  protected:
-
-   const HorzMesh *Mesh;     ///< Horizontal mesh for spatial operations
-   const VertCoord *VCoord;  ///< Vertical coordinate for vertical ops
-   MPI_Comm Comm;            ///< MPI communicator for parallel reductions
-
-   std::string OperatorTypeName; ///< Operator type (e.g., "SpatialMean")
-   std::string InstanceName;     ///< Unique instance name
-   std::vector<std::string> InputNames;  ///< Required input field names
+   std::string OperatorTypeName;        ///< Operator type (e.g., "SpatialMean")
+   std::string InstanceName;            ///< Unique instance name
+   std::vector<std::string> InputNames; ///< Required input field names
    std::vector<std::string> OutputNames; ///< Produced output field names
-  
+
    TimeInstant LastComputed; ///< Timestamp of last compute for caching
    bool FieldComputed;       ///< Flag indicating whether output is valid
 

@@ -4,7 +4,8 @@
 //===-- analysis/analysisGroups/GlobalStats.h - GlobalStats ----*- C++ -*-===//
 //
 /// \file
-/// \brief Defines the GlobalStats analysis group for computing global statistics
+/// \brief Defines the GlobalStats analysis group for computing global
+/// statistics
 ///
 /// GlobalStats is a bundled AnalysisGroup that automates creation of spatial
 /// reduction operators (mean, min, max, sum, etc.) and optional temporal
@@ -50,15 +51,14 @@ namespace OMEGA {
 /// output frequency and type (temporal reduction vs. discrete sampling).
 class GlobalStats : public AnalysisGroup {
  public:
-
    /// Constructs a GlobalStats analysis group. Reads field list, spatial
    /// statistics list, and temporal specifications (reduction periods and/or
    /// sample frequencies) from config. Builds operator chains for all
    /// field/statistic combinations, creates IOStreams for each unique
    /// (period, type) pair, and associates operators with streams.
-   GlobalStats(const std::string &GroupName,       ///< [in] name of this group
-               Config &AnalysisGroupOptions,        ///< [in] group configuration
-               Analysis *AnalysisManager            ///< [in] analysis manager
+   GlobalStats(const std::string &GroupName, ///< [in] name of this group
+               Config &AnalysisGroupOptions, ///< [in] group configuration
+               Analysis *AnalysisManager     ///< [in] analysis manager
    );
 
    /// Default destructor

@@ -25,8 +25,8 @@
 #include "Analysis.h"
 #include "Config.h"
 #include "IOStream.h"
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace OMEGA {
 
@@ -34,13 +34,13 @@ namespace OMEGA {
 /// Concrete derived classes (e.g., GlobalStats) encapsulate the configuration
 /// parsing, operator construction, and stream creation logic for named analysis
 /// group types. The base class provides utilities for grouping operator chains
-/// by their output characteristics and creating IOStream objects with appropriate
-/// configurations. Future versions will support user-defined custom groups where
-/// users specify composable operator chains directly in the config file.
+/// by their output characteristics and creating IOStream objects with
+/// appropriate configurations. Future versions will support user-defined custom
+/// groups where users specify composable operator chains directly in the config
+/// file.
 class AnalysisGroup {
 
  public:
-
    /// Virtual destructor allows polymorphic deletion of derived classes
    virtual ~AnalysisGroup() = default;
 
@@ -53,60 +53,61 @@ class AnalysisGroup {
    /// Called by derived class constructors after all operator chains have
    /// been registered with the Analysis orchestrator.
    void createAnalysisGroupStreams(
-      const std::string &GroupName,       ///< [in] name of this group
-      Config &AnalysisGroupOptions,       ///< [in] group configuration options
-      Analysis *AnalysisManager           ///< [in] Analysis orchestrator instance
+       const std::string &GroupName, ///< [in] name of this group
+       Config &AnalysisGroupOptions, ///< [in] group configuration options
+       Analysis *AnalysisManager     ///< [in] Analysis orchestrator instance
    );
 
  protected:
-
    /// Metadata about a single operator chain within this AnalysisGroup.
    /// Stores the chain string (operator instance name), the output frequency,
    /// and whether the chain performs temporal reduction or discrete sampling.
    struct OpChainInfo {
-      std::string ChainStr;      ///< Operator instance name (output Field name)
-      std::string FreqStr;       ///< Period/frequency string (e.g., "1day", "6hour")
-      bool IsTimeReduction;      ///< true for temporal reduction; false for discrete samples
+      std::string ChainStr; ///< Operator instance name (output Field name)
+      std::string FreqStr;  ///< Period/frequency string (e.g., "1day", "6hour")
+      bool IsTimeReduction; ///< true for temporal reduction; false for discrete
+                            ///< samples
    };
 
-   /// Template for constructing IOStream configurations for this group's output.
-   /// Provides default values for all IOStream creation parameters. Derived
-   /// classes can override defaults using group-specific config options via
-   /// the apply() method. The toConfig() method converts the parameters to
+   /// Template for constructing IOStream configurations for this group's
+   /// output. Provides default values for all IOStream creation parameters.
+   /// Derived classes can override defaults using group-specific config options
+   /// via the apply() method. The toConfig() method converts the parameters to
    /// a Config object suitable for IOStream::create().
    struct StreamParams {
       /// Constructor initializes all IOStream parameters with default values.
       /// Empty string values indicate parameters that must be set by derived
       /// classes or will be omitted from the final stream configuration.
       StreamParams()
-         : Params{
-            {"UsePointerFile", "false"},
-            {"PointerFilename", ""},
-            {"Filename", ""},
-            {"Mode", "write"},
-            {"IfExists", "append"},
-            {"Precision", "double"},
-            {"Freq", ""},
-            {"FreqUnits", ""},
-            {"FileFreq", ""},
-            {"FileFreqUnits", ""},
-            {"UseStartEnd", "false"},
-            {"StartTime", ""},
-            {"EndTime", ""},
-         }
-      {}
-      
+          : Params{
+                {"UsePointerFile", "false"},
+                {"PointerFilename", ""},
+                {"Filename", ""},
+                {"Mode", "write"},
+                {"IfExists", "append"},
+                {"Precision", "double"},
+                {"Freq", ""},
+                {"FreqUnits", ""},
+                {"FileFreq", ""},
+                {"FileFreqUnits", ""},
+                {"UseStartEnd", "false"},
+                {"StartTime", ""},
+                {"EndTime", ""},
+            } {}
+
       /// Applies group-specific configuration overrides to the default
       /// parameter values. Only known parameters can be overridden; unknown
       /// keys trigger an error.
-      void apply(const std::map<std::string, std::string> &Overrides ///< [in] parameter overrides
+      void apply(const std::map<std::string, std::string>
+                     &Overrides ///< [in] parameter overrides
       ) {
-         for (const auto& [Key, Value] : Overrides) {
+         for (const auto &[Key, Value] : Overrides) {
             auto It = Params.find(Key);
 
             // Validate that the key exists in our parameter map
             if (It == Params.end()) {
-               ABORT_ERROR("Analysis: Unknown Stream config parameter, {}", Key);
+               ABORT_ERROR("Analysis: Unknown Stream config parameter, {}",
+                           Key);
             }
 
             It->second = Value;
@@ -119,9 +120,9 @@ class AnalysisGroup {
       /// after stream creation.
       Config toConfig() const {
          Config Cfg;
-         
+
          // Add only parameters with non-empty values
-         for (const auto& [Key, Value] : Params) {
+         for (const auto &[Key, Value] : Params) {
             if (!Value.empty()) {
                Cfg.add(Key, Value);
             }
@@ -138,7 +139,7 @@ class AnalysisGroup {
       std::map<std::string, std::string> Params;
    };
 
-   std::string GroupName;   ///< Name of this AnalysisGroup instance
+   std::string GroupName; ///< Name of this AnalysisGroup instance
 
    /// Metadata for all operator chains in this group (output field name,
    /// frequency, and type). Populated by derived class constructors.

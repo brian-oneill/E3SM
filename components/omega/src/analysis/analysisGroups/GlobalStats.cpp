@@ -1,8 +1,9 @@
-//===-- analysis/analysisGroups/GlobalStats.cpp - GlobalStats impl -*- C++ -*-===//
+//===-- analysis/analysisGroups/GlobalStats.cpp - GlobalStats impl -*- C++
+//-*-===//
 //
-// Implementation of GlobalStats constructor. Reads configuration for field list,
-// spatial statistics, and temporal specifications (reduction periods and/or
-// sample frequencies). Builds operator chains for all field/statistic
+// Implementation of GlobalStats constructor. Reads configuration for field
+// list, spatial statistics, and temporal specifications (reduction periods
+// and/or sample frequencies). Builds operator chains for all field/statistic
 // combinations, stores metadata for stream creation, and invokes base class
 // method to create IOStreams organized by output frequency and type.
 //
@@ -20,8 +21,8 @@ namespace OMEGA {
 // (ReductionPeriod) and/or discrete sampling (SampleFreq). Chains are grouped
 // by their output characteristics and associated with appropriate IOStreams.
 GlobalStats::GlobalStats(const std::string &GroupName,
-               Config &AnalysisGroupOptions,
-               Analysis *AnalysisManager) {
+                         Config &AnalysisGroupOptions,
+                         Analysis *AnalysisManager) {
 
    Error Err1;
    Error Err2;
@@ -35,7 +36,8 @@ GlobalStats::GlobalStats(const std::string &GroupName,
    // Each statistic name (e.g., "Mean", "Max") is prefixed with "Spatial"
    std::vector<std::string> OpList;
    Err1 = AnalysisGroupOptions.get("SpatialStats", OpList);
-   CHECK_ERROR_ABORT(Err1, "GlobalStats: SpatialStats list not found in Config");
+   CHECK_ERROR_ABORT(Err1,
+                     "GlobalStats: SpatialStats list not found in Config");
 
    // Read optional temporal reduction periods (e.g., "1day", "1month")
    // If present, creates time-averaged output
@@ -54,18 +56,18 @@ GlobalStats::GlobalStats(const std::string &GroupName,
    }
 
    // Build operator chains for all field/statistic combinations
-   for (const auto &VarName: VarList) {
-      for (const auto &OpName: OpList) {
+   for (const auto &VarName : VarList) {
+      for (const auto &OpName : OpList) {
 
          // Construct operator type name (e.g., "SpatialMean")
          std::string OperatorType = "Spatial" + OpName;
          std::string ChainStr;
 
-         std::string NewOpChainName = VarName + "_Spatial" + OpName; 
+         std::string NewOpChainName = VarName + "_Spatial" + OpName;
 
          // Create temporal reduction chains: Field -> SpatialOp -> TimeMean
          // These produce time-averaged statistics over specified periods
-         for (const auto &Period: PeriodList) {
+         for (const auto &Period : PeriodList) {
             // Build chain string (e.g., "Temperature_SpatialMean_TimeMean1day")
             ChainStr = VarName + "_" + OperatorType + "_TimeMean" + Period;
 
@@ -76,22 +78,24 @@ GlobalStats::GlobalStats(const std::string &GroupName,
             AnalysisManager->parseChainAndBuildOps(ChainStr);
          }
 
-         // Create discrete sampling chains: Field -> SpatialOp (no temporal reduction)
-         // These produce instantaneous snapshots at specified frequencies
+         // Create discrete sampling chains: Field -> SpatialOp (no temporal
+         // reduction) These produce instantaneous snapshots at specified
+         // frequencies
          if (!SampleFreqList.empty()) {
             // Build chain string without temporal operator
             ChainStr = VarName + "_" + OperatorType;
-            
-            // Parse chain string and instantiate operators (if not already built)
+
+            // Parse chain string and instantiate operators (if not already
+            // built)
             AnalysisManager->parseChainAndBuildOps(ChainStr);
          }
-         
+
          // Store metadata for each sample frequency
          for (const auto &SampleFreq : SampleFreqList) {
-            // Same chain string, but different frequency and no temporal reduction
+            // Same chain string, but different frequency and no temporal
+            // reduction
             OpChainInfos.push_back(OpChainInfo{ChainStr, SampleFreq, false});
          }
-
       }
    }
 

@@ -17,7 +17,7 @@ namespace OMEGA {
 AnalysisOperator::AnalysisOperator() {
    // Initialize cache tracking variables
    FieldComputed = false;
-   LastComputed = TimeInstant();
+   LastComputed  = TimeInstant();
 } // end default constructor
 
 //------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ AnalysisOperator::AnalysisOperator(const std::string &OperatorType) {
 
    // Initialize cache tracking variables
    FieldComputed = false;
-   LastComputed = TimeInstant();
+   LastComputed  = TimeInstant();
 } // end constructor
 
 //------------------------------------------------------------------------------
@@ -38,17 +38,13 @@ AnalysisOperator::AnalysisOperator(const std::string &OperatorType) {
 // and MPI communicator. These are used by derived classes during compute().
 // Derived classes may override this to perform additional setup, but should
 // call this base implementation to ensure pointers are stored.
-void AnalysisOperator::initialize(
-    const MachEnv *Env,
-    const HorzMesh *InMesh,
-    const VertCoord *InVCoord,
-    Config Options
-) {
+void AnalysisOperator::initialize(const MachEnv *Env, const HorzMesh *InMesh,
+                                  const VertCoord *InVCoord, Config Options) {
 
    // Store pointers needed during compute()
-   Mesh = InMesh;
+   Mesh   = InMesh;
    VCoord = InVCoord;
-   Comm = Env->getComm();
+   Comm   = Env->getComm();
 
 } // end initialize
 
@@ -72,7 +68,8 @@ const std::string AnalysisOperator::getOperatorType() {
 } // end getOperatorType
 
 //------------------------------------------------------------------------------
-// Returns the unique instance name for this operator (e.g., "Temperature_SpatialMean")
+// Returns the unique instance name for this operator (e.g.,
+// "Temperature_SpatialMean")
 const std::string AnalysisOperator::getName() {
    return InstanceName;
 } // end getName
@@ -97,7 +94,7 @@ const std::vector<std::string> AnalysisOperator::getOutputFieldNames() {
 // share this intermediate result.
 bool AnalysisOperator::isCacheValid(const TimeInstant &TimeStamp) {
    bool IsValid = false;
-   
+
    // Cache is valid if we've computed and timestamp matches
    if (FieldComputed && LastComputed == TimeStamp) {
       IsValid = true;
