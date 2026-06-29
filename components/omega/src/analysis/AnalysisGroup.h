@@ -1,7 +1,27 @@
 #ifndef OMEGA_ANALYSISGROUP_H
 #define OMEGA_ANALYSISGROUP_H
 
+//===-- analysis/AnalysisGroup.h - AnalysisGroup base class -----*- C++ -*-===//
+//
+/// \file
+/// \brief Defines the AnalysisGroup base class for bundled analysis groups
+///
+/// AnalysisGroup is the abstract base class for bundled analysis groups that
+/// encapsulate common analysis patterns. In the initial implementation (v1),
+/// concrete derived classes (e.g., GlobalStats) handle config parsing, operator
+/// construction, and stream creation for pre-defined analysis group types.
+/// Future versions will support user-defined custom groups specified entirely
+/// in config using composable operator chains.
+///
+/// Each AnalysisGroup reads its configuration, constructs operator chains
+/// by calling Analysis::parseChainAndBuildOps(), and creates associated
+/// IOStream objects for output. The base class provides helper structures
+/// (OpChainInfo, StreamParams) and methods (createAnalysisGroupStreams) that
+/// facilitate grouping operator chains by output frequency and type, validating
+/// temporal reduction periods, and creating appropriately configured streams.
+///
 //===----------------------------------------------------------------------===//
+
 #include "Analysis.h"
 #include "Config.h"
 #include "IOStream.h"
@@ -10,38 +30,54 @@
 
 namespace OMEGA {
 
-/// The AnalysisGroup class ...
+/// AnalysisGroup is the abstract base class for bundled analysis groups.
+/// Concrete derived classes (e.g., GlobalStats) encapsulate the configuration
+/// parsing, operator construction, and stream creation logic for named analysis
+/// group types. The base class provides utilities for grouping operator chains
+/// by their output characteristics and creating IOStream objects with appropriate
+/// configurations. Future versions will support user-defined custom groups where
+/// users specify composable operator chains directly in the config file.
 class AnalysisGroup {
 
  public:
 
-   ///
+   /// Virtual destructor allows polymorphic deletion of derived classes
    virtual ~AnalysisGroup() = default;
 
-   ///
+   /// Returns the name of this AnalysisGroup instance
    std::string getName();
 
-   ///
+   /// Groups operator chains by output period and type (time reduction vs.
+   /// discrete sampling), validates temporal reduction periods against the
+   /// restart interval, and creates IOStream objects for the group's output.
+   /// Called by derived class constructors after all operator chains have
+   /// been registered with the Analysis orchestrator.
    void createAnalysisGroupStreams(
-      const std::string &GroupName,
-      Config &AnalysisGroupOptions,
-      Analysis *AnalysisManager);
+      const std::string &GroupName,       ///< [in] name of this group
+      Config &AnalysisGroupOptions,       ///< [in] group configuration options
+      Analysis *AnalysisManager           ///< [in] Analysis orchestrator instance
+   );
 
  protected:
 
-   /// Structure to store metadata about operator chains
+   /// Metadata about a single operator chain within this AnalysisGroup.
+   /// Stores the chain string (operator instance name), the output frequency,
+   /// and whether the chain performs temporal reduction or discrete sampling.
    struct OpChainInfo {
-      std::string ChainStr;      // Operator instance name (e.g., "Temperature_SpatialMean_TimeMean1day")
-      std::string FreqStr;       // Frequency/period string (e.g., "1day", "6hour")
-      bool IsTimeReduction;            // true for temporal reduction, false for discrete samples
+      std::string ChainStr;      ///< Operator instance name (output Field name)
+      std::string FreqStr;       ///< Period/frequency string (e.g., "1day", "6hour")
+      bool IsTimeReduction;      ///< true for temporal reduction; false for discrete samples
    };
 
-   /// The StreamParams struct serves as a template for creating output streams
-   /// associated with an AnalysisGroup
+   /// Template for constructing IOStream configurations for this group's output.
+   /// Provides default values for all IOStream creation parameters. Derived
+   /// classes can override defaults using group-specific config options via
+   /// the apply() method. The toConfig() method converts the parameters to
+   /// a Config object suitable for IOStream::create().
    struct StreamParams {
-      // Params is a string-to-string map of all the possible options used in
-      // IOStream creation. When a StreamParams instance is created, it has
-      // the following values by default
+      /// Constructor initializes all IOStream parameters with default values.
+      /// Empty string values indicate parameters that must be set by derived
+      /// classes or will be omitted from the final stream configuration.
       StreamParams()
          : Params{
             {"UsePointerFile", "false"},
@@ -59,12 +95,16 @@ class AnalysisGroup {
             {"EndTime", ""},
          }
       {}
-      // If optional stream config options are given for the AnalysisGroup,
-      // apply will take the options overwrite the default values above
-      void apply(const std::map<std::string, std::string> &Overrides) {
+      
+      /// Applies group-specific configuration overrides to the default
+      /// parameter values. Only known parameters can be overridden; unknown
+      /// keys trigger an error.
+      void apply(const std::map<std::string, std::string> &Overrides ///< [in] parameter overrides
+      ) {
          for (const auto& [Key, Value] : Overrides) {
             auto It = Params.find(Key);
 
+            // Validate that the key exists in our parameter map
             if (It == Params.end()) {
                ABORT_ERROR("Analysis: Unknown Stream config parameter, {}", Key);
             }
@@ -73,38 +113,42 @@ class AnalysisGroup {
          }
       }
 
-      // Creates a Config object to be passed to IOStream::create
+      /// Converts the parameter map to a Config object suitable for passing
+      /// to IOStream::create(). Only parameters with non-empty values are
+      /// included in the Config. Contents are left empty and must be added
+      /// after stream creation.
       Config toConfig() const {
          Config Cfg;
-         // Loop over the Params, add only options where Value is not empty
+         
+         // Add only parameters with non-empty values
          for (const auto& [Key, Value] : Params) {
             if (!Value.empty()) {
                Cfg.add(Key, Value);
             }
          }
 
-         // Contents are added after stream is created, leave empty for now
+         // Contents are populated after stream creation via IOStream::addField
          std::vector<std::string> EmptyStrVec{""};
          Cfg.add("Contents", EmptyStrVec);
 
          return Cfg;
       }
 
-      // Map of config options used to create output streams for the
-      // AnalysisGroup
+      /// Map of all IOStream configuration options for this group's output
       std::map<std::string, std::string> Params;
    };
 
-   /// Name of this AnalysisGroup
-   std::string GroupName;
+   std::string GroupName;   ///< Name of this AnalysisGroup instance
 
-   /// Vector storing metadata for all operator chains in this group
+   /// Metadata for all operator chains in this group (output field name,
+   /// frequency, and type). Populated by derived class constructors.
    std::vector<OpChainInfo> OpChainInfos;
 
-   ///
+   /// Full operator chain strings for all chains in this group. This vector
+   /// stores the complete underscore-delimited chain strings for reference.
    std::vector<std::string> OpChainStrings;
 
-};
+}; // end class AnalysisGroup
 
 } // end namespace OMEGA
 

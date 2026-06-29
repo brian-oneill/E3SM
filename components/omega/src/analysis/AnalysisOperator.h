@@ -1,6 +1,29 @@
 #ifndef OMEGA_ANALYSISOP_H
 #define OMEGA_ANALYSISOP_H
 
+//===-- analysis/AnalysisOperator.h - AnalysisOperator base ----*- C++ -*-===//
+//
+/// \file
+/// \brief Defines the AnalysisOperator base class and configuration helpers
+///
+/// AnalysisOperator is the abstract base class from which all concrete analysis
+/// operators are derived. Each operator performs a single, well-defined
+/// transformation on input fields (e.g., spatial reduction, temporal averaging).
+/// Derived classes are templated on the Kokkos array type of their primary
+/// input field, enabling type-safe dispatch based on scalar type, rank, and
+/// memory location.
+///
+/// Operators declare their input field dependencies at construction and create
+/// their output Fields in the Field registry. The initialize() method is called
+/// after all Fields exist to store mesh/environment pointers needed during
+/// compute(). The compute() method retrieves input data from the Field registry
+/// and writes results to operator-owned output arrays.
+///
+/// This file also provides helper functions (opParam, makeOpConfig) for
+/// constructing Config objects inline when instantiating operators, providing
+/// a uniform parameter-passing mechanism whether operators are created from
+/// user config or programmatically by bundled AnalysisGroups.
+///
 //===----------------------------------------------------------------------===//
 
 #include "Config.h"
@@ -20,13 +43,19 @@
 
 namespace OMEGA {
 
-/// Base case: return the config
+/// Base case for variadic template recursion - returns an empty Config.
+/// This terminates the recursive construction in makeOpConfig.
 inline Config makeOpConfig() {
     return Config();
 }
 
-/// Create a Config with key-value pairs
-/// Usage: makeOpConfig({"key1", value1}, {"key2", value2}, ...)
+/// Constructs a Config object from variadic key-value pairs using recursive
+/// template expansion. Enables inline operator parameter specification:
+/// \code
+///   makeOpConfig(opParam("Period", "1day"), opParam("Layer", 10))
+/// \endcode
+/// This provides a uniform parameter interface whether operators are
+/// instantiated from user config or programmatically by AnalysisGroups.
 template<typename T, typename... Args>
 Config makeOpConfig(const std::pair<std::string, T>& Param, Args... OtherArgs) {
     Config Cfg = makeOpConfig(OtherArgs...);  // Recurse to build from end
@@ -34,80 +63,114 @@ Config makeOpConfig(const std::pair<std::string, T>& Param, Args... OtherArgs) {
     return Cfg;
 }
 
-///
+/// Type alias for operator parameter pairs. Used with opParam() helper
+/// to construct key-value pairs for makeOpConfig().
 template<typename T>
 using OpParam = std::pair<std::string, std::decay_t<T>>;
 
-///
+/// Helper function to create operator parameter pairs with perfect forwarding.
+/// Usage: opParam("Key", Value) creates a pair suitable for makeOpConfig().
+/// Type decay ensures no reference issues when pairs are passed to Config.
 template<typename T>
-OpParam<T> opParam(std::string Key, T&& Value) {
+OpParam<T> opParam(std::string Key,      ///< [in] parameter name
+                   T&& Value              ///< [in] parameter value
+) {
     return {
         std::move(Key),
         std::forward<T>(Value)
     };
 }
 
-/// The AnalysisOperator class ...
+/// AnalysisOperator is the abstract base class for all concrete analysis
+/// operators. Derived classes are templated on the Kokkos array type of their
+/// primary input field, enabling type-safe factory dispatch. Each operator
+/// performs a single, well-defined transformation (spatial reduction, temporal
+/// averaging, binary operations, etc.).
+///
+/// Operators allocate their output data arrays as members and register output
+/// Fields in the Field registry during construction. The initialize() method
+/// stores mesh/environment pointers after all Fields exist. The compute()
+/// method retrieves input data from the Field registry by name and writes
+/// results to the operator-owned output arrays.
+///
+/// Cache validation via isCacheValid() prevents redundant computation when
+/// multiple downstream operators share an intermediate result.
 class AnalysisOperator {
 
  public:
+   /// Default constructor
    AnalysisOperator();
-   AnalysisOperator(const std::string &OperatorType);
-
-
-   virtual ~AnalysisOperator();
-
-   /// Return name for this operator type
-   const std::string getOperatorType();
-
-   /// Return unique name for this instance of the operator type, contains
-   /// concatenated strings of upstream operator Names
-   const std::string getName();
-
-   /// Return names of fields required by this operator
-   const std::vector<std::string> getInputFieldNames();
-
-   /// Return names of output fields produced by this operator
-   const std::vector<std::string> getOutputFieldNames();
-
-   /// Returns true if Field has already been computed on this timestamp
-   bool isCacheValid(const TimeInstant &TimeStamp);
-
-
-   /// Initialize operator 
-   virtual void initialize(
-       const MachEnv *Env,
-       const HorzMesh *Mesh,
-       const VertCoord *VCoord,
-       Config Options
+   
+   /// Constructor with operator type name
+   AnalysisOperator(const std::string &OperatorType ///< [in] operator type name
    );
 
-   /// Set period alarm for temporal reduction operators
-   /// Default implementation does nothing (non-temporal operators ignore this)
-   virtual void setPeriodAlarm(Alarm *Alarm) {}
+   /// Virtual destructor allows polymorphic deletion of derived classes
+   virtual ~AnalysisOperator();
 
-   /// Perform computation of Analysis fields. Data arrays of input field
-   /// retrieved from Field map using input field names. Writes to
-   /// operator-owned output arrays
-   virtual void compute(const TimeInstant &TimeStamp) = 0;
+   /// Returns the operator type name (e.g., "SpatialMean", "TimeMean")
+   const std::string getOperatorType();
+
+   /// Returns the unique instance name for this operator, derived from the
+   /// concatenated upstream field names and operator type. For example,
+   /// "Temperature_SpatialMean" for a SpatialMean operator with Temperature input.
+   const std::string getName();
+
+   /// Returns the names of input fields required by this operator. These
+   /// names are used during dependency resolution to link operators in the
+   /// dependency graph.
+   const std::vector<std::string> getInputFieldNames();
+
+   /// Returns the names of output fields produced by this operator. These
+   /// are the Field registry names where the operator writes its results.
+   const std::vector<std::string> getOutputFieldNames();
+
+   /// Returns true if the operator's output is already valid for the given
+   /// timestamp (cache hit). Used by computeRecursive to avoid redundant
+   /// computation when multiple downstream operators share this result.
+   bool isCacheValid(const TimeInstant &TimeStamp ///< [in] timestamp to check
+   );
+
+   /// Initializes the operator after all Fields exist in the registry.
+   /// Stores pointers to mesh, environment, and other resources needed
+   /// during compute() calls. Called once during Analysis construction
+   /// after the dependency graph is built.
+   virtual void initialize(
+       const MachEnv *Env,        ///< [in] machine environment
+       const HorzMesh *Mesh,      ///< [in] horizontal mesh
+       const VertCoord *VCoord,   ///< [in] vertical coordinate
+       Config Options             ///< [in] operator-specific options
+   );
+
+   /// Sets the period alarm for temporal reduction operators. The alarm
+   /// pointer is used to detect when the accumulation period ends and
+   /// the operator should finalize its output (divide sum by sample count).
+   /// Default implementation does nothing; only temporal operators override this.
+   virtual void setPeriodAlarm(Alarm *Alarm ///< [in] period alarm pointer
+   ) {}
+
+   /// Pure virtual compute method - must be implemented by all derived classes.
+   /// Retrieves input field data from the Field registry, performs the
+   /// operator's transformation, and writes results to operator-owned output
+   /// arrays. Updates LastComputed timestamp and FieldComputed flag for caching.
+   virtual void compute(const TimeInstant &TimeStamp ///< [in] current timestamp
+   ) = 0;
 
 
  protected:
 
-   // Member data
-   const HorzMesh *Mesh;                    ///< Horizontal mesh
-   const VertCoord *VCoord;                 ///< VertCoord
-   MPI_Comm Comm;
+   const HorzMesh *Mesh;      ///< Horizontal mesh for spatial operations
+   const VertCoord *VCoord;   ///< Vertical coordinate for vertical operations
+   MPI_Comm Comm;             ///< MPI communicator for parallel reductions
 
+   std::string OperatorTypeName;  ///< Operator type (e.g., "SpatialMean")
+   std::string InstanceName;      ///< Unique instance name (e.g., "Temperature_SpatialMean")
+   std::vector<std::string> InputNames;   ///< Names of required input fields
+   std::vector<std::string> OutputNames;  ///< Names of produced output fields
+  
+   TimeInstant LastComputed;  ///< Timestamp of last computation for cache validation
+   bool FieldComputed;        ///< Flag indicating whether output is valid
 
-   std::string OperatorTypeName;
-   std::string InstanceName;
-   std::vector<std::string> InputNames;
-   std::vector<std::string> OutputNames;
-
- 
-   TimeInstant LastComputed;
-   bool FieldComputed;
 }; // end class AnalysisOperator
 
 } // end namespace OMEGA
