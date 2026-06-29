@@ -2351,37 +2351,37 @@ localMaskedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
                      
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
                      
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
                      
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
                      
-                     R8 MaskVal = static_cast<R8>(Arr2.data()[addr2]);
+                     R8 MaskVal = static_cast<R8>(Arr2.data()[Addr2]);
                      if (MaskVal != 0.0) {
-                        IT TestVal = Arr1.data()[addr1] * MaskVal;
+                        IT TestVal = Arr1.data()[Addr1] * MaskVal;
                         if (TestVal < LocalMin)
                            LocalMin = TestVal;
                      }
-//                     std::cout << I+1 << " " << J+1 << " " << Arr1.data()[addr1] << " " << MaskVal << " " << LocalMin << std::endl;
+//                     std::cout << I+1 << " " << J+1 << " " << Arr1.data()[Addr1] << " " << MaskVal << " " << LocalMin << std::endl;
                   }
                }
             }
          }
       }
    } else { // on device
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -2394,29 +2394,29 @@ localMaskedMin(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, IT &lmin) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, IT &Lmin) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
-                R8 MaskVal = static_cast<R8>(LocArr2.data()[addr2]);
+                R8 MaskVal = static_cast<R8>(LocArr2.data()[Addr2]);
                 if (MaskVal != 0.0) {
-                   IT TestVal = LocArr1.data()[addr1] * MaskVal;
-                   lmin = Kokkos::min(TestVal, lmin);
+                   IT TestVal = LocArr1.data()[Addr1] * MaskVal;
+                   Lmin = Kokkos::min(TestVal, Lmin);
                 }
              }
           },
@@ -2583,25 +2583,25 @@ localMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
 
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
 
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
 
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
 
-                     R8 MaskVal = static_cast<R8>(Arr2.data()[addr2]);
+                     R8 MaskVal = static_cast<R8>(Arr2.data()[Addr2]);
                      if (MaskVal != 0.0) {
-                        IT TestVal = Arr1.data()[addr1] * MaskVal;
+                        IT TestVal = Arr1.data()[Addr1] * MaskVal;
                         if (TestVal > LocalMax)
                            LocalMax = TestVal;
                      }
@@ -2611,8 +2611,8 @@ localMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
          }
       }
    } else { // on device
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -2625,29 +2625,29 @@ localMaskedMax(const Kokkos::View<T1, ML1, MS1> Arr1, ///< [in] 1st array
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, IT &lmax) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, IT &Lmax) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
-                R8 MaskVal = static_cast<R8>(LocArr2.data()[addr2]);
+                R8 MaskVal = static_cast<R8>(LocArr2.data()[Addr2]);
                 if (MaskVal != 0.0) {
-                   IT TestVal = LocArr1.data()[addr1] * MaskVal;
-                   lmax = Kokkos::max(TestVal, lmax);
+                   IT TestVal = LocArr1.data()[Addr1] * MaskVal;
+                   Lmax = Kokkos::max(TestVal, Lmax);
                 }
              }
           },
