@@ -1812,8 +1812,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                  "globalMaskedSum: Arr1 rank must be >= Arr2 rank");
    // Verify dimension matching
    if (Arr2.rank == 1) {
-       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+       int HorizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(HorizDim1) == Arr2.extent(0),
                      "globalMaskedSum: Horizontal dimensions must match");
    } else { // Arr2.rank == 2
        OMEGA_REQUIRE(Arr1.rank >= 2,
@@ -1843,32 +1843,32 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
             for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
                      
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
 
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
 
                      LocalSum +=
-                         Arr1.data()[addr1] * Arr2.data()[addr2];
+                         Arr1.data()[Addr1] * Arr2.data()[Addr2];
                   }
                }
             }
          }
       }
    } else { // on device
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -1881,26 +1881,26 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I4 &lsum) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I4 &Lsum) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
-                lsum += LocArr1.data()[addr1] * LocArr2.data()[addr2];
+                Lsum += LocArr1.data()[Addr1] * LocArr2.data()[Addr2];
              }
           },
           LocalSum);
@@ -1933,8 +1933,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                  "globalMaskedSum: Arr1 rank must be >= Arr2 rank");
    // Verify dimension matching
    if (Arr2.rank == 1) {
-       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+       int HorizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(HorizDim1) == Arr2.extent(0),
                      "globalMaskedSum: Horizontal dimensions must match");
    } else { // Arr2.rank == 2
        OMEGA_REQUIRE(Arr1.rank >= 2,
@@ -1964,32 +1964,32 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
             for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
                      
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
 
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
 
                      LocalSum +=
-                         Arr1.data()[addr1] * Arr2.data()[addr2];
+                         Arr1.data()[Addr1] * Arr2.data()[Addr2];
                   }
                }
             }
          }
       }
    } else { // on device
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -2002,26 +2002,26 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I8 &lsum) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, I8 &Lsum) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
-                lsum += LocArr1.data()[addr1] * LocArr2.data()[addr2];
+                Lsum += LocArr1.data()[Addr1] * LocArr2.data()[Addr2];
              }
           },
           LocalSum);
@@ -2054,8 +2054,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                  "globalMaskedSum: Arr1 rank must be >= Arr2 rank");
    // Verify dimension matching
    if (Arr2.rank == 1) {
-       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+       int HorizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(HorizDim1) == Arr2.extent(0),
                      "globalMaskedSum: Horizontal dimensions must match");
    } else { // Arr2.rank == 2
        OMEGA_REQUIRE(Arr1.rank >= 2,
@@ -2085,25 +2085,25 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
             for (I4 K = IRange[4]; K <= IRange[5]; ++K) {
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
                      
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
 
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
 
                      // convert each to R8 to be sure prod is computed in R8
-                     R8 DTmp1 = Arr1.data()[addr1];
-                     R8 DTmp2 = Arr2.data()[addr2];
+                     R8 DTmp1 = Arr1.data()[Addr1];
+                     R8 DTmp2 = Arr2.data()[Addr2];
                      LocalSum += DTmp1 * DTmp2;
                   }
                }
@@ -2111,8 +2111,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
          }
       }
    } else { // on device
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -2125,29 +2125,29 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &lsum) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &Lsum) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
                 // convert each to R8 to be sure prod is computed in R8
-                R8 DTmp1 = LocArr1.data()[addr1];
-                R8 DTmp2 = static_cast<R8>(LocArr2.data()[addr2]);
-                lsum += DTmp1 * DTmp2;
+                R8 DTmp1 = LocArr1.data()[Addr1];
+                R8 DTmp2 = static_cast<R8>(LocArr2.data()[Addr2]);
+                Lsum += DTmp1 * DTmp2;
              }
           },
           LocalSum);
@@ -2187,8 +2187,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
    
    // Verify dimension matching
    if (Arr2.rank == 1) {
-       int horizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-       OMEGA_REQUIRE(Arr1.extent(horizDim1) == Arr2.extent(0),
+       int HorizDim1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+       OMEGA_REQUIRE(Arr1.extent(HorizDim1) == Arr2.extent(0),
                      "globalMaskedSum: Horizontal dimensions must match");
    } else { // Arr2.rank == 2
        OMEGA_REQUIRE(Arr1.rank >= 2,
@@ -2217,23 +2217,23 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
                for (I4 L = IRange[6]; L <= IRange[7]; ++L) {
                   for (I4 M = IRange[8]; M <= IRange[9]; ++M) {
                      
-                     size_t addr1 = I * Strides1[0] + J * Strides1[1] +
+                     size_t Addr1 = I * Strides1[0] + J * Strides1[1] +
                                    K * Strides1[2] + L * Strides1[3] +
                                    M * Strides1[4];
                      
-                     size_t addr2 = 0;
-                     std::array<I4, 5> indices = {I, J, K, L, M};
+                     size_t Addr2 = 0;
+                     std::array<I4, 5> Indices = {I, J, K, L, M};
                      
                      if (Arr2.rank == 1) {
-                         int horizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
-                         addr2 = indices[horizIdx1];
+                         int HorizIdx1 = (Arr1.rank == 1) ? 0 : Arr1.rank - 2;
+                         Addr2 = Indices[HorizIdx1];
                      } else {
-                         int horizIdx = indices[Arr1.rank - 2];
-                         int vertIdx = indices[Arr1.rank - 1];
-                         addr2 = horizIdx * Stride2H + vertIdx * Stride2V;
+                         int HorizIdx = Indices[Arr1.rank - 2];
+                         int VertIdx = Indices[Arr1.rank - 1];
+                         Addr2 = HorizIdx * Stride2H + VertIdx * Stride2V;
                      }
                      
-                     R8 ProdTmp = Arr1.data()[addr1] * static_cast<R8>(Arr2.data()[addr2]);
+                     R8 ProdTmp = Arr1.data()[Addr1] * static_cast<R8>(Arr2.data()[Addr2]);
                      sumDDLocal(DDTmp, ProdTmp);
                   }
                }
@@ -2243,8 +2243,8 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
    } else {
       R8 LocalSum = 0.0;
 
-      const int arr1Rank = Arr1.rank;
-      const int arr2Rank = Arr2.rank;
+      const int Arr1Rank = Arr1.rank;
+      const int Arr2Rank = Arr2.rank;
 
       Array1DI4 DevRange("IRange", 10);
       Array1DI8 DevStrides("Strides", 5);
@@ -2257,26 +2257,26 @@ globalMaskedSum(const Kokkos::View<T1, ML1, MS1> Arr1,
       parallelReduce(
           {IRange[1] + 1, IRange[3] + 1, IRange[5] + 1, IRange[7] + 1,
            IRange[9] + 1},
-          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &lsum) {
+          KOKKOS_LAMBDA(int I, int J, int K, int L, int M, R8 &Lsum) {
              if (I >= LocRange(0) and J >= LocRange(2) and K >= LocRange(4) and
                  L >= LocRange(6) and M >= LocRange(8)) {
 
-                size_t addr1 = I * LocStrides(0) + J * LocStrides(1) +
+                size_t Addr1 = I * LocStrides(0) + J * LocStrides(1) +
                               K * LocStrides(2) + L * LocStrides(3) +
                               M * LocStrides(4);
 
-                size_t addr2 = 0;
-                 int indices[5] = {I, J, K, L, M};
-                if (arr2Rank == 1) {
-                    int horizIdx1 = (arr1Rank == 1) ? 0 : arr1Rank - 2;
-                    addr2 = indices[horizIdx1];
+                size_t Addr2 = 0;
+                 int Indices[5] = {I, J, K, L, M};
+                if (Arr2Rank == 1) {
+                    int HorizIdx1 = (Arr1Rank == 1) ? 0 : Arr1Rank - 2;
+                    Addr2 = Indices[HorizIdx1];
                 } else {
-                    int horizIdx = indices[Kokkos::max(0, arr1Rank - 2)];
-                    int vertIdx = indices[arr1Rank - 1];
-                    addr2 = horizIdx * LocArr2.extent(1) + vertIdx;
+                    int HorizIdx = Indices[Kokkos::max(0, Arr1Rank - 2)];
+                    int VertIdx = Indices[Arr1Rank - 1];
+                    Addr2 = HorizIdx * LocArr2.extent(1) + VertIdx;
                 }
 
-                lsum += LocArr1.data()[addr1] * static_cast<R8>(LocArr2.data()[addr2]);
+                Lsum += LocArr1.data()[Addr1] * static_cast<R8>(LocArr2.data()[Addr2]);
              }
           },
           LocalSum);
