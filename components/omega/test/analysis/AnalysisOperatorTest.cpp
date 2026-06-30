@@ -363,28 +363,44 @@ void testSpatialMeanOpType(const std::string &TypeName,
    std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMean_" + TypeName;
    
-   // Create test field with constant value
-   ScalarT ConstValue = static_cast<ScalarT>(42);
+   // Create test field with alternating values to properly test mean calculation
+   ScalarT Value1 = static_cast<ScalarT>(10);
+   ScalarT Value2 = static_cast<ScalarT>(20);
    
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i) -> ScalarT {
+            return ((i % 2) == 0) ? Value1 : Value2;
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i, I4 j) -> ScalarT {
+            return (((i + j) % 2) == 0) ? Value1 : Value2;
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j, I4 k) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
+            return (((i + j + k) % 2) == 0) ? Value1 : Value2;
          });
    }
    
-   // Expected mean is the constant value
-   Real ExpectedMean = static_cast<Real>(ConstValue);
+   // Calculate expected mean based on exact element count
+   I8 TotalElements = 0;
+   if constexpr (Rank == 1) {
+      TotalElements = Mesh->NCellsGlobal;
+   } else if constexpr (Rank == 2) {
+      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+   } else if constexpr (Rank == 3) {
+      I4 NTracers = Tracers::getNumTracers();
+      TotalElements = static_cast<I8>(NTracers) * static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+   }
+   
+   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count of Value2 = TotalElements / 2
+   I8 Count1 = (TotalElements + 1) / 2;  // Ceiling division (for odd total, Value1 gets extra)
+   I8 Count2 = TotalElements / 2;        // Floor division
+   Real ExpectedMean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) + 
+                        static_cast<Real>(Value2) * static_cast<Real>(Count2)) / 
+                       static_cast<Real>(TotalElements);
    
    // Create and compute operator
    Config EmptyConfig;
@@ -427,28 +443,49 @@ void testSpatialStdDevOpType(const std::string &TypeName,
    std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldStdDev_" + TypeName;
    
-   // Create test field with constant value (zero variance)
-   ScalarT ConstValue = static_cast<ScalarT>(10);
+   // Create test field with alternating values to properly test std dev calculation
+   ScalarT Value1 = static_cast<ScalarT>(10);
+   ScalarT Value2 = static_cast<ScalarT>(20);
    
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i) -> ScalarT {
+            return ((i % 2) == 0) ? Value1 : Value2;
          });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i, I4 j) -> ScalarT {
+            return (((i + j) % 2) == 0) ? Value1 : Value2;
          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [ConstValue](I4 i, I4 j, I4 k) -> ScalarT {
-            return ConstValue;
+         [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
+            return (((i + j + k) % 2) == 0) ? Value1 : Value2;
          });
    }
    
-   // Expected standard deviation is 0 (constant field)
-   Real ExpectedStdDev = 0.0;
+   // Calculate expected standard deviation based on exact element count
+   I8 TotalElements = 0;
+   if constexpr (Rank == 1) {
+      TotalElements = Mesh->NCellsGlobal;
+   } else if constexpr (Rank == 2) {
+      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+   } else if constexpr (Rank == 3) {
+      I4 NTracers = Tracers::getNumTracers();
+      TotalElements = static_cast<I8>(NTracers) * static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+   }
+   
+   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count of Value2 = TotalElements / 2
+   I8 Count1 = (TotalElements + 1) / 2;  // Ceiling division
+   I8 Count2 = TotalElements / 2;        // Floor division
+   Real Mean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) + 
+                static_cast<Real>(Value2) * static_cast<Real>(Count2)) / 
+               static_cast<Real>(TotalElements);
+   
+   // Standard deviation: sqrt(sum((x_i - mean)^2) / N)
+   Real SumSquaredDiff = static_cast<Real>(Count1) * std::pow(static_cast<Real>(Value1) - Mean, 2.0) +
+                         static_cast<Real>(Count2) * std::pow(static_cast<Real>(Value2) - Mean, 2.0);
+   Real ExpectedStdDev = std::sqrt(SumSquaredDiff / static_cast<Real>(TotalElements));
 
    // SpatialStdDevOp requires a pre-existing _SpatialMean field for the input.
    // Create and compute a SpatialMeanOp first so that field is registered.
