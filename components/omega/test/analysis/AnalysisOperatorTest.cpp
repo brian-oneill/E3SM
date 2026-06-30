@@ -192,10 +192,10 @@ void reportTest(const std::string &TestName, bool Passed) {
 //------------------------------------------------------------------------------
 // Template for testing SpatialMaxOp with any array type
 template<typename ArrayType>
-void testSpatialMaxOp_Type(const std::string &TypeName,
-                           const MachEnv *Env,
-                           const HorzMesh *Mesh,
-                           const VertCoord *VCoord) {
+void testSpatialMaxOpType(const std::string &TypeName,
+                          const MachEnv *Env,
+                          const HorzMesh *Mesh,
+                          const VertCoord *VCoord) {
    
    using Helper = TestHelper<ArrayType>;
    using ScalarT = typename Helper::ScalarT;
@@ -280,10 +280,10 @@ void testSpatialMaxOp_Type(const std::string &TypeName,
 //------------------------------------------------------------------------------
 // Template for testing SpatialMinOp with any array type
 template<typename ArrayType>
-void testSpatialMinOp_Type(const std::string &TypeName,
-                           const MachEnv *Env,
-                           const HorzMesh *Mesh,
-                           const VertCoord *VCoord) {
+void testSpatialMinOpType(const std::string &TypeName,
+                          const MachEnv *Env,
+                          const HorzMesh *Mesh,
+                          const VertCoord *VCoord) {
    
    using Helper = TestHelper<ArrayType>;
    using ScalarT = typename Helper::ScalarT;
@@ -351,10 +351,10 @@ void testSpatialMinOp_Type(const std::string &TypeName,
 //------------------------------------------------------------------------------
 // Template for testing SpatialMeanOp with any array type
 template<typename ArrayType>
-void testSpatialMeanOp_Type(const std::string &TypeName,
-                            const MachEnv *Env,
-                            const HorzMesh *Mesh,
-                            const VertCoord *VCoord) {
+void testSpatialMeanOpType(const std::string &TypeName,
+                           const MachEnv *Env,
+                           const HorzMesh *Mesh,
+                           const VertCoord *VCoord) {
    
    using Helper = TestHelper<ArrayType>;
    using ScalarT = typename Helper::ScalarT;
@@ -415,10 +415,10 @@ void testSpatialMeanOp_Type(const std::string &TypeName,
 //------------------------------------------------------------------------------
 // Template for testing SpatialStdDevOp with any array type
 template<typename ArrayType>
-void testSpatialStdDevOp_Type(const std::string &TypeName,
-                              const MachEnv *Env,
-                              const HorzMesh *Mesh,
-                              const VertCoord *VCoord) {
+void testSpatialStdDevOpType(const std::string &TypeName,
+                             const MachEnv *Env,
+                             const HorzMesh *Mesh,
+                             const VertCoord *VCoord) {
    
    using Helper = TestHelper<ArrayType>;
    using ScalarT = typename Helper::ScalarT;
@@ -485,11 +485,11 @@ void testSpatialStdDevOp_Type(const std::string &TypeName,
 //------------------------------------------------------------------------------
 // Template for testing TimeMeanOp with any array type
 template<typename ArrayType>
-void testTimeMeanOp_Type(const std::string &TypeName,
-                         const MachEnv *Env,
-                         const HorzMesh *Mesh,
-                         const VertCoord *VCoord,
-                         Clock *ModelClock) {
+void testTimeMeanOpType(const std::string &TypeName,
+                        const MachEnv *Env,
+                        const HorzMesh *Mesh,
+                        const VertCoord *VCoord,
+                        Clock *ModelClock) {
    
    using Helper = TestHelper<ArrayType>;
    using ScalarT = typename Helper::ScalarT;
@@ -692,22 +692,22 @@ void testSpatialMaxOp(const MachEnv *Env,
    LOG_INFO("Testing SpatialMaxOp with all array types...");
    
    // 1D arrays - 4 scalar types
-   testSpatialMaxOp_Type<Array1DI4>("1D-I4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array1DI8>("1D-I8", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array1DR4>("1D-R4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array1DR8>("1D-R8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
    
    // 2D arrays - 4 scalar types
-   testSpatialMaxOp_Type<Array2DI4>("2D-I4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array2DI8>("2D-I8", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array2DR4>("2D-R4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array2DR8>("2D-R8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
    
    // 3D arrays - 4 scalar types
-   testSpatialMaxOp_Type<Array3DI4>("3D-I4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array3DI8>("3D-I8", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array3DR4>("3D-R4", Env, Mesh, VCoord);
-   testSpatialMaxOp_Type<Array3DR8>("3D-R8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array3DR4>("3D-R4", Env, Mesh, VCoord);
+   testSpatialMaxOpType<Array3DR8>("3D-R8", Env, Mesh, VCoord);
 }
 
 //------------------------------------------------------------------------------
@@ -719,22 +719,22 @@ void testSpatialMinOp(const MachEnv *Env,
    LOG_INFO("Testing SpatialMinOp with all array types...");
    
    // 1D arrays
-   testSpatialMinOp_Type<Array1DI4>("1D-I4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array1DI8>("1D-I8", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array1DR4>("1D-R4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array1DR8>("1D-R8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
    
    // 2D arrays
-   testSpatialMinOp_Type<Array2DI4>("2D-I4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array2DI8>("2D-I8", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array2DR4>("2D-R4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array2DR8>("2D-R8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
    
    // 3D arrays
-   testSpatialMinOp_Type<Array3DI4>("3D-I4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array3DI8>("3D-I8", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array3DR4>("3D-R4", Env, Mesh, VCoord);
-   testSpatialMinOp_Type<Array3DR8>("3D-R8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array3DR4>("3D-R4", Env, Mesh, VCoord);
+   testSpatialMinOpType<Array3DR8>("3D-R8", Env, Mesh, VCoord);
 }
 
 //------------------------------------------------------------------------------
@@ -746,22 +746,22 @@ void testSpatialMeanOp(const MachEnv *Env,
    LOG_INFO("Testing SpatialMeanOp with all array types...");
    
    // 1D arrays
-   testSpatialMeanOp_Type<Array1DI4>("1D-I4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array1DI8>("1D-I8", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array1DR4>("1D-R4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array1DR8>("1D-R8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
    
    // 2D arrays
-   testSpatialMeanOp_Type<Array2DI4>("2D-I4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array2DI8>("2D-I8", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array2DR4>("2D-R4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array2DR8>("2D-R8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
    
    // 3D arrays
-   testSpatialMeanOp_Type<Array3DI4>("3D-I4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array3DI8>("3D-I8", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array3DR4>("3D-R4", Env, Mesh, VCoord);
-   testSpatialMeanOp_Type<Array3DR8>("3D-R8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array3DR4>("3D-R4", Env, Mesh, VCoord);
+   testSpatialMeanOpType<Array3DR8>("3D-R8", Env, Mesh, VCoord);
 }
 
 //------------------------------------------------------------------------------
@@ -773,22 +773,22 @@ void testSpatialStdDevOp(const MachEnv *Env,
    LOG_INFO("Testing SpatialStdDevOp with all array types...");
    
    // 1D arrays
-   testSpatialStdDevOp_Type<Array1DI4>("1D-I4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array1DI8>("1D-I8", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array1DR4>("1D-R4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array1DR8>("1D-R8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
    
    // 2D arrays
-   testSpatialStdDevOp_Type<Array2DI4>("2D-I4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array2DI8>("2D-I8", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array2DR4>("2D-R4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array2DR8>("2D-R8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
    
    // 3D arrays
-   testSpatialStdDevOp_Type<Array3DI4>("3D-I4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array3DI8>("3D-I8", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array3DR4>("3D-R4", Env, Mesh, VCoord);
-   testSpatialStdDevOp_Type<Array3DR8>("3D-R8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array3DR4>("3D-R4", Env, Mesh, VCoord);
+   testSpatialStdDevOpType<Array3DR8>("3D-R8", Env, Mesh, VCoord);
 }
 
 //------------------------------------------------------------------------------
@@ -801,22 +801,22 @@ void testTimeMeanOp(const MachEnv *Env,
    LOG_INFO("Testing TimeMeanOp with all array types...");
    
    // 1D arrays
-   testTimeMeanOp_Type<Array1DI4>("1D-I4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array1DI8>("1D-I8", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array1DR4>("1D-R4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array1DR8>("1D-R8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord, ModelClock);
    
    // 2D arrays
-   testTimeMeanOp_Type<Array2DI4>("2D-I4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array2DI8>("2D-I8", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array2DR4>("2D-R4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array2DR8>("2D-R8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord, ModelClock);
    
    // 3D arrays
-   testTimeMeanOp_Type<Array3DI4>("3D-I4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array3DI8>("3D-I8", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array3DR4>("3D-R4", Env, Mesh, VCoord, ModelClock);
-   testTimeMeanOp_Type<Array3DR8>("3D-R8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array3DR4>("3D-R4", Env, Mesh, VCoord, ModelClock);
+   testTimeMeanOpType<Array3DR8>("3D-R8", Env, Mesh, VCoord, ModelClock);
 }
 
 //===----------------------------------------------------------------------===//
