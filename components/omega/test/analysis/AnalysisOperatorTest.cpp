@@ -849,6 +849,114 @@ void testTimeMeanOp(const MachEnv *Env, const HorzMesh *Mesh,
 }
 
 //===----------------------------------------------------------------------===//
+// Initialization and finalization functions
+//===----------------------------------------------------------------------===//
+
+//------------------------------------------------------------------------------
+// Initialize needed modules
+void initAnalysisTest() {
+
+   I4 Err;
+
+   MachEnv::init(MPI_COMM_WORLD);
+   MachEnv *DefEnv  = MachEnv::getDefault();
+   MPI_Comm DefComm = DefEnv->getComm();
+
+   // Initialize the Logging system
+   initLogging(DefEnv);
+
+   LOG_INFO("=======================================================");
+   LOG_INFO("Analysis Operator Multi-Type Tests");
+   LOG_INFO("Testing 5 operators × 12 array types = 60 tests");
+   LOG_INFO("=======================================================");
+
+   // Open config file
+   Config("Omega");
+   Config::readAll("omega.yml");
+
+   // First step of time stepper initialization needed for IOstream
+   TimeStepper::init1();
+
+   // Get the model clock
+   TimeStepper *DefStepper = TimeStepper::getDefault();
+   Clock *ModelClock       = DefStepper->getClock();
+
+   // Initialize the IO system
+   IO::init(DefComm);
+
+   // Create the default decomposition (initializes the decomposition)
+   Decomp::init();
+
+   // Initialize streams
+   IOStream::init(ModelClock);
+
+   // Initialize fields
+   Field::init(ModelClock);
+
+   // Initialize the default halo
+   Err = Halo::init();
+   if (Err != 0)
+      ABORT_ERROR("AnalysisOperatorTest: error initializing default halo");
+
+   // Initialize the default mesh
+   HorzMesh::init();
+
+   // Initialize the default vertical coordinate
+   VertCoord::init();
+
+   // Initialize tracers
+   Tracers::init();
+
+   // Initialize auxiliary state
+   AuxiliaryState::init();
+
+   // Initialize equation of state
+   Eos::init();
+
+   // Initialize pressure gradient
+   PressureGrad::init();
+
+   // Initialize tendencies
+   Tendencies::init();
+
+   // Initialize vertical advection
+   VertAdv::init();
+
+   // Second step of time stepper initialization
+   TimeStepper::init2();
+
+   // Initialize ocean state
+   Err = OceanState::init();
+   if (Err != 0)
+      ABORT_ERROR("AnalysisOperatorTest: error initializing default state");
+
+   // Register all analysis operators
+   Analysis::init();
+}
+
+//------------------------------------------------------------------------------
+// Clean-up modules
+void finalizeAnalysisTest() {
+
+   Analysis::finalize();
+   IOStream::finalize();
+   OceanState::clear();
+   Tracers::clear();
+   AuxiliaryState::clear();
+   PressureGrad::clear();
+   Tendencies::clear();
+   VertAdv::clear();
+   VertCoord::clear();
+   TimeStepper::clear();
+   HorzMesh::clear();
+   Field::clear();
+   Dimension::clear();
+   Halo::clear();
+   Decomp::clear();
+   MachEnv::removeAll();
+}
+
+//===----------------------------------------------------------------------===//
 // Main test driver
 //===----------------------------------------------------------------------===//
 
@@ -861,55 +969,37 @@ int main(int argc, char *argv[]) {
    Pacer::initialize(MPI_COMM_WORLD);
    Pacer::setPrefix("Omega:");
    {
-      // Initialize Omega infrastructure
-      MachEnv::init(MPI_COMM_WORLD);
-      MachEnv *DefEnv = MachEnv::getDefault();
+      initAnalysisTest();
 
-      initLogging(DefEnv);
+      auto DefEnv     = MachEnv::getDefault();
+      auto DefStepper = TimeStepper::getDefault();
+      auto Mesh       = HorzMesh::getDefault();
+      auto VCoord     = VertCoord::getDefault();
+      auto ModelClock = DefStepper->getClock();
 
-      Config("Omega");
-      Config::readAll("omega.yml");
-
-      TimeStepper::init1();
-      TimeStepper *DefStepper = TimeStepper::getDefault();
-      Clock *ModelClock       = DefStepper->getClock();
-
-      IO::init(DefEnv->getComm());
-      Decomp::init();
-      IOStream::init(ModelClock);
-      Field::init(ModelClock);
-      Err = Halo::init();
-      if (Err != 0)
-         ABORT_ERROR("AnalysisOperatorTest: Error initializing default halo");
-      HorzMesh::init();
-      VertCoord::init();
-      Tracers::init();
-      AuxiliaryState::init();
-      Eos::init();
-      PressureGrad::init();
-      Tendencies::init();
-      VertAdv::init();
-      TimeStepper::init2();
-      Err = OceanState::init();
-      if (Err != 0)
-         ABORT_ERROR("AnalysisOperatorTest: Error initializing default state");
-
-      auto Mesh   = HorzMesh::getDefault();
-      auto VCoord = VertCoord::getDefault();
-
-      // Register all analysis operators
-      Analysis::init();
-
+      LOG_INFO("");
+      LOG_INFO("--- Testing SpatialMaxOp (12 array types) ---");
       testSpatialMaxOp(DefEnv, Mesh, VCoord);
 
+      LOG_INFO("");
+      LOG_INFO("--- Testing SpatialMinOp (12 array types) ---");
       testSpatialMinOp(DefEnv, Mesh, VCoord);
 
+      LOG_INFO("");
+      LOG_INFO("--- Testing SpatialMeanOp (12 array types) ---");
       testSpatialMeanOp(DefEnv, Mesh, VCoord);
 
+      LOG_INFO("");
+      LOG_INFO("--- Testing SpatialStdDevOp (12 array types) ---");
       testSpatialStdDevOp(DefEnv, Mesh, VCoord);
 
+      LOG_INFO("");
+      LOG_INFO("--- Testing TimeMeanOp (12 array types) ---");
       testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
 
+      // Report summary
+      LOG_INFO("");
+      LOG_INFO("=======================================================");
       LOG_INFO("Test Summary:");
       LOG_INFO("  Total tests: {}", NumTests);
       LOG_INFO("  Passed: {}", NumPassed);
@@ -917,30 +1007,10 @@ int main(int argc, char *argv[]) {
       LOG_INFO("=======================================================");
 
       if (NumFailed > 0) {
-         LOG_ERROR("AnalysisOperatorTest Failure");
-         LOG_ERROR("  Total tests: {}", NumTests);
-         LOG_ERROR("  Passed: {}", NumPassed);
-         LOG_ERROR("  Failed: {}", NumFailed);
          Err = 1;
       }
 
-      // Cleanup
-      Analysis::finalize();
-      IOStream::finalize();
-      OceanState::clear();
-      Tracers::clear();
-      AuxiliaryState::clear();
-      PressureGrad::clear();
-      Tendencies::clear();
-      VertAdv::clear();
-      VertCoord::clear();
-      TimeStepper::clear();
-      HorzMesh::clear();
-      Field::clear();
-      Dimension::clear();
-      Halo::clear();
-      Decomp::clear();
-      MachEnv::removeAll();
+      finalizeAnalysisTest();
    }
    Pacer::finalize();
    Kokkos::finalize();

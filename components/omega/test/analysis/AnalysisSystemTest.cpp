@@ -636,6 +636,117 @@ void testStreamOutput() {
 }
 
 //===----------------------------------------------------------------------===//
+// Initialization and finalization functions
+//===----------------------------------------------------------------------===//
+
+//------------------------------------------------------------------------------
+// Initialize needed modules
+void initAnalysisSystemTest() {
+
+   MachEnv::init(MPI_COMM_WORLD);
+   MachEnv *DefEnv  = MachEnv::getDefault();
+   MPI_Comm DefComm = DefEnv->getComm();
+
+   // Initialize the Logging system
+   initLogging(DefEnv);
+
+   // Open config file
+   Config("Omega");
+   Config::readAll("omega.yml");
+
+   // First step of time stepper initialization needed for IOstream
+   TimeStepper::init1();
+
+   // Get the model clock
+   TimeStepper *DefStepper = TimeStepper::getDefault();
+   Clock *ModelClock       = DefStepper->getClock();
+
+   // Initialize the IO system
+   IO::init(DefComm);
+
+   // Create the default decomposition (initializes the decomposition)
+   Decomp::init();
+
+   // Initialize streams
+   IOStream::init(ModelClock);
+
+   // Initialize fields
+   Field::init(ModelClock);
+
+   // Initialize the default halo
+   Halo::init();
+
+   // Initialize the default mesh
+   HorzMesh::init();
+
+   // Initialize the default vertical coordinate
+   VertCoord::init();
+
+   // Initialize tracers
+   Tracers::init();
+
+   // Initialize auxiliary state
+   AuxiliaryState::init();
+
+   // Initialize equation of state
+   Eos::init();
+
+   // Initialize pressure gradient
+   PressureGrad::init();
+
+   // Initialize tendencies
+   Tendencies::init();
+
+   // Initialize vertical advection
+   VertAdv::init();
+
+   // Second step of time stepper initialization
+   TimeStepper::init2();
+
+   // Initialize ocean state
+   OceanState::init();
+
+   // Validate streams
+   bool StreamsValid = IOStream::validateAll();
+   if (!StreamsValid) {
+      LOG_ERROR("Stream validation failed");
+   }
+
+   // Read initial state
+   Metadata ReqMeta;
+   Error Err1 = IOStream::read("InitialState", ModelClock, ReqMeta);
+   if (Err1.isFail()) {
+      LOG_ERROR("Failed to read initial state");
+   }
+
+   // Initialize Analysis module (creates operators, resolves dependencies,
+   // sets alarms)
+   Analysis::init();
+}
+
+//------------------------------------------------------------------------------
+// Clean-up modules
+void finalizeAnalysisSystemTest() {
+
+   Analysis::finalize();
+   IOStream::finalize();
+   OceanState::clear();
+   Tracers::clear();
+   AuxiliaryState::clear();
+   PressureGrad::clear();
+   Tendencies::clear();
+   VertAdv::clear();
+   VertCoord::clear();
+   TimeStepper::clear();
+   HorzMesh::clear();
+   Field::clear();
+   Dimension::clear();
+   Halo::clear();
+   Decomp::clear();
+   MachEnv::removeAll();
+}
+
+//===----------------------------------------------------------------------===//
 // Main test driver
 //===----------------------------------------------------------------------===//
 
@@ -648,106 +759,68 @@ int main(int argc, char *argv[]) {
    Pacer::initialize(MPI_COMM_WORLD);
    Pacer::setPrefix("Omega:");
    {
-      // Initialize full Omega infrastructure for integration tests
-      MachEnv::init(MPI_COMM_WORLD);
-      MachEnv *DefEnv  = MachEnv::getDefault();
-      MPI_Comm DefComm = DefEnv->getComm();
+      initAnalysisSystemTest();
 
-      initLogging(DefEnv);
+      auto DefEnv     = MachEnv::getDefault();
+      auto DefStepper = TimeStepper::getDefault();
+      auto Mesh       = HorzMesh::getDefault();
+      auto VCoord     = VertCoord::getDefault();
+      auto ModelClock = DefStepper->getClock();
 
-      Config("Omega");
-      Config::readAll("omega.yml");
+      LOG_INFO("=======================================================");
+      LOG_INFO("Analysis System Tests");
+      LOG_INFO("=======================================================");
 
-      TimeStepper::init1();
-      TimeStepper *DefStepper = TimeStepper::getDefault();
-      Clock *ModelClock       = DefStepper->getClock();
-
-      IO::init(DefComm);
-      Decomp::init();
-      IOStream::init(ModelClock);
-      Field::init(ModelClock);
-      Halo::init();
-      HorzMesh::init();
-      VertCoord::init();
-      Tracers::init();
-      AuxiliaryState::init();
-      Eos::init();
-      PressureGrad::init();
-      Tendencies::init();
-      VertAdv::init();
-      TimeStepper::init2();
-      OceanState::init();
-
-      // Validate streams
-      bool StreamsValid = IOStream::validateAll();
-      if (!StreamsValid) {
-         LOG_ERROR("Stream validation failed");
-      }
-
-      // Read initial state
-      Metadata ReqMeta;
-      Error Err1 = IOStream::read("InitialState", ModelClock, ReqMeta);
-      if (Err1.isFail()) {
-         LOG_ERROR("Failed to read initial state");
-      }
-
-      // Initialize Analysis module (creates operators, resolves dependencies,
-      // sets alarms)
-      Analysis::init();
-
-      // Dependency Resolution and Execution Order
+      // Test 5.2: Dependency Resolution and Execution Order
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.2: Dependency Resolution ---");
       testSharedIntermediates();
       testUpstreamDependencies();
       testCacheValidation();
 
-      // Alarm System Verification
+      // Test 5.3: Alarm System Verification
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.3: Alarm System ---");
       testTerminalOperatorAlarms();
       testTemporalOperatorAlarms();
       testAlarmPropagation();
 
-      // Factory Registration and Type Dispatch
-      auto Mesh   = HorzMesh::getDefault();
-      auto VCoord = VertCoord::getDefault();
+      // Test 5.4: Factory Registration and Type Dispatch
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.4: Factory Registration ---");
       testFactoryCreatesValidOperators();
       testFactoryTypeDispatch(DefEnv, Mesh, VCoord);
       testFactoryDifferentFieldTypes(Mesh, VCoord);
       testFactoryInstantiateAll(DefEnv, Mesh, VCoord);
 
-      // Configuration Parsing and Validation
+      // Test 5.5: Configuration Parsing and Validation
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.5: Configuration Parsing ---");
       testOperatorChainParsing();
       testFieldReuseInChains();
       testStreamParameterApplication();
 
-      // End-to-End Integration
+      // Test 5.6: End-to-End Integration
+      LOG_INFO("");
+      LOG_INFO("--- Test 5.6: End-to-End Integration ---");
       testComputeAllExecution(ModelClock);
       testOutputFieldsCreated();
       testStreamOutput();
 
+      // Report summary
+      LOG_INFO("");
+      LOG_INFO("=======================================================");
+      LOG_INFO("Test Summary:");
+      LOG_INFO("  Total tests: {}", NumTests);
+      LOG_INFO("  Passed: {}", NumPassed);
+      LOG_INFO("  Failed: {}", NumFailed);
+      LOG_INFO("=======================================================");
+
       if (NumFailed > 0) {
          ErrCode = 1;
-         LOG_ERROR("AnalysisSystemTest Failure");
-         LOG_INFO("  Total tests: {}", NumTests);
-         LOG_INFO("  Passed: {}", NumPassed);
-         LOG_INFO("  Failed: {}", NumFailed);
       }
 
-      // Cleanup
-      Analysis::finalize();
-      IOStream::finalize();
-      OceanState::clear();
-      Tracers::clear();
-      AuxiliaryState::clear();
-      PressureGrad::clear();
-      Tendencies::clear();
-      VertAdv::clear();
-      VertCoord::clear();
-      TimeStepper::clear();
-      HorzMesh::clear();
-      Field::clear();
-      Dimension::clear();
-      Halo::clear();
-      Decomp::clear();
-      MachEnv::removeAll();
+      finalizeAnalysisSystemTest();
    }
    Pacer::finalize();
    Kokkos::finalize();
