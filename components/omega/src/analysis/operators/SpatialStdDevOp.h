@@ -143,35 +143,35 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
 
       // Construct index range for input data to exclude halo cells and inactive
       // layers Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
-      std::vector<I4> indxRange;
+      std::vector<I4> IndxRange;
 
       if (NDims == 1) {
          // 1D array: horizontal dimension only
-         indxRange = {0, NOwned - 1};
+         IndxRange = {0, NOwned - 1};
       } else if (NDims == 2) {
          // 2D array: (horizontal, vertical)
-         indxRange = {0, NOwned - 1, 0, NVertLayers - 1};
+         IndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
       } else {
          // 3D+ array: (extra dims..., horizontal, vertical)
-         indxRange.resize(2 * NDims);
+         IndxRange.resize(2 * NDims);
 
          // Extra dimensions: include full extent
-         for (I4 i = 0; i < NDims - 2; ++i) {
-            indxRange[2 * i]     = 0;
-            indxRange[2 * i + 1] = InputData.extent(i) - 1;
+         for (I4 I = 0; I < NDims - 2; ++I) {
+            IndxRange[2 * I]     = 0;
+            IndxRange[2 * I + 1] = InputData.extent(I) - 1;
          }
 
          // Horizontal dimension (second to last): exclude halo
-         indxRange[2 * (NDims - 2)]     = 0;
-         indxRange[2 * (NDims - 2) + 1] = NOwned - 1;
+         IndxRange[2 * (NDims - 2)]     = 0;
+         IndxRange[2 * (NDims - 2) + 1] = NOwned - 1;
 
          // Vertical dimension (last): all layers
-         indxRange[2 * (NDims - 1)]     = 0;
-         indxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
+         IndxRange[2 * (NDims - 1)]     = 0;
+         IndxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
       }
 
       // Index range for mask array (always 2D: horizontal × vertical)
-      std::vector<I4> maskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
+      std::vector<I4> MaskIndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
 
       // Retrieve spatial mean value computed by upstream SpatialMeanOp
       auto MeanField = Field::get(InputNames[1]);
@@ -182,28 +182,28 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
       I4 NSize           = static_cast<I4>(InputData.size());
       const int Arr1Rank = InputData.rank;
       parallelFor(
-          {NSize}, KOKKOS_LAMBDA(const int flat_idx) {
+          {NSize}, KOKKOS_LAMBDA(const int FlatIdx) {
              // Compute horizontal and vertical indices from flat index
              // (used for debugging/validation, though not needed for this
              // computation)
-             int horizIdx = 0;
-             int vertIdx  = 0;
+             int HorizIdx = 0;
+             int VertIdx  = 0;
 
              if (Arr1Rank == 1) {
-                horizIdx = flat_idx;
+                HorizIdx = FlatIdx;
              } else if (Arr1Rank == 2) {
-                horizIdx = flat_idx / InputData.extent(1);
-                vertIdx  = flat_idx % InputData.extent(1);
+                HorizIdx = FlatIdx / InputData.extent(1);
+                VertIdx  = FlatIdx % InputData.extent(1);
              } else {
-                int idx_last_two = flat_idx % (InputData.extent(Arr1Rank - 2) *
+                int IdxLastTwo = FlatIdx % (InputData.extent(Arr1Rank - 2) *
                                                InputData.extent(Arr1Rank - 1));
-                horizIdx = idx_last_two / InputData.extent(Arr1Rank - 1);
-                vertIdx  = idx_last_two % InputData.extent(Arr1Rank - 1);
+                HorizIdx = IdxLastTwo / InputData.extent(Arr1Rank - 1);
+                VertIdx  = IdxLastTwo % InputData.extent(Arr1Rank - 1);
              }
 
              // Compute squared difference and store in work array
-             auto Diff = InputData.data()[flat_idx] - MeanVal(0);
-             LocWorkArray.data()[flat_idx] = Diff * Diff;
+             auto Diff = InputData.data()[FlatIdx] - MeanVal(0);
+             LocWorkArray.data()[FlatIdx] = Diff * Diff;
           });
 
       // Compute masked sum of squared differences and sum of mask values
@@ -223,28 +223,28 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
              {static_cast<I4>(MaskArray.extent(0))},
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
 
-         WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &indxRange);
+         WorkSum = globalMaskedSum(WorkArray, Mask1D, Comm, &IndxRange);
 
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
-            CachedMaskSum = globalSum(Mask1D, Comm, &indxRange);
+            CachedMaskSum = globalSum(Mask1D, Comm, &IndxRange);
          }
          MaskSum = CachedMaskSum;
       } else {
          // For 2D+ arrays, use full 2D mask
-         WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &indxRange);
+         WorkSum = globalMaskedSum(WorkArray, MaskArray, Comm, &IndxRange);
 
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
-            CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+            CachedMaskSum = globalSum(MaskArray, Comm, &MaskIndxRange);
 
             // For 3D+ arrays, scale mask sum by product of extra dimension sizes.
             // This accounts for replication of the 2D mask across extra
             // dimensions
             if (NDims > 2) {
                I4 ExtraDimSize = 1;
-               for (I4 i = 0; i < NDims - 2; ++i) {
-                  ExtraDimSize *= InputData.extent(i);
+               for (I4 I = 0; I < NDims - 2; ++I) {
+                  ExtraDimSize *= InputData.extent(I);
                }
                CachedMaskSum *= ExtraDimSize;
             }
