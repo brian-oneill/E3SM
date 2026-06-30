@@ -21,7 +21,7 @@
 /// statistics, creates separate IOStreams for each unique (period, type)
 /// combination, and associates operators with the appropriate streams.
 ///
-/// Example usage in YAML config:
+/// Example usage in config:
 /// \code
 /// GlobalStats:
 ///   Fields: [Temperature, Salinity]
