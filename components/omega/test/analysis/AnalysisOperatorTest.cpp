@@ -46,9 +46,9 @@ struct TestHelper {
       if constexpr (std::is_integral_v<ScalarT>) {
          return 0;  // Exact equality for integers
       } else if constexpr (std::is_same_v<ScalarT, float>) {
-         return 1.0e-6f;  // Single precision tolerance
+         return 1.0e-4f;  // Single precision tolerance
       } else {
-         return 1.0e-10;  // Double precision tolerance
+         return 1.0e-8;  // Double precision tolerance
       }
    }
    

@@ -1,5 +1,4 @@
-//===-- analysis/AnalysisGroup.cpp - AnalysisGroup implementation -*- C++
-//-*-===//
+//===- analysis/AnalysisGroup.cpp - AnalysisGroup implementation -*- C++-*-===//
 //
 // Implementation of AnalysisGroup base class methods. The key method is
 // createAnalysisGroupStreams(), which groups operator chains by their output

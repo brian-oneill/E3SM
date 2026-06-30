@@ -57,8 +57,7 @@ namespace OMEGA {
 /// Parses a frequency string into numeric and unit components
 /// Frequency strings are of the form "1day", "6hour", "1month", etc.
 /// Returns a vector with two elements: [0] = numeric part, [1] = units
-/// If units do not end with 's', appends 's' for consistency with
-/// TimeInterval
+/// If units do not end with 's', appends 's'.
 std::vector<std::string>
 parseFreqStr(const std::string &FreqStr ///< [in] frequency string to parse
 );
@@ -111,8 +110,8 @@ class Analysis {
 
    /// Computes all analysis fields whose alarms are ringing at the current
    /// timestep. This function is called once per timestep from the main
-   /// timestepping loop. It iterates over all operator nodes and triggers
-   /// recursive computation for any node with a ringing alarm.
+   /// driver. It iterates over all operator nodes and triggers recursive
+   /// computation for any node with a ringing alarm.
    void computeAll();
 
    /// Parses an underscore-delimited operator chain string and instantiates

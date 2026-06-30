@@ -169,7 +169,7 @@ template <typename ArrayT> class TimeMeanOp : public AnalysisOperator {
    /// store the final time-averaged mean
    ArrayT OutputData;
 
-   /// Number of timesteps accumulated in current averaging period
+   /// Number of values accumulated in current averaging period
    I4 NumAccum;
 
    /// Total size of input/output arrays for parallel iteration
