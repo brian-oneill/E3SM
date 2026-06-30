@@ -81,13 +81,12 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
                         static_cast<ScalarT>(0),              // Min valid value
                         std::numeric_limits<ScalarT>::max(),  // Max valid value
                         -std::numeric_limits<ScalarT>::max(), // Fill value
-                        NDims,   // Dimension lengths
+                        NDims,   // Rank
                         DimNames // Dimension names
           );
 
       // Attach output data array to Field
-      OutputField->template attachData<Array1D_t<ScalarT>>(
-          OutputData);
+      OutputField->template attachData<Array1D_t<ScalarT>>(OutputData);
 
       // Allocate work array matching input field layout
       // Used to store squared differences: (x - mean)^2
@@ -176,8 +175,7 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
 
       // Retrieve spatial mean value computed by upstream SpatialMeanOp
       auto MeanField = Field::get(InputNames[1]);
-      auto MeanVal =
-          MeanField->template getDataArray<Array1D_t<ScalarT>>();
+      auto MeanVal = MeanField->template getDataArray<Array1D_t<ScalarT>>();
 
       // Fill work array with squared differences: (x - mean)^2
       // Mask will be applied later during reduction
@@ -239,6 +237,17 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
          // Use cached mask sum if available, otherwise compute and cache it
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
+
+            // For 3D+ arrays, scale mask sum by product of extra dimension sizes.
+            // This accounts for replication of the 2D mask across extra
+            // dimensions
+            if (NDims > 2) {
+               I4 ExtraDimSize = 1;
+               for (I4 i = 0; i < NDims - 2; ++i) {
+                  ExtraDimSize *= InputData.extent(i);
+               }
+               CachedMaskSum *= ExtraDimSize;
+            }
          }
          MaskSum = CachedMaskSum;
       }
@@ -247,7 +256,7 @@ template <typename ArrayT> class SpatialStdDevOp : public AnalysisOperator {
       auto Variance = WorkSum / MaskSum;
 
       // Compute standard deviation: square root of variance
-      auto StdDev = std::sqrt(Variance);
+      StdDev = std::sqrt(Variance);
 
       // Write result to output array
       deepCopy(OutputData, StdDev);

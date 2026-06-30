@@ -200,7 +200,7 @@ class Analysis {
    /// Registers all built-in operator types with the AnalysisOpFactory.
    /// Called once during init() before any operators are instantiated.
    /// Each operator template is registered with all supported array type
-   /// variants (scalar types, ranks, memory locations).
+   /// variants (scalar types, ranks, memory locations). Defined in Ops.cpp.
    static void registerAllBaseAnalysisOperators();
 
    /// Post-hoc dependency resolution: iterates over all operator nodes and

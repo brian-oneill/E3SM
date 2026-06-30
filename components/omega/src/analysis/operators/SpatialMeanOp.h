@@ -42,7 +42,7 @@ template <typename ArrayT> class SpatialMeanOp : public AnalysisOperator {
    /// registers the output Field in the Field registry. The output Field
    /// name is constructed as InputName + "_SpatialMean".
    SpatialMeanOp(const std::vector<std::string>
-                     &UpstreamNames, ///< [in] input field names
+                 &UpstreamNames,     ///< [in] input field names
                  Config Options      ///< [in] operator config
                  )
        : AnalysisOperator("SpatialMean") {
@@ -73,13 +73,12 @@ template <typename ArrayT> class SpatialMeanOp : public AnalysisOperator {
                         -std::numeric_limits<ScalarT>::max(), // Min valid value
                         std::numeric_limits<ScalarT>::max(),  // Max valid value
                         -std::numeric_limits<ScalarT>::max(), // Fill value
-                        NDims,   // Dimension lengths
+                        NDims,   // Rank
                         DimNames // Dimension names
           );
 
       // Attach output data array to Field
-      OutputField->template attachData<Array1D_t<ScalarT>>(
-          OutputData);
+      OutputField->template attachData<Array1D_t<ScalarT>>(OutputData);
 
    } // end constructor
 
@@ -188,8 +187,8 @@ template <typename ArrayT> class SpatialMeanOp : public AnalysisOperator {
          if (CachedMaskSum < 0) {
             CachedMaskSum = globalSum(MaskArray, Comm, &maskIndxRange);
 
-            // For 3D+ arrays, scale mask sum by product of extra dimension
-            // sizes This accounts for replication of the 2D mask across extra
+            // For 3D+ arrays, scale mask sum by product of extra dimension sizes.
+            // This accounts for replication of the 2D mask across extra
             // dimensions
             if (NDims > 2) {
                I4 ExtraDimSize = 1;
@@ -213,10 +212,6 @@ template <typename ArrayT> class SpatialMeanOp : public AnalysisOperator {
       FieldComputed = true;
 
    } // end compute
-
-   /// Returns the computed spatial mean value. Used for accessing the result
-   /// directly without retrieving from the Field registry.
-   ScalarT getVal() { return SpatialMean; }
 
  private:
    /// Output data array holding the computed spatial mean (single scalar value)

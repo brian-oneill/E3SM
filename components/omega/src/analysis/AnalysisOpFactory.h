@@ -142,7 +142,7 @@ class AnalysisOpFactory {
    static void registerAllArrayVariants(
        const std::string &baseName ///< [in] base operator name
    ) {
-// Define a macro that registers one variant
+// Define a macro that registers one variant with registerOperator
 #define REGISTER_VARIANT(dtype, rank, memloc, ArrayT)                     \
    registerOperator(baseName + "_" #ArrayT + "_" #memloc,                 \
                     [](const std::vector<std::string> &names, Config c) { \

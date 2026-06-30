@@ -21,6 +21,14 @@ namespace OMEGA {
 // registration call expands a single operator template over all supported
 // array type combinations (scalar type, rank, memory location), enabling
 // type-safe dispatch at operator creation time.
+//
+// This method is defined here in operators/Ops.cpp rather than in Analysis.cpp
+// to maintain separation of concerns: Analysis.cpp handles core Analysis
+// initialization and lifecycle management, while this file centralizes all
+// operator-specific registration logic. Co-locating the registration function
+// with the operator includes (Ops.h) keeps operator management centralized in
+// the operators directory and allows adding new operators without modifying
+// Analysis.cpp.
 void Analysis::registerAllBaseAnalysisOperators() {
 
    AnalysisOpFactory::registerAllArrayVariants<SpatialMaxOp>("SpatialMax");

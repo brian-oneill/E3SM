@@ -74,13 +74,12 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
                         -std::numeric_limits<ScalarT>::max(), // Min valid value
                         std::numeric_limits<ScalarT>::max(),  // Max valid value
                         -std::numeric_limits<ScalarT>::max(), // Fill value
-                        NDims,   // Dimension lengths
+                        NDims,   // Rank
                         DimNames // Dimension names
           );
 
       // Attach output data array to Field
-      OutputField->template attachData<Array1D_t<ScalarT>>(
-          OutputData);
+      OutputField->template attachData<Array1D_t<ScalarT>>(OutputData);
 
    } // end constructor
 

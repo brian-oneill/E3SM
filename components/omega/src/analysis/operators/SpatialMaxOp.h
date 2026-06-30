@@ -18,7 +18,7 @@
 ///
 /// For 1D inputs, the horizontal-only mask (k=0 column of the 2D mask) is used.
 /// For 2D+ inputs, the full 2D mask (horizontal × vertical) is applied. Index
-/// ranges are constructed to exclude halo cells and include only owned entities
+/// ranges are constructed to exclude halo cells and include only owned elements
 /// and active vertical layers.
 ///
 //===----------------------------------------------------------------------===//
@@ -74,13 +74,12 @@ template <typename ArrayT> class SpatialMaxOp : public AnalysisOperator {
                         -std::numeric_limits<ScalarT>::max(), // Min valid value
                         std::numeric_limits<ScalarT>::max(),  // Max valid value
                         -std::numeric_limits<ScalarT>::max(), // Fill value
-                        NDims,   // Dimension lengths
+                        NDims,   // Rank
                         DimNames // Dimension names
           );
 
       // Attach output data array to Field
-      OutputField->template attachData<Array1D_t<ScalarT>>(
-          OutputData);
+      OutputField->template attachData<Array1D_t<ScalarT>>(OutputData);
 
    } // end constructor
 

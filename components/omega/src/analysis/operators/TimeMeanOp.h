@@ -83,7 +83,7 @@ template <typename ArrayT> class TimeMeanOp : public AnalysisOperator {
                         -std::numeric_limits<ScalarT>::max(), // Min valid value
                         std::numeric_limits<ScalarT>::max(),  // Max valid value
                         -std::numeric_limits<ScalarT>::max(), // Fill value
-                        NDims,   // Dimension lengths
+                        NDims,   // Rank
                         DimNames // Dimension names
           );
 

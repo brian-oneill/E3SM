@@ -1,5 +1,4 @@
-//===-- analysis/AnalysisOpFactory.cpp - Factory implementation --*- C++
-//-*-===//
+//===-- analysis/AnalysisOpFactory.cpp - Factory implementation --*- C++-*-===//
 //
 // Implementation of AnalysisOpFactory static methods for operator registration
 // and creation. The factory maintains a runtime registry (Meyer's singleton)

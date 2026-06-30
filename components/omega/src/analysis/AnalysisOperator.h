@@ -65,14 +65,14 @@ Config makeOpConfig(const std::pair<std::string, T> &Param, Args... OtherArgs) {
 
 /// Type alias for operator parameter pairs. Used with opParam() helper
 /// to construct key-value pairs for makeOpConfig().
-template <typename T> using OpParam = std::pair<std::string, std::decay_t<T>>;
+template <typename T> using OpParamPair = std::pair<std::string, std::decay_t<T>>;
 
 /// Helper function to create operator parameter pairs with perfect
 /// forwarding. Usage: opParam("Key", Value) creates a pair suitable for
 /// makeOpConfig(). Type decay ensures no reference issues when pairs are
 /// passed to Config.
 template <typename T>
-OpParam<T> opParam(std::string Key, ///< [in] parameter name
+OpParamPair<T> opParam(std::string Key, ///< [in] parameter name
                    T &&Value        ///< [in] parameter value
 ) {
    return {std::move(Key), std::forward<T>(Value)};
@@ -105,7 +105,7 @@ class AnalysisOperator {
    /// Virtual destructor allows polymorphic deletion of derived classes
    virtual ~AnalysisOperator();
 
-   /// Returns the operator type name (e.g., "SpatialMean", "TimeMean")
+   /// Returns the operator type name (e.g., "SpatialMax", "TimeMean")
    const std::string getOperatorType();
 
    /// Returns the unique instance name for this operator, derived from the
@@ -142,8 +142,9 @@ class AnalysisOperator {
 
    /// Sets the period alarm for temporal reduction operators. The alarm
    /// pointer is used to detect when the accumulation period ends and the
-   /// operator should finalize its output (divide sum by sample count).
-   /// Default implementation does nothing; only temporal operators override.
+   /// operator should finalize its output (e.g. divide sum by sample count
+   /// for TimeMean). Default implementation does nothing; only temporal
+   /// operators override.
    virtual void setPeriodAlarm(Alarm *Alarm ///< [in] period alarm ptr
    ) {}
 

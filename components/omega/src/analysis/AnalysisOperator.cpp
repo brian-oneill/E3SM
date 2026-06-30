@@ -62,7 +62,7 @@ AnalysisOperator::~AnalysisOperator() {
 } // end destructor
 
 //------------------------------------------------------------------------------
-// Returns the operator type name (e.g., "SpatialMean", "TimeMean")
+// Returns the operator type name (e.g., "SpatialMax", "TimeMean")
 const std::string AnalysisOperator::getOperatorType() {
    return OperatorTypeName;
 } // end getOperatorType
