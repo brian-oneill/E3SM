@@ -126,31 +126,31 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
 
       // Construct index range to exclude halo cells and inactive layers
       // Format: [dim0_start, dim0_end, dim1_start, dim1_end, ...]
-      std::vector<I4> indxRange;
+      std::vector<I4> IndxRange;
 
       if (NDims == 1) {
          // 1D array: horizontal dimension only
-         indxRange = {0, NOwned - 1};
+         IndxRange = {0, NOwned - 1};
       } else if (NDims == 2) {
          // 2D array: (horizontal, vertical)
-         indxRange = {0, NOwned - 1, 0, NVertLayers - 1};
+         IndxRange = {0, NOwned - 1, 0, NVertLayers - 1};
       } else {
          // 3D+ array: (extra dims..., horizontal, vertical)
-         indxRange.resize(2 * NDims);
+         IndxRange.resize(2 * NDims);
 
          // Extra dimensions: include full extent
-         for (I4 i = 0; i < NDims - 2; ++i) {
-            indxRange[2 * i]     = 0;
-            indxRange[2 * i + 1] = InputData.extent(i) - 1;
+         for (I4 I = 0; I < NDims - 2; ++I) {
+            IndxRange[2 * I]     = 0;
+            IndxRange[2 * I + 1] = InputData.extent(I) - 1;
          }
 
          // Horizontal dimension (second to last): exclude halo
-         indxRange[2 * (NDims - 2)]     = 0;
-         indxRange[2 * (NDims - 2) + 1] = NOwned - 1;
+         IndxRange[2 * (NDims - 2)]     = 0;
+         IndxRange[2 * (NDims - 2) + 1] = NOwned - 1;
 
          // Vertical dimension (last): all layers
-         indxRange[2 * (NDims - 1)]     = 0;
-         indxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
+         IndxRange[2 * (NDims - 1)]     = 0;
+         IndxRange[2 * (NDims - 1) + 1] = NVertLayers - 1;
       }
 
       // Compute global masked minimum
@@ -167,10 +167,10 @@ template <typename ArrayT> class SpatialMinOp : public AnalysisOperator {
              {static_cast<I4>(MaskArray.extent(0))},
              KOKKOS_LAMBDA(int I) { LocalMask1D(I) = LocalMaskArray(I, 0); });
 
-         SpatialMin = globalMaskedMin(InputData, Mask1D, Comm, &indxRange);
+         SpatialMin = globalMaskedMin(InputData, Mask1D, Comm, &IndxRange);
       } else {
          // For 2D+ arrays, use full 2D mask
-         SpatialMin = globalMaskedMin(InputData, MaskArray, Comm, &indxRange);
+         SpatialMin = globalMaskedMin(InputData, MaskArray, Comm, &IndxRange);
       }
 
       // Write result to output array

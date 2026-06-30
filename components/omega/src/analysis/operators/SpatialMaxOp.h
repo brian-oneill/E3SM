@@ -139,9 +139,9 @@ template <typename ArrayT> class SpatialMaxOp : public AnalysisOperator {
          IndxRange.resize(2 * NDims);
 
          // Extra dimensions: include full extent
-         for (I4 i = 0; i < NDims - 2; ++i) {
-            IndxRange[2 * i]     = 0;
-            IndxRange[2 * i + 1] = InputData.extent(i) - 1;
+         for (I4 I = 0; I < NDims - 2; ++I) {
+            IndxRange[2 * I]     = 0;
+            IndxRange[2 * I + 1] = InputData.extent(I) - 1;
          }
 
          // Horizontal dimension (second to last): exclude halo
