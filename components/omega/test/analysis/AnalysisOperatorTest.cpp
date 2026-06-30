@@ -26,7 +26,7 @@
 using namespace OMEGA;
 
 // Test result tracking
-int NumTests = 0;
+int NumTests  = 0;
 int NumPassed = 0;
 int NumFailed = 0;
 
@@ -36,34 +36,35 @@ int NumFailed = 0;
 
 //------------------------------------------------------------------------------
 // Template struct consolidating all test helper functions
-template<typename ArrayType>
-struct TestHelper {
-   using ScalarT = typename ArrayType::non_const_value_type;
+template <typename ArrayType> struct TestHelper {
+   using ScalarT             = typename ArrayType::non_const_value_type;
    static constexpr int Rank = ArrayType::rank;
-   
+
    // Type-aware tolerance for floating point comparisons
    static ScalarT getTolerance() {
       if constexpr (std::is_integral_v<ScalarT>) {
-         return 0;  // Exact equality for integers
+         return 0; // Exact equality for integers
       } else if constexpr (std::is_same_v<ScalarT, float>) {
-         return 1.0e-4f;  // Single precision tolerance
+         return 1.0e-4f; // Single precision tolerance
       } else {
-         return 1.0e-8;  // Double precision tolerance
+         return 1.0e-8; // Double precision tolerance
       }
    }
-   
+
    // Get dimensions based on rank
-   static std::vector<I4> getDims(const HorzMesh *Mesh, const VertCoord *VCoord) {
+   static std::vector<I4> getDims(const HorzMesh *Mesh,
+                                  const VertCoord *VCoord) {
       if constexpr (Rank == 1) {
-         return {Mesh->NCellsSize};  // 1D horizontal array over cells
+         return {Mesh->NCellsSize}; // 1D horizontal array over cells
       } else if constexpr (Rank == 2) {
          return {Mesh->NCellsSize, VCoord->NVertLayers};
       } else if constexpr (Rank == 3) {
-         return {Tracers::getNumTracers(), Mesh->NCellsSize, VCoord->NVertLayers};
+         return {Tracers::getNumTracers(), Mesh->NCellsSize,
+                 VCoord->NVertLayers};
       }
       return {};
    }
-   
+
    // Get dimension names
    static std::vector<std::string> getDimNames() {
       if constexpr (Rank == 1) {
@@ -75,60 +76,42 @@ struct TestHelper {
       }
       return {};
    }
-   
+
    // Create test field for 1D arrays
-   template<int R = Rank>
+   template <int R = Rank>
    static typename std::enable_if<R == 1, void>::type
-   createField(const std::string &FieldName,
-               const std::vector<I4> &Dims,
+   createField(const std::string &FieldName, const std::vector<I4> &Dims,
                std::function<ScalarT(I4)> ValueFunc) {
-      
+
       auto DimNames = getDimNames();
-      auto TestField = Field::create(
-         FieldName,
-         "Test field for multi-type validation",
-         "m",
-         "",
-         -1.0e30,
-         1.0e30,
-         -1.0e30,
-         1,
-         DimNames
-      );
-      
+      auto TestField =
+          Field::create(FieldName, "Test field for multi-type validation", "m",
+                        "", -1.0e30, 1.0e30, -1.0e30, 1, DimNames);
+
       ArrayType TestData(FieldName + "_data", Dims[0]);
       TestField->attachData<ArrayType>(TestData);
-      
+
       auto TestDataHost = Kokkos::create_mirror_view(TestData);
       for (I4 i = 0; i < Dims[0]; ++i) {
          TestDataHost(i) = ValueFunc(i);
       }
       Kokkos::deep_copy(TestData, TestDataHost);
    }
-   
+
    // Create test field for 2D arrays
-   template<int R = Rank>
+   template <int R = Rank>
    static typename std::enable_if<R == 2, void>::type
-   createField(const std::string &FieldName,
-               const std::vector<I4> &Dims,
+   createField(const std::string &FieldName, const std::vector<I4> &Dims,
                std::function<ScalarT(I4, I4)> ValueFunc) {
-      
+
       auto DimNames = getDimNames();
-      auto TestField = Field::create(
-         FieldName,
-         "Test field for multi-type validation",
-         "m",
-         "",
-         -1.0e30,
-         1.0e30,
-         -1.0e30,
-         2,
-         DimNames
-      );
-      
+      auto TestField =
+          Field::create(FieldName, "Test field for multi-type validation", "m",
+                        "", -1.0e30, 1.0e30, -1.0e30, 2, DimNames);
+
       ArrayType TestData(FieldName + "_data", Dims[0], Dims[1]);
       TestField->attachData<ArrayType>(TestData);
-      
+
       auto TestDataHost = Kokkos::create_mirror_view(TestData);
       for (I4 i = 0; i < Dims[0]; ++i) {
          for (I4 j = 0; j < Dims[1]; ++j) {
@@ -137,30 +120,21 @@ struct TestHelper {
       }
       Kokkos::deep_copy(TestData, TestDataHost);
    }
-   
+
    // Create test field for 3D arrays
-   template<int R = Rank>
+   template <int R = Rank>
    static typename std::enable_if<R == 3, void>::type
-   createField(const std::string &FieldName,
-               const std::vector<I4> &Dims,
+   createField(const std::string &FieldName, const std::vector<I4> &Dims,
                std::function<ScalarT(I4, I4, I4)> ValueFunc) {
-      
+
       auto DimNames = getDimNames();
-      auto TestField = Field::create(
-         FieldName,
-         "Test field for multi-type validation",
-         "m",
-         "",
-         -1.0e30,
-         1.0e30,
-         -1.0e30,
-         3,
-         DimNames
-      );
-      
+      auto TestField =
+          Field::create(FieldName, "Test field for multi-type validation", "m",
+                        "", -1.0e30, 1.0e30, -1.0e30, 3, DimNames);
+
       ArrayType TestData(FieldName + "_data", Dims[0], Dims[1], Dims[2]);
       TestField->attachData<ArrayType>(TestData);
-      
+
       auto TestDataHost = Kokkos::create_mirror_view(TestData);
       for (I4 i = 0; i < Dims[0]; ++i) {
          for (I4 j = 0; j < Dims[1]; ++j) {
@@ -191,85 +165,93 @@ void reportTest(const std::string &TestName, bool Passed) {
 
 //------------------------------------------------------------------------------
 // Template for testing SpatialMaxOp with any array type
-template<typename ArrayType>
-void testSpatialMaxOpType(const std::string &TypeName,
-                          const MachEnv *Env,
-                          const HorzMesh *Mesh,
-                          const VertCoord *VCoord) {
-   
-   using Helper = TestHelper<ArrayType>;
-   using ScalarT = typename Helper::ScalarT;
+template <typename ArrayType>
+void testSpatialMaxOpType(const std::string &TypeName, const MachEnv *Env,
+                          const HorzMesh *Mesh, const VertCoord *VCoord) {
+
+   using Helper       = TestHelper<ArrayType>;
+   using ScalarT      = typename Helper::ScalarT;
    constexpr int Rank = Helper::Rank;
-   
-   std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
+
+   std::vector<I4> Dims  = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMax_" + TypeName;
-   
+
    // Create test field with values based on global cell IDs for MPI correctness
    // Get global cell IDs to ensure unique values across all ranks
-   auto Decomp = Decomp::getDefault();
-   auto CellIDH = Decomp->CellIDH;  // Global cell IDs (1-based)
-   
+   auto Decomp  = Decomp::getDefault();
+   auto CellIDH = Decomp->CellIDH; // Global cell IDs (1-based)
+
    if constexpr (Rank == 1) {
-      Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i) -> ScalarT {
-            return static_cast<ScalarT>(CellIDH(i) - 1);  // Convert to 0-based
-         });
+      Helper::createField(FieldName, Dims, [CellIDH](I4 i) -> ScalarT {
+         return static_cast<ScalarT>(CellIDH(i) - 1); // Convert to 0-based
+      });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
-            // Unique value: cellID * NVertLayers + layerIndex
-            return static_cast<ScalarT>((CellIDH(i) - 1) * VCoord->NVertLayers + j);
-         });
+                          [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
+                             // Unique value: cellID * NVertLayers + layerIndex
+                             return static_cast<ScalarT>(
+                                 (CellIDH(i) - 1) * VCoord->NVertLayers + j);
+                          });
    } else if constexpr (Rank == 3) {
-      Helper::createField(FieldName, Dims,
-         [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
-            // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID * NVertLayers + layerIdx
-            return static_cast<ScalarT>(i * (Mesh->NCellsGlobal * VCoord->NVertLayers) + 
-                                        (CellIDH(j) - 1) * VCoord->NVertLayers + k);
-         });
+      Helper::createField(
+          FieldName, Dims,
+          [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
+             // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID
+             // * NVertLayers + layerIdx
+             return static_cast<ScalarT>(
+                 i * (Mesh->NCellsGlobal * VCoord->NVertLayers) +
+                 (CellIDH(j) - 1) * VCoord->NVertLayers + k);
+          });
    }
-   
-   // Compute expected max. The operator performs a global reduction across all ranks
-   // via MPI_Allreduce, so the expected maximum is based on global mesh properties.
-   // The maximum value corresponds to the largest indices in each dimension.
+
+   // Compute expected max. The operator performs a global reduction across all
+   // ranks via MPI_Allreduce, so the expected maximum is based on global mesh
+   // properties. The maximum value corresponds to the largest indices in each
+   // dimension.
    ScalarT ExpectedMax = 0;
-   
+
    if constexpr (Rank == 1) {
       // 1D: max is just the highest cell ID (0-based)
       ExpectedMax = static_cast<ScalarT>(Mesh->NCellsGlobal - 1);
    } else if constexpr (Rank == 2) {
       // 2D: max = (NCellsGlobal - 1) * NVertLayers + (NVertLayers - 1)
-      ExpectedMax = static_cast<ScalarT>((Mesh->NCellsGlobal - 1) * VCoord->NVertLayers + 
-                                         (VCoord->NVertLayers - 1));
+      ExpectedMax =
+          static_cast<ScalarT>((Mesh->NCellsGlobal - 1) * VCoord->NVertLayers +
+                               (VCoord->NVertLayers - 1));
    } else if constexpr (Rank == 3) {
-      // 3D: max = (NTracers - 1) * (NCellsGlobal * NVertLayers) + 
+      // 3D: max = (NTracers - 1) * (NCellsGlobal * NVertLayers) +
       //           (NCellsGlobal - 1) * NVertLayers + (NVertLayers - 1)
       I4 NTracers = Tracers::getNumTracers();
-      ExpectedMax = static_cast<ScalarT>((NTracers - 1) * (Mesh->NCellsGlobal * VCoord->NVertLayers) +
-                                         (Mesh->NCellsGlobal - 1) * VCoord->NVertLayers +
-                                         (VCoord->NVertLayers - 1));
+      ExpectedMax = static_cast<ScalarT>(
+          (NTracers - 1) * (Mesh->NCellsGlobal * VCoord->NVertLayers) +
+          (Mesh->NCellsGlobal - 1) * VCoord->NVertLayers +
+          (VCoord->NVertLayers - 1));
    }
 
    // Create and compute operator
    Config EmptyConfig;
-   auto MaxOp = AnalysisOpFactory::createOp("SpatialMax", {FieldName}, EmptyConfig);
+   auto MaxOp =
+       AnalysisOpFactory::createOp("SpatialMax", {FieldName}, EmptyConfig);
    MaxOp->initialize(Env, Mesh, VCoord, EmptyConfig);
 
    TimeInstant TestTime;
    MaxOp->compute(TestTime);
 
    // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
-   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
+   // with the matching type to avoid reinterpreting bits via
+   // static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMax");
-   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
+   auto ResultData =
+       ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
 
-   Real ComputedMax = static_cast<Real>(ResultHost(0));
+   Real ComputedMax     = static_cast<Real>(ResultHost(0));
    Real ExpectedMaxReal = static_cast<Real>(ExpectedMax);
 
    // Verify
-   bool Passed = (std::abs(ComputedMax - ExpectedMaxReal) <= static_cast<Real>(Helper::getTolerance()));
+   bool Passed = (std::abs(ComputedMax - ExpectedMaxReal) <=
+                  static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMaxOp: " + TypeName, Passed);
 
    if (!Passed) {
@@ -279,68 +261,75 @@ void testSpatialMaxOpType(const std::string &TypeName,
 
 //------------------------------------------------------------------------------
 // Template for testing SpatialMinOp with any array type
-template<typename ArrayType>
-void testSpatialMinOpType(const std::string &TypeName,
-                          const MachEnv *Env,
-                          const HorzMesh *Mesh,
-                          const VertCoord *VCoord) {
-   
-   using Helper = TestHelper<ArrayType>;
-   using ScalarT = typename Helper::ScalarT;
+template <typename ArrayType>
+void testSpatialMinOpType(const std::string &TypeName, const MachEnv *Env,
+                          const HorzMesh *Mesh, const VertCoord *VCoord) {
+
+   using Helper       = TestHelper<ArrayType>;
+   using ScalarT      = typename Helper::ScalarT;
    constexpr int Rank = Helper::Rank;
-   
-   std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
+
+   std::vector<I4> Dims  = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMin_" + TypeName;
-   
+
    // Create test field with values based on global cell IDs for MPI correctness
-   auto Decomp = Decomp::getDefault();
-   auto CellIDH = Decomp->CellIDH;  // Global cell IDs (1-based)
-   
+   auto Decomp  = Decomp::getDefault();
+   auto CellIDH = Decomp->CellIDH; // Global cell IDs (1-based)
+
    if constexpr (Rank == 1) {
-      Helper::createField(FieldName, Dims,
-         [CellIDH](I4 i) -> ScalarT {
-            return static_cast<ScalarT>(CellIDH(i) - 1 + 100);  // Convert to 0-based, offset by 100
-         });
+      Helper::createField(FieldName, Dims, [CellIDH](I4 i) -> ScalarT {
+         return static_cast<ScalarT>(CellIDH(i) - 1 +
+                                     100); // Convert to 0-based, offset by 100
+      });
    } else if constexpr (Rank == 2) {
-      Helper::createField(FieldName, Dims,
-         [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
-            // Unique value: cellID * NVertLayers + layerIndex + offset
-            return static_cast<ScalarT>((CellIDH(i) - 1) * VCoord->NVertLayers + j + 100);
-         });
+      Helper::createField(
+          FieldName, Dims, [CellIDH, VCoord](I4 i, I4 j) -> ScalarT {
+             // Unique value: cellID * NVertLayers + layerIndex + offset
+             return static_cast<ScalarT>(
+                 (CellIDH(i) - 1) * VCoord->NVertLayers + j + 100);
+          });
    } else if constexpr (Rank == 3) {
-      Helper::createField(FieldName, Dims,
-         [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
-            // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID * NVertLayers + layerIdx + offset
-            return static_cast<ScalarT>(i * (Mesh->NCellsGlobal * VCoord->NVertLayers) + 
-                                        (CellIDH(j) - 1) * VCoord->NVertLayers + k + 100);
-         });
+      Helper::createField(
+          FieldName, Dims,
+          [CellIDH, VCoord, Mesh](I4 i, I4 j, I4 k) -> ScalarT {
+             // Unique value: tracerIdx * (NCellsGlobal * NVertLayers) + cellID
+             // * NVertLayers + layerIdx + offset
+             return static_cast<ScalarT>(
+                 i * (Mesh->NCellsGlobal * VCoord->NVertLayers) +
+                 (CellIDH(j) - 1) * VCoord->NVertLayers + k + 100);
+          });
    }
-   
-   // Compute expected min. The operator performs a global reduction across all ranks
-   // via MPI_Allreduce, so the expected minimum is based on global mesh properties.
-   // The minimum value is always at i=0, j=0 (cell with global ID 0), k=0, plus offset 100.
+
+   // Compute expected min. The operator performs a global reduction across all
+   // ranks via MPI_Allreduce, so the expected minimum is based on global mesh
+   // properties. The minimum value is always at i=0, j=0 (cell with global ID
+   // 0), k=0, plus offset 100.
    ScalarT ExpectedMin = static_cast<ScalarT>(100);
-   
+
    // Create and compute operator
    Config EmptyConfig;
-   auto MinOp = AnalysisOpFactory::createOp("SpatialMin", {FieldName}, EmptyConfig);
+   auto MinOp =
+       AnalysisOpFactory::createOp("SpatialMin", {FieldName}, EmptyConfig);
    MinOp->initialize(Env, Mesh, VCoord, EmptyConfig);
 
    TimeInstant TestTime;
    MinOp->compute(TestTime);
 
    // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
-   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
+   // with the matching type to avoid reinterpreting bits via
+   // static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMin");
-   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
+   auto ResultData =
+       ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
 
-   Real ComputedMin = static_cast<Real>(ResultHost(0));
+   Real ComputedMin     = static_cast<Real>(ResultHost(0));
    Real ExpectedMinReal = static_cast<Real>(ExpectedMin);
 
    // Verify
-   bool Passed = (std::abs(ComputedMin - ExpectedMinReal) <= static_cast<Real>(Helper::getTolerance()));
+   bool Passed = (std::abs(ComputedMin - ExpectedMinReal) <=
+                  static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMinOp: " + TypeName, Passed);
 
    if (!Passed) {
@@ -350,79 +339,86 @@ void testSpatialMinOpType(const std::string &TypeName,
 
 //------------------------------------------------------------------------------
 // Template for testing SpatialMeanOp with any array type
-template<typename ArrayType>
-void testSpatialMeanOpType(const std::string &TypeName,
-                           const MachEnv *Env,
-                           const HorzMesh *Mesh,
-                           const VertCoord *VCoord) {
-   
-   using Helper = TestHelper<ArrayType>;
-   using ScalarT = typename Helper::ScalarT;
+template <typename ArrayType>
+void testSpatialMeanOpType(const std::string &TypeName, const MachEnv *Env,
+                           const HorzMesh *Mesh, const VertCoord *VCoord) {
+
+   using Helper       = TestHelper<ArrayType>;
+   using ScalarT      = typename Helper::ScalarT;
    constexpr int Rank = Helper::Rank;
-   
-   std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
+
+   std::vector<I4> Dims  = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldMean_" + TypeName;
-   
-   // Create test field with alternating values to properly test mean calculation
+
+   // Create test field with alternating values to properly test mean
+   // calculation
    ScalarT Value1 = static_cast<ScalarT>(10);
    ScalarT Value2 = static_cast<ScalarT>(20);
-   
+
    if constexpr (Rank == 1) {
-      Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i) -> ScalarT {
-            return ((i % 2) == 0) ? Value1 : Value2;
-         });
+      Helper::createField(FieldName, Dims, [Value1, Value2](I4 i) -> ScalarT {
+         return ((i % 2) == 0) ? Value1 : Value2;
+      });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i, I4 j) -> ScalarT {
-            return (((i + j) % 2) == 0) ? Value1 : Value2;
-         });
+                          [Value1, Value2](I4 i, I4 j) -> ScalarT {
+                             return (((i + j) % 2) == 0) ? Value1 : Value2;
+                          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
-            return (((i + j + k) % 2) == 0) ? Value1 : Value2;
-         });
+                          [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
+                             return (((i + j + k) % 2) == 0) ? Value1 : Value2;
+                          });
    }
-   
+
    // Calculate expected mean based on exact element count
    I8 TotalElements = 0;
    if constexpr (Rank == 1) {
       TotalElements = Mesh->NCellsGlobal;
    } else if constexpr (Rank == 2) {
-      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) *
+                      static_cast<I8>(VCoord->NVertLayers);
    } else if constexpr (Rank == 3) {
-      I4 NTracers = Tracers::getNumTracers();
-      TotalElements = static_cast<I8>(NTracers) * static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+      I4 NTracers   = Tracers::getNumTracers();
+      TotalElements = static_cast<I8>(NTracers) *
+                      static_cast<I8>(Mesh->NCellsGlobal) *
+                      static_cast<I8>(VCoord->NVertLayers);
    }
-   
-   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count of Value2 = TotalElements / 2
-   I8 Count1 = (TotalElements + 1) / 2;  // Ceiling division (for odd total, Value1 gets extra)
-   I8 Count2 = TotalElements / 2;        // Floor division
-   Real ExpectedMean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) + 
-                        static_cast<Real>(Value2) * static_cast<Real>(Count2)) / 
+
+   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count
+   // of Value2 = TotalElements / 2
+   I8 Count1 = (TotalElements + 1) /
+               2; // Ceiling division (for odd total, Value1 gets extra)
+   I8 Count2         = TotalElements / 2; // Floor division
+   Real ExpectedMean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) +
+                        static_cast<Real>(Value2) * static_cast<Real>(Count2)) /
                        static_cast<Real>(TotalElements);
-   
+
    // Create and compute operator
    Config EmptyConfig;
-   auto MeanOp = AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
+   auto MeanOp =
+       AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
    MeanOp->initialize(Env, Mesh, VCoord, EmptyConfig);
 
    TimeInstant TestTime;
    MeanOp->compute(TestTime);
 
    // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
-   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
+   // with the matching type to avoid reinterpreting bits via
+   // static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialMean");
-   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
+   auto ResultData =
+       ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
 
    Real ComputedMean = static_cast<Real>(ResultHost(0));
 
    // Verify
-   bool Passed = (std::abs(ComputedMean - ExpectedMean) <= static_cast<Real>(Helper::getTolerance()));
+   bool Passed = (std::abs(ComputedMean - ExpectedMean) <=
+                  static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialMeanOp: " + TypeName, Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  Expected: {}, Got: {}", ExpectedMean, ComputedMean);
    }
@@ -430,88 +426,98 @@ void testSpatialMeanOpType(const std::string &TypeName,
 
 //------------------------------------------------------------------------------
 // Template for testing SpatialStdDevOp with any array type
-template<typename ArrayType>
-void testSpatialStdDevOpType(const std::string &TypeName,
-                             const MachEnv *Env,
-                             const HorzMesh *Mesh,
-                             const VertCoord *VCoord) {
-   
-   using Helper = TestHelper<ArrayType>;
-   using ScalarT = typename Helper::ScalarT;
+template <typename ArrayType>
+void testSpatialStdDevOpType(const std::string &TypeName, const MachEnv *Env,
+                             const HorzMesh *Mesh, const VertCoord *VCoord) {
+
+   using Helper       = TestHelper<ArrayType>;
+   using ScalarT      = typename Helper::ScalarT;
    constexpr int Rank = Helper::Rank;
-   
-   std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
+
+   std::vector<I4> Dims  = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldStdDev_" + TypeName;
-   
-   // Create test field with alternating values to properly test std dev calculation
+
+   // Create test field with alternating values to properly test std dev
+   // calculation
    ScalarT Value1 = static_cast<ScalarT>(10);
    ScalarT Value2 = static_cast<ScalarT>(20);
-   
+
    if constexpr (Rank == 1) {
-      Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i) -> ScalarT {
-            return ((i % 2) == 0) ? Value1 : Value2;
-         });
+      Helper::createField(FieldName, Dims, [Value1, Value2](I4 i) -> ScalarT {
+         return ((i % 2) == 0) ? Value1 : Value2;
+      });
    } else if constexpr (Rank == 2) {
       Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i, I4 j) -> ScalarT {
-            return (((i + j) % 2) == 0) ? Value1 : Value2;
-         });
+                          [Value1, Value2](I4 i, I4 j) -> ScalarT {
+                             return (((i + j) % 2) == 0) ? Value1 : Value2;
+                          });
    } else if constexpr (Rank == 3) {
       Helper::createField(FieldName, Dims,
-         [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
-            return (((i + j + k) % 2) == 0) ? Value1 : Value2;
-         });
+                          [Value1, Value2](I4 i, I4 j, I4 k) -> ScalarT {
+                             return (((i + j + k) % 2) == 0) ? Value1 : Value2;
+                          });
    }
-   
+
    // Calculate expected standard deviation based on exact element count
    I8 TotalElements = 0;
    if constexpr (Rank == 1) {
       TotalElements = Mesh->NCellsGlobal;
    } else if constexpr (Rank == 2) {
-      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+      TotalElements = static_cast<I8>(Mesh->NCellsGlobal) *
+                      static_cast<I8>(VCoord->NVertLayers);
    } else if constexpr (Rank == 3) {
-      I4 NTracers = Tracers::getNumTracers();
-      TotalElements = static_cast<I8>(NTracers) * static_cast<I8>(Mesh->NCellsGlobal) * static_cast<I8>(VCoord->NVertLayers);
+      I4 NTracers   = Tracers::getNumTracers();
+      TotalElements = static_cast<I8>(NTracers) *
+                      static_cast<I8>(Mesh->NCellsGlobal) *
+                      static_cast<I8>(VCoord->NVertLayers);
    }
-   
-   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count of Value2 = TotalElements / 2
-   I8 Count1 = (TotalElements + 1) / 2;  // Ceiling division
-   I8 Count2 = TotalElements / 2;        // Floor division
-   Real Mean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) + 
-                static_cast<Real>(Value2) * static_cast<Real>(Count2)) / 
+
+   // For alternating pattern, count of Value1 = (TotalElements + 1) / 2, count
+   // of Value2 = TotalElements / 2
+   I8 Count1 = (TotalElements + 1) / 2; // Ceiling division
+   I8 Count2 = TotalElements / 2;       // Floor division
+   Real Mean = (static_cast<Real>(Value1) * static_cast<Real>(Count1) +
+                static_cast<Real>(Value2) * static_cast<Real>(Count2)) /
                static_cast<Real>(TotalElements);
-   
+
    // Standard deviation: sqrt(sum((x_i - mean)^2) / N)
-   Real SumSquaredDiff = static_cast<Real>(Count1) * std::pow(static_cast<Real>(Value1) - Mean, 2.0) +
-                         static_cast<Real>(Count2) * std::pow(static_cast<Real>(Value2) - Mean, 2.0);
-   Real ExpectedStdDev = std::sqrt(SumSquaredDiff / static_cast<Real>(TotalElements));
+   Real SumSquaredDiff = static_cast<Real>(Count1) *
+                             std::pow(static_cast<Real>(Value1) - Mean, 2.0) +
+                         static_cast<Real>(Count2) *
+                             std::pow(static_cast<Real>(Value2) - Mean, 2.0);
+   Real ExpectedStdDev =
+       std::sqrt(SumSquaredDiff / static_cast<Real>(TotalElements));
 
    // SpatialStdDevOp requires a pre-existing _SpatialMean field for the input.
    // Create and compute a SpatialMeanOp first so that field is registered.
    Config EmptyConfig;
-   auto MeanOp = AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
+   auto MeanOp =
+       AnalysisOpFactory::createOp("SpatialMean", {FieldName}, EmptyConfig);
    MeanOp->initialize(Env, Mesh, VCoord, EmptyConfig);
 
    TimeInstant TestTime;
    MeanOp->compute(TestTime);
 
    // Now create and compute the StdDev operator
-   auto StdDevOp = AnalysisOpFactory::createOp("SpatialStdDev", {FieldName}, EmptyConfig);
+   auto StdDevOp =
+       AnalysisOpFactory::createOp("SpatialStdDev", {FieldName}, EmptyConfig);
    StdDevOp->initialize(Env, Mesh, VCoord, EmptyConfig);
    StdDevOp->compute(TestTime);
 
    // Get result. The operator attaches output as Array1D<ScalarT>, so retrieve
-   // with the matching type to avoid reinterpreting bits via static_pointer_cast.
+   // with the matching type to avoid reinterpreting bits via
+   // static_pointer_cast.
    auto ResultField = Field::get(FieldName + "_SpatialStdDev");
-   auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
+   auto ResultData =
+       ResultField->getDataArray<typename Array1D<ScalarT>::type>();
    auto ResultHost = Kokkos::create_mirror_view(ResultData);
    Kokkos::deep_copy(ResultHost, ResultData);
 
    Real ComputedStdDev = static_cast<Real>(ResultHost(0));
 
    // Verify
-   bool Passed = (std::abs(ComputedStdDev - ExpectedStdDev) <= static_cast<Real>(Helper::getTolerance()));
+   bool Passed = (std::abs(ComputedStdDev - ExpectedStdDev) <=
+                  static_cast<Real>(Helper::getTolerance()));
    reportTest("SpatialStdDevOp: " + TypeName, Passed);
 
    if (!Passed) {
@@ -521,83 +527,78 @@ void testSpatialStdDevOpType(const std::string &TypeName,
 
 //------------------------------------------------------------------------------
 // Template for testing TimeMeanOp with any array type
-template<typename ArrayType>
-void testTimeMeanOpType(const std::string &TypeName,
-                        const MachEnv *Env,
-                        const HorzMesh *Mesh,
-                        const VertCoord *VCoord,
+template <typename ArrayType>
+void testTimeMeanOpType(const std::string &TypeName, const MachEnv *Env,
+                        const HorzMesh *Mesh, const VertCoord *VCoord,
                         Clock *ModelClock) {
-   
-   using Helper = TestHelper<ArrayType>;
-   using ScalarT = typename Helper::ScalarT;
+
+   using Helper       = TestHelper<ArrayType>;
+   using ScalarT      = typename Helper::ScalarT;
    constexpr int Rank = Helper::Rank;
-   
-   std::vector<I4> Dims = Helper::getDims(Mesh, VCoord);
+
+   std::vector<I4> Dims  = Helper::getDims(Mesh, VCoord);
    std::string FieldName = "TestFieldTimeMean_" + TypeName;
-   
+
    // Create test field with initial value
    ScalarT BaseValue = static_cast<ScalarT>(5);
-   
+
    if constexpr (Rank == 1) {
       Helper::createField(FieldName, Dims,
-         [BaseValue](I4 i) -> ScalarT {
-            return BaseValue;
-         });
+                          [BaseValue](I4 i) -> ScalarT { return BaseValue; });
    } else if constexpr (Rank == 2) {
-      Helper::createField(FieldName, Dims,
-         [BaseValue](I4 i, I4 j) -> ScalarT {
-            return BaseValue;
-         });
+      Helper::createField(FieldName, Dims, [BaseValue](I4 i, I4 j) -> ScalarT {
+         return BaseValue;
+      });
    } else if constexpr (Rank == 3) {
-      Helper::createField(FieldName, Dims,
-         [BaseValue](I4 i, I4 j, I4 k) -> ScalarT {
-            return BaseValue;
-         });
+      Helper::createField(
+          FieldName, Dims,
+          [BaseValue](I4 i, I4 j, I4 k) -> ScalarT { return BaseValue; });
    }
-   
+
    // Get the field and its data array for updating during time loop
    auto TestField = Field::get(FieldName);
-   auto TestData = TestField->template getDataArray<ArrayType>();
-   
+   auto TestData  = TestField->template getDataArray<ArrayType>();
+
    // Set up time stepping parameters
-   const int NumSteps = 5;  // Accumulate over 5 timesteps
+   const int NumSteps        = 5; // Accumulate over 5 timesteps
    TimeInterval StepInterval = ModelClock->getTimeStep();
-   
+
    // Calculate period interval (NumSteps * timestep)
    R8 StepSeconds;
    StepInterval.get(StepSeconds, TimeUnits::Seconds);
    R8 PeriodSeconds = StepSeconds * NumSteps;
    TimeInterval PeriodInterval(PeriodSeconds, TimeUnits::Seconds);
-   
+
    // Create TimeMeanOp with a valid period string (e.g., "5seconds")
    // The Period string is just a label used in the output field name
    Config OpConfig;
-   std::string PeriodLabel = std::to_string(static_cast<int>(PeriodSeconds)) + "seconds";
-//   OpConfig.set("Period", PeriodLabel);
-   
-   auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean", {FieldName}, makeOpConfig(opParam("Period", PeriodLabel)));
+   std::string PeriodLabel =
+       std::to_string(static_cast<int>(PeriodSeconds)) + "seconds";
+   //   OpConfig.set("Period", PeriodLabel);
+
+   auto TimeMeanOp = AnalysisOpFactory::createOp(
+       "TimeMean", {FieldName}, makeOpConfig(opParam("Period", PeriodLabel)));
    TimeMeanOp->initialize(Env, Mesh, VCoord, OpConfig);
-   
+
    // Create a period alarm that rings after NumSteps
    TimeInstant StartTime = ModelClock->getCurrentTime();
    Alarm PeriodAlarm("TestPeriodAlarm_" + TypeName, PeriodInterval, StartTime);
    TimeMeanOp->setPeriodAlarm(&PeriodAlarm);
-   
+
    // Time-stepping loop: update field values and compute mean at each step
    std::vector<ScalarT> ValuesAtEachStep;
-   
+
    for (int step = 0; step < NumSteps; ++step) {
       // Update field values to simulate time evolution
       // Value at each step = BaseValue + step (e.g., 5, 6, 7, 8, 9)
-      ScalarT CurrentValue = static_cast<ScalarT>(
-         static_cast<Real>(BaseValue) + static_cast<Real>(step)
-      );
+      ScalarT CurrentValue = static_cast<ScalarT>(static_cast<Real>(BaseValue) +
+                                                  static_cast<Real>(step));
       ValuesAtEachStep.push_back(CurrentValue);
-      
+
       // Update the field data on device
       auto TestDataHost = Kokkos::create_mirror_view(TestData);
       Kokkos::deep_copy(TestDataHost, TestData);
-      
+
       if constexpr (Rank == 1) {
          for (I4 i = 0; i < Dims[0]; ++i) {
             TestDataHost(i) = CurrentValue;
@@ -617,7 +618,7 @@ void testTimeMeanOpType(const std::string &TypeName,
             }
          }
       }
-      
+
       Kokkos::deep_copy(TestData, TestDataHost);
 
       // Advance clock to next timestep
@@ -625,7 +626,7 @@ void testTimeMeanOpType(const std::string &TypeName,
       TimeInstant CurrentTime = ModelClock->getCurrentTime();
 
       // Update alarm status based on current time
-      PeriodAlarm.updateStatus(CurrentTime);      
+      PeriodAlarm.updateStatus(CurrentTime);
 
       // Compute the time mean (accumulates internally)
       TimeMeanOp->compute(CurrentTime);
@@ -637,23 +638,25 @@ void testTimeMeanOpType(const std::string &TypeName,
       }
    }
 
-   // Calculate expected mean: average of [BaseValue, BaseValue+1, ..., BaseValue+(NumSteps-1)]
-   // For BaseValue=5 and NumSteps=5: avg of [5, 6, 7, 8, 9] = 7.0
+   // Calculate expected mean: average of [BaseValue, BaseValue+1, ...,
+   // BaseValue+(NumSteps-1)] For BaseValue=5 and NumSteps=5: avg of [5, 6, 7,
+   // 8, 9] = 7.0
    Real Sum = 0.0;
    for (const auto &val : ValuesAtEachStep) {
       Sum += static_cast<Real>(val);
    }
    Real ExpectedMean = Sum / static_cast<Real>(NumSteps);
-   
+
    // Get result field - output field name includes the Period label
    std::string ResultFieldName = FieldName + "_TimeMean" + PeriodLabel;
-   auto ResultField = Field::get(ResultFieldName);
-   
+   auto ResultField            = Field::get(ResultFieldName);
+
    // Verify a sample of values. The TimeMeanOp output field is attached with
    // the same ArrayType as the input, so retrieve with the matching type.
    bool Passed = true;
    if constexpr (Rank == 1) {
-      auto ResultData = ResultField->getDataArray<typename Array1D<ScalarT>::type>();
+      auto ResultData =
+          ResultField->getDataArray<typename Array1D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
 
@@ -662,13 +665,14 @@ void testTimeMeanOpType(const std::string &TypeName,
          if (std::abs(ComputedValue - ExpectedMean) >
              static_cast<Real>(Helper::getTolerance())) {
             Passed = false;
-            LOG_ERROR("  At index {}: Expected {}, Got {}", 
-                     i, ExpectedMean, ComputedValue);
+            LOG_ERROR("  At index {}: Expected {}, Got {}", i, ExpectedMean,
+                      ComputedValue);
             break;
          }
       }
    } else if constexpr (Rank == 2) {
-      auto ResultData = ResultField->getDataArray<typename Array2D<ScalarT>::type>();
+      auto ResultData =
+          ResultField->getDataArray<typename Array2D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
 
@@ -678,15 +682,17 @@ void testTimeMeanOpType(const std::string &TypeName,
             if (std::abs(ComputedValue - ExpectedMean) >
                 static_cast<Real>(Helper::getTolerance())) {
                Passed = false;
-               LOG_ERROR("  At index ({}, {}): Expected {}, Got {}", 
-                        i, j, ExpectedMean, ComputedValue);
+               LOG_ERROR("  At index ({}, {}): Expected {}, Got {}", i, j,
+                         ExpectedMean, ComputedValue);
                break;
             }
          }
-         if (!Passed) break;
+         if (!Passed)
+            break;
       }
    } else if constexpr (Rank == 3) {
-      auto ResultData = ResultField->getDataArray<typename Array3D<ScalarT>::type>();
+      auto ResultData =
+          ResultField->getDataArray<typename Array3D<ScalarT>::type>();
       auto ResultHost = Kokkos::create_mirror_view(ResultData);
       Kokkos::deep_copy(ResultHost, ResultData);
 
@@ -697,19 +703,21 @@ void testTimeMeanOpType(const std::string &TypeName,
                if (std::abs(ComputedValue - ExpectedMean) >
                    static_cast<Real>(Helper::getTolerance())) {
                   Passed = false;
-                  LOG_ERROR("  At index ({}, {}, {}): Expected {}, Got {}", 
-                           i, j, k, ExpectedMean, ComputedValue);
+                  LOG_ERROR("  At index ({}, {}, {}): Expected {}, Got {}", i,
+                            j, k, ExpectedMean, ComputedValue);
                   break;
                }
             }
-            if (!Passed) break;
+            if (!Passed)
+               break;
          }
-         if (!Passed) break;
+         if (!Passed)
+            break;
       }
    }
-   
+
    reportTest("TimeMeanOp: " + TypeName, Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  Expected mean: {}", ExpectedMean);
       LOG_ERROR("  Period label: {}", PeriodLabel);
@@ -722,24 +730,21 @@ void testTimeMeanOpType(const std::string &TypeName,
 
 //------------------------------------------------------------------------------
 // Test SpatialMaxOp with all array types
-void testSpatialMaxOp(const MachEnv *Env,
-                      const HorzMesh *Mesh,
+void testSpatialMaxOp(const MachEnv *Env, const HorzMesh *Mesh,
                       const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing SpatialMaxOp with all array types...");
-   
+
    // 1D arrays - 4 scalar types
    testSpatialMaxOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
-   
+
    // 2D arrays - 4 scalar types
    testSpatialMaxOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
-   
+
    // 3D arrays - 4 scalar types
    testSpatialMaxOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
    testSpatialMaxOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
@@ -749,24 +754,21 @@ void testSpatialMaxOp(const MachEnv *Env,
 
 //------------------------------------------------------------------------------
 // Test SpatialMinOp with all array types
-void testSpatialMinOp(const MachEnv *Env,
-                      const HorzMesh *Mesh,
+void testSpatialMinOp(const MachEnv *Env, const HorzMesh *Mesh,
                       const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing SpatialMinOp with all array types...");
-   
+
    // 1D arrays
    testSpatialMinOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
    testSpatialMinOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
    testSpatialMinOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
    testSpatialMinOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
-   
+
    // 2D arrays
    testSpatialMinOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
    testSpatialMinOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
    testSpatialMinOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
    testSpatialMinOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
-   
+
    // 3D arrays
    testSpatialMinOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
    testSpatialMinOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
@@ -776,24 +778,21 @@ void testSpatialMinOp(const MachEnv *Env,
 
 //------------------------------------------------------------------------------
 // Test SpatialMeanOp with all array types
-void testSpatialMeanOp(const MachEnv *Env,
-                       const HorzMesh *Mesh,
+void testSpatialMeanOp(const MachEnv *Env, const HorzMesh *Mesh,
                        const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing SpatialMeanOp with all array types...");
-   
+
    // 1D arrays
    testSpatialMeanOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
-   
+
    // 2D arrays
    testSpatialMeanOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
-   
+
    // 3D arrays
    testSpatialMeanOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
    testSpatialMeanOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
@@ -803,24 +802,21 @@ void testSpatialMeanOp(const MachEnv *Env,
 
 //------------------------------------------------------------------------------
 // Test SpatialStdDevOp with all array types
-void testSpatialStdDevOp(const MachEnv *Env,
-                         const HorzMesh *Mesh,
+void testSpatialStdDevOp(const MachEnv *Env, const HorzMesh *Mesh,
                          const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing SpatialStdDevOp with all array types...");
-   
+
    // 1D arrays
    testSpatialStdDevOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord);
-   
+
    // 2D arrays
    testSpatialStdDevOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord);
-   
+
    // 3D arrays
    testSpatialStdDevOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord);
    testSpatialStdDevOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord);
@@ -830,25 +826,21 @@ void testSpatialStdDevOp(const MachEnv *Env,
 
 //------------------------------------------------------------------------------
 // Test TimeMeanOp with all array types
-void testTimeMeanOp(const MachEnv *Env,
-                    const HorzMesh *Mesh,
-                    const VertCoord *VCoord,
-                    Clock *ModelClock) {
-   
-   LOG_INFO("Testing TimeMeanOp with all array types...");
-   
+void testTimeMeanOp(const MachEnv *Env, const HorzMesh *Mesh,
+                    const VertCoord *VCoord, Clock *ModelClock) {
+
    // 1D arrays
    testTimeMeanOpType<Array1DI4>("1D-I4", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array1DI8>("1D-I8", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array1DR4>("1D-R4", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array1DR8>("1D-R8", Env, Mesh, VCoord, ModelClock);
-   
+
    // 2D arrays
    testTimeMeanOpType<Array2DI4>("2D-I4", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array2DI8>("2D-I8", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array2DR4>("2D-R4", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array2DR8>("2D-R8", Env, Mesh, VCoord, ModelClock);
-   
+
    // 3D arrays
    testTimeMeanOpType<Array3DI4>("3D-I4", Env, Mesh, VCoord, ModelClock);
    testTimeMeanOpType<Array3DI8>("3D-I8", Env, Mesh, VCoord, ModelClock);
@@ -861,9 +853,9 @@ void testTimeMeanOp(const MachEnv *Env,
 //===----------------------------------------------------------------------===//
 
 int main(int argc, char *argv[]) {
-   
+
    int Err = 0;
-   
+
    MPI_Init(&argc, &argv);
    Kokkos::initialize();
    Pacer::initialize(MPI_COMM_WORLD);
@@ -872,28 +864,23 @@ int main(int argc, char *argv[]) {
       // Initialize Omega infrastructure
       MachEnv::init(MPI_COMM_WORLD);
       MachEnv *DefEnv = MachEnv::getDefault();
-      
+
       initLogging(DefEnv);
-      
-      LOG_INFO("=======================================================");
-      LOG_INFO("Analysis Operator Multi-Type Tests");
-      LOG_INFO("Testing 5 operators × 12 array types = 60 tests");
-      LOG_INFO("=======================================================");
-      
+
       Config("Omega");
       Config::readAll("omega.yml");
-      
+
       TimeStepper::init1();
       TimeStepper *DefStepper = TimeStepper::getDefault();
-      Clock *ModelClock = DefStepper->getClock();
-      
+      Clock *ModelClock       = DefStepper->getClock();
+
       IO::init(DefEnv->getComm());
       Decomp::init();
       IOStream::init(ModelClock);
       Field::init(ModelClock);
       Err = Halo::init();
       if (Err != 0)
-         ABORT_ERROR("VertAdvTest: error initializing default halo");
+         ABORT_ERROR("AnalysisOperatorTest: Error initializing default halo");
       HorzMesh::init();
       VertCoord::init();
       Tracers::init();
@@ -905,47 +892,38 @@ int main(int argc, char *argv[]) {
       TimeStepper::init2();
       Err = OceanState::init();
       if (Err != 0)
-         ABORT_ERROR("ocnInit: Error initializing default state");
-      
-      auto Mesh = HorzMesh::getDefault();
+         ABORT_ERROR("AnalysisOperatorTest: Error initializing default state");
+
+      auto Mesh   = HorzMesh::getDefault();
       auto VCoord = VertCoord::getDefault();
-      
+
       // Register all analysis operators
       Analysis::init();
-      
-      LOG_INFO("");
-      LOG_INFO("--- Testing SpatialMaxOp (12 array types) ---");
+
       testSpatialMaxOp(DefEnv, Mesh, VCoord);
-      
-      LOG_INFO("");
-      LOG_INFO("--- Testing SpatialMinOp (12 array types) ---");
+
       testSpatialMinOp(DefEnv, Mesh, VCoord);
-      
-      LOG_INFO("");
-      LOG_INFO("--- Testing SpatialMeanOp (12 array types) ---");
+
       testSpatialMeanOp(DefEnv, Mesh, VCoord);
-      
-      LOG_INFO("");
-      LOG_INFO("--- Testing SpatialStdDevOp (12 array types) ---");
+
       testSpatialStdDevOp(DefEnv, Mesh, VCoord);
-      
-      LOG_INFO("");
-      LOG_INFO("--- Testing TimeMeanOp (12 array types) ---");
+
       testTimeMeanOp(DefEnv, Mesh, VCoord, ModelClock);
-      
-      // Report summary
-      LOG_INFO("");
-      LOG_INFO("=======================================================");
+
       LOG_INFO("Test Summary:");
       LOG_INFO("  Total tests: {}", NumTests);
       LOG_INFO("  Passed: {}", NumPassed);
       LOG_INFO("  Failed: {}", NumFailed);
       LOG_INFO("=======================================================");
-      
+
       if (NumFailed > 0) {
+         LOG_ERROR("AnalysisOperatorTest Failure");
+         LOG_ERROR("  Total tests: {}", NumTests);
+         LOG_ERROR("  Passed: {}", NumPassed);
+         LOG_ERROR("  Failed: {}", NumFailed);
          Err = 1;
       }
-      
+
       // Cleanup
       Analysis::finalize();
       IOStream::finalize();
@@ -967,6 +945,6 @@ int main(int argc, char *argv[]) {
    Pacer::finalize();
    Kokkos::finalize();
    MPI_Finalize();
-   
+
    return Err;
 }

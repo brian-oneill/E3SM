@@ -29,7 +29,7 @@
 using namespace OMEGA;
 
 // Test result tracking
-int NumTests = 0;
+int NumTests  = 0;
 int NumPassed = 0;
 int NumFailed = 0;
 
@@ -52,56 +52,52 @@ void reportTest(const std::string &TestName, bool Passed) {
 //------------------------------------------------------------------------------
 // Test 5.2.1: Verify shared intermediate operators are deduplicated
 void testSharedIntermediates() {
-   
-   LOG_INFO("Testing shared intermediate deduplication...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    // Count how many times each operator name appears
    std::map<std::string, int> OpCounts;
    for (const auto *Node : OpNodes) {
       std::string OpName = Node->Op->getName();
       OpCounts[OpName]++;
    }
-   
+
    // Check that no operator appears more than once
    bool Passed = true;
    for (const auto &Pair : OpCounts) {
       if (Pair.second > 1) {
-         LOG_ERROR("  Operator {} appears {} times (should be 1)", 
-                   Pair.first, Pair.second);
+         LOG_ERROR("  Operator {} appears {} times (should be 1)", Pair.first,
+                   Pair.second);
          Passed = false;
       }
    }
-   
+
    reportTest("Dependency: Shared intermediates deduplicated", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.2.2: Verify upstream dependencies are correctly resolved
 void testUpstreamDependencies() {
-   
-   LOG_INFO("Testing upstream dependency resolution...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = true;
-   
+
    // For each operator, verify its upstreams produce the fields it needs
    for (const auto *Node : OpNodes) {
       auto InputNames = Node->Op->getInputFieldNames();
-      
+
       for (const auto &InputName : InputNames) {
          // Check if this input is a simulation field or an operator output
          bool FoundUpstream = false;
-         
+
          // Check if it's a simulation field
          if (Field::exists(InputName)) {
             FoundUpstream = true;
          }
-         
+
          // Check if it's produced by an upstream operator
          for (const auto *Upstream : Node->Upstreams) {
             auto UpstreamOutputs = Upstream->Op->getOutputFieldNames();
@@ -111,9 +107,10 @@ void testUpstreamDependencies() {
                   break;
                }
             }
-            if (FoundUpstream) break;
+            if (FoundUpstream)
+               break;
          }
-         
+
          if (!FoundUpstream) {
             LOG_ERROR("  Operator {} requires input {} but no upstream found",
                       Node->Op->getName(), InputName);
@@ -121,54 +118,53 @@ void testUpstreamDependencies() {
          }
       }
    }
-   
+
    reportTest("Dependency: Upstream dependencies resolved", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.2.3: Verify cache prevents redundant computation
 void testCacheValidation() {
-   
-   LOG_INFO("Testing cache validation...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    if (OpNodes.empty()) {
       reportTest("Cache: Validation (no operators to test)", true);
       return;
    }
 
    auto AnalysisClock = DefAnalysis->getModelClock();
-   auto CurTime = AnalysisClock->getCurrentTime();
-   auto TimeStep = AnalysisClock->getTimeStep();
+   auto CurTime       = AnalysisClock->getCurrentTime();
+   auto TimeStep      = AnalysisClock->getTimeStep();
 
    auto TestTime = CurTime + TimeStep;
-   
+
    // Get first operator
    auto *FirstNode = OpNodes[0];
-//   TimeInstant TestTime(0, 0, 0, 0, 0, 1);
-   
+   //   TimeInstant TestTime(0, 0, 0, 0, 0, 1);
+
    // Initially should not be valid
    bool InitiallyInvalid = !FirstNode->Op->isCacheValid(TestTime);
-   
+
    // Compute it
    FirstNode->Op->compute(TestTime);
-   
+
    // Now should be valid for same timestamp
    bool NowValid = FirstNode->Op->isCacheValid(TestTime);
-   
+
    // Should be invalid for different timestamp
    auto DifferentTime = TestTime + TimeStep;
-//  TimeInstant DifferentTime(0, 0, 0, 0, 0, 2);
+   //  TimeInstant DifferentTime(0, 0, 0, 0, 0, 2);
    bool InvalidForDifferentTime = !FirstNode->Op->isCacheValid(DifferentTime);
-   
+
    bool Passed = InitiallyInvalid && NowValid && InvalidForDifferentTime;
    reportTest("Cache: Validation prevents redundant computation", Passed);
-   
+
    if (!Passed) {
-      LOG_ERROR("  InitiallyInvalid: {}, NowValid: {}, InvalidForDifferentTime: {}",
-                InitiallyInvalid, NowValid, InvalidForDifferentTime);
+      LOG_ERROR(
+          "  InitiallyInvalid: {}, NowValid: {}, InvalidForDifferentTime: {}",
+          InitiallyInvalid, NowValid, InvalidForDifferentTime);
    }
 }
 
@@ -179,14 +175,12 @@ void testCacheValidation() {
 //------------------------------------------------------------------------------
 // Test 5.3.1: Verify terminal operators have alarms
 void testTerminalOperatorAlarms() {
-   
-   LOG_INFO("Testing terminal operator alarms...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = true;
-   
+
    // Terminal operators (those with StreamNames) should have alarms
    for (const auto *Node : OpNodes) {
       if (!Node->StreamNames.empty()) {
@@ -197,26 +191,24 @@ void testTerminalOperatorAlarms() {
          }
       }
    }
-   
+
    reportTest("Alarm: Terminal operators have alarms", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.3.2: Verify temporal operators have multiple alarms
 void testTemporalOperatorAlarms() {
-   
-   LOG_INFO("Testing temporal operator alarms...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = true;
-   
+
    // Temporal reduction operators should have 2 alarms (accumulation + output)
    for (const auto *Node : OpNodes) {
-      std::string OpType = Node->Op->getOperatorType();
+      std::string OpType   = Node->Op->getOperatorType();
       bool IsTimeReduction = (OpType.find("Time") != std::string::npos);
-      
+
       if (IsTimeReduction && !Node->StreamNames.empty()) {
          if (Node->ComputeAlarms.size() < 2) {
             LOG_ERROR("  Temporal operator {} has {} alarms (expected 2)",
@@ -225,21 +217,20 @@ void testTemporalOperatorAlarms() {
          }
       }
    }
-   
-   reportTest("Alarm: Temporal operators have accumulation + output alarms", Passed);
+
+   reportTest("Alarm: Temporal operators have accumulation + output alarms",
+              Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.3.3: Verify alarm propagation to upstream operators
 void testAlarmPropagation() {
-   
-   LOG_INFO("Testing alarm propagation...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = true;
-   
+
    // Intermediate operators should have alarms propagated from downstream
    for (const auto *Node : OpNodes) {
       if (Node->StreamNames.empty() && !Node->Upstreams.empty()) {
@@ -251,7 +242,7 @@ void testAlarmPropagation() {
          }
       }
    }
-   
+
    reportTest("Alarm: Propagation to upstream operators", Passed);
 }
 
@@ -261,31 +252,22 @@ void testAlarmPropagation() {
 
 //------------------------------------------------------------------------------
 // Helper: Create a test field for factory testing
-void createFactoryTestField(const std::string &FieldName,
-                            const HorzMesh *Mesh,
+void createFactoryTestField(const std::string &FieldName, const HorzMesh *Mesh,
                             const VertCoord *VCoord) {
-   
-   I4 NCells = Mesh->NCellsSize;
+
+   I4 NCells      = Mesh->NCellsSize;
    I4 NVertLayers = VCoord->NVertLayers;
-   
+
    // Create a 2D test field
    std::vector<std::string> DimNames = {"NCells", "NVertLayers"};
-   auto TestField = Field::create(
-      FieldName,
-      "Test field for factory validation",
-      "units",
-      "",
-      -1.0e30,
-      1.0e30,
-      -1.0e30,
-      2,
-      DimNames
-   );
-   
+   auto TestField =
+       Field::create(FieldName, "Test field for factory validation", "units",
+                     "", -1.0e30, 1.0e30, -1.0e30, 2, DimNames);
+
    // Allocate and attach data with known values
    Array2DReal TestData(FieldName + "_data", NCells, NVertLayers);
    TestField->attachData<Array2DReal>(TestData);
-   
+
    // Fill with simple pattern: value = Cell + K
    auto TestDataHost = Kokkos::create_mirror_view(TestData);
    for (I4 Cell = 0; Cell < NCells; ++Cell) {
@@ -299,24 +281,21 @@ void createFactoryTestField(const std::string &FieldName,
 //------------------------------------------------------------------------------
 // Test 5.4.1: Verify factory creates valid operators (proves registration)
 void testFactoryCreatesValidOperators() {
-   
-   LOG_INFO("Testing factory creates valid operators...");
-   
+
    // Create a simple test field to use for operator creation
-   auto Mesh = HorzMesh::getDefault();
+   auto Mesh   = HorzMesh::getDefault();
    auto VCoord = VertCoord::getDefault();
-   
+
    std::string TestFieldName = "FactoryRegistrationTestField";
    createFactoryTestField(TestFieldName, Mesh, VCoord);
-   
+
    Config EmptyConfig;
    bool Passed = true;
-   
+
    // Try to create a SpatialMax operator - if this succeeds, it proves
    // the operator type is registered in the factory
-   auto TestOp = AnalysisOpFactory::createOp("SpatialMax",
-                                              {TestFieldName},
-                                              EmptyConfig);
+   auto TestOp =
+       AnalysisOpFactory::createOp("SpatialMax", {TestFieldName}, EmptyConfig);
    if (!TestOp) {
       LOG_ERROR("  Failed to create SpatialMax operator - registration failed");
       Passed = false;
@@ -327,29 +306,25 @@ void testFactoryCreatesValidOperators() {
          Passed = false;
       }
    }
-   
+
    reportTest("Factory: Creates valid operators (proves registration)", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.4.2: Verify type dispatch and operator creation
-void testFactoryTypeDispatch(const MachEnv *Env,
-                             const HorzMesh *Mesh,
+void testFactoryTypeDispatch(const MachEnv *Env, const HorzMesh *Mesh,
                              const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing factory type dispatch...");
-   
+
    // Create a test field specifically for this test
    std::string TestFieldName = "FactoryTestField";
    createFactoryTestField(TestFieldName, Mesh, VCoord);
-   
+
    Config EmptyConfig;
    bool Passed = true;
-   
+
    // Create operator using the factory
-   auto MaxOp = AnalysisOpFactory::createOp("SpatialMax",
-                                            {TestFieldName},
-                                            EmptyConfig);
+   auto MaxOp =
+       AnalysisOpFactory::createOp("SpatialMax", {TestFieldName}, EmptyConfig);
    if (!MaxOp) {
       LOG_ERROR("  Failed to create SpatialMax operator");
       Passed = false;
@@ -360,25 +335,25 @@ void testFactoryTypeDispatch(const MachEnv *Env,
                    MaxOp->getOperatorType());
          Passed = false;
       }
-      
+
       // Verify input field names are correct
       auto InputNames = MaxOp->getInputFieldNames();
       if (InputNames.size() != 1 || InputNames[0] != TestFieldName) {
          LOG_ERROR("  Input field names mismatch");
          Passed = false;
       }
-      
+
       // Verify output field names follow expected pattern
-      auto OutputNames = MaxOp->getOutputFieldNames();
+      auto OutputNames               = MaxOp->getOutputFieldNames();
       std::string ExpectedOutputName = TestFieldName + "_SpatialMax";
       if (OutputNames.size() != 1 || OutputNames[0] != ExpectedOutputName) {
          LOG_ERROR("  Output field name mismatch: expected {}, got {}",
-                   ExpectedOutputName, 
+                   ExpectedOutputName,
                    OutputNames.empty() ? "none" : OutputNames[0]);
          Passed = false;
       }
    }
-   
+
    reportTest("Factory: Type dispatch creates correct operator", Passed);
 }
 
@@ -386,19 +361,16 @@ void testFactoryTypeDispatch(const MachEnv *Env,
 // Test 5.4.3: Verify factory handles different field configurations
 void testFactoryDifferentFieldTypes(const HorzMesh *Mesh,
                                     const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing factory with different field configurations...");
-   
+
    Config EmptyConfig;
    bool Passed = true;
-   
+
    // Test 1: Create operator with first test field
    std::string TestFieldName1 = "FactoryDifferentFields1";
    createFactoryTestField(TestFieldName1, Mesh, VCoord);
-   
-   auto Op1 = AnalysisOpFactory::createOp("SpatialMin",
-                                          {TestFieldName1},
-                                          EmptyConfig);
+
+   auto Op1 =
+       AnalysisOpFactory::createOp("SpatialMin", {TestFieldName1}, EmptyConfig);
    if (!Op1) {
       LOG_ERROR("  Failed to create operator for test field 1");
       Passed = false;
@@ -406,13 +378,12 @@ void testFactoryDifferentFieldTypes(const HorzMesh *Mesh,
       LOG_ERROR("  Operator 1 has wrong type");
       Passed = false;
    }
-   
+
    // Test 2: Create operator with second test field
    std::string TestFieldName2 = "FactoryDifferentFields2";
    createFactoryTestField(TestFieldName2, Mesh, VCoord);
-   
-   auto Op2 = AnalysisOpFactory::createOp("SpatialMean",
-                                          {TestFieldName2},
+
+   auto Op2 = AnalysisOpFactory::createOp("SpatialMean", {TestFieldName2},
                                           EmptyConfig);
    if (!Op2) {
       LOG_ERROR("  Failed to create operator for test field 2");
@@ -421,12 +392,12 @@ void testFactoryDifferentFieldTypes(const HorzMesh *Mesh,
       LOG_ERROR("  Operator 2 has wrong type");
       Passed = false;
    }
-   
+
    // Test 3: Verify operators have correct input/output associations
    if (Op1 && Op2) {
       auto Inputs1 = Op1->getInputFieldNames();
       auto Inputs2 = Op2->getInputFieldNames();
-      
+
       if (Inputs1.empty() || Inputs1[0] != TestFieldName1) {
          LOG_ERROR("  Operator 1 has wrong input field");
          Passed = false;
@@ -436,62 +407,54 @@ void testFactoryDifferentFieldTypes(const HorzMesh *Mesh,
          Passed = false;
       }
    }
-   
+
    reportTest("Factory: Handles different field configurations", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.4.4: Verify factory instantiates all operator types
-void testFactoryInstantiateAll(const MachEnv *Env,
-                               const HorzMesh *Mesh,
+void testFactoryInstantiateAll(const MachEnv *Env, const HorzMesh *Mesh,
                                const VertCoord *VCoord) {
-   
-   LOG_INFO("Testing factory instantiation for all operator types...");
-   
+
    // Create a test field for all operators
    std::string TestFieldName = "FactoryInstantiateTestField";
    createFactoryTestField(TestFieldName, Mesh, VCoord);
-   
-   std::vector<std::string> SpatialOps = {
-      "SpatialMax",
-      "SpatialMin",
-      "SpatialMean",
-      "SpatialStdDev"
-   };
-   
+
+   std::vector<std::string> SpatialOps = {"SpatialMax", "SpatialMin",
+                                          "SpatialMean", "SpatialStdDev"};
+
    Config EmptyConfig;
    bool Passed = true;
-   
+
    // Test each spatial operator - verify factory can create them
    for (const auto &OpName : SpatialOps) {
-      auto Op = AnalysisOpFactory::createOp(OpName,
-                                            {TestFieldName},
-                                            EmptyConfig);
+      auto Op =
+          AnalysisOpFactory::createOp(OpName, {TestFieldName}, EmptyConfig);
       if (!Op) {
          LOG_ERROR("  Failed to instantiate {} operator", OpName);
          Passed = false;
          continue;
       }
-      
+
       // Verify operator type matches request
       if (Op->getOperatorType() != OpName) {
          LOG_ERROR("  Operator type mismatch for {}", OpName);
          Passed = false;
       }
-      
+
       // Verify output field names follow expected pattern
-      auto OutputNames = Op->getOutputFieldNames();
+      auto OutputNames               = Op->getOutputFieldNames();
       std::string ExpectedOutputName = TestFieldName + "_" + OpName;
       if (OutputNames.empty() || OutputNames[0] != ExpectedOutputName) {
          LOG_ERROR("  Unexpected output field name for {}", OpName);
          Passed = false;
       }
    }
-   
+
    // Test TimeMean with required Period parameter
-   auto TimeMeanOp = AnalysisOpFactory::createOp("TimeMean",
-                                                  {TestFieldName},
-                                                  makeOpConfig(opParam("Period", std::string("1day"))));
+   auto TimeMeanOp = AnalysisOpFactory::createOp(
+       "TimeMean", {TestFieldName},
+       makeOpConfig(opParam("Period", std::string("1day"))));
    if (!TimeMeanOp) {
       LOG_ERROR("  Failed to instantiate TimeMean operator");
       Passed = false;
@@ -501,7 +464,7 @@ void testFactoryInstantiateAll(const MachEnv *Env,
          LOG_ERROR("  Operator type mismatch for TimeMean");
          Passed = false;
       }
-      
+
       // Verify output field naming includes period
       auto OutputNames = TimeMeanOp->getOutputFieldNames();
       if (OutputNames.empty()) {
@@ -509,7 +472,7 @@ void testFactoryInstantiateAll(const MachEnv *Env,
          Passed = false;
       }
    }
-   
+
    reportTest("Factory: Instantiate all registered operator types", Passed);
 }
 
@@ -520,20 +483,18 @@ void testFactoryInstantiateAll(const MachEnv *Env,
 //------------------------------------------------------------------------------
 // Test 5.5.1: Verify operator chain parsing
 void testOperatorChainParsing() {
-   
-   LOG_INFO("Testing operator chain parsing...");
-   
+
    // This test verifies that parseChainAndBuildOps correctly handles
    // underscore-delimited operator chains
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   
+
    // Check if any operators were created from config
    auto OpNodes = DefAnalysis->getOpNodes();
-   bool Passed = !OpNodes.empty();
-   
+   bool Passed  = !OpNodes.empty();
+
    reportTest("Config: Operator chain parsing", Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  No operators were created from configuration");
    }
@@ -542,12 +503,10 @@ void testOperatorChainParsing() {
 //------------------------------------------------------------------------------
 // Test 5.5.2: Verify field reuse in chains
 void testFieldReuseInChains() {
-   
-   LOG_INFO("Testing field reuse in operator chains...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    // Count unique output field names
    std::set<std::string> UniqueOutputs;
    for (const auto *Node : OpNodes) {
@@ -556,31 +515,29 @@ void testFieldReuseInChains() {
          UniqueOutputs.insert(Output);
       }
    }
-   
+
    // Each operator should produce a unique output
    bool Passed = (UniqueOutputs.size() == OpNodes.size());
    reportTest("Config: Field reuse prevents duplicates", Passed);
-   
+
    if (!Passed) {
-      LOG_ERROR("  {} unique outputs for {} operators",
-                UniqueOutputs.size(), OpNodes.size());
+      LOG_ERROR("  {} unique outputs for {} operators", UniqueOutputs.size(),
+                OpNodes.size());
    }
 }
 
 //------------------------------------------------------------------------------
 // Test 5.5.3: Verify stream parameter application
 void testStreamParameterApplication() {
-   
-   LOG_INFO("Testing stream parameter application...");
-   
+
    // Verify that streams were created for analysis output
    // This is a basic check that the stream creation succeeded
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = false;
-   
+
    // Check if any terminal operators have associated streams
    for (const auto *Node : OpNodes) {
       if (!Node->StreamNames.empty()) {
@@ -588,9 +545,9 @@ void testStreamParameterApplication() {
          break;
       }
    }
-   
+
    reportTest("Config: Stream parameters applied", Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  No terminal operators with associated streams found");
    }
@@ -603,36 +560,32 @@ void testStreamParameterApplication() {
 //------------------------------------------------------------------------------
 // Test 5.6.1: Verify computeAll executes without errors
 void testComputeAllExecution(Clock *ModelClock) {
-   
-   LOG_INFO("Testing computeAll execution...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   
+
    bool Passed = true;
 
    // Advance clock to trigger alarms
    TimeInstant CurrentTime = ModelClock->getCurrentTime();
-   TimeInterval OneStep = ModelClock->getTimeStep();
-   TimeInstant NextTime = CurrentTime + OneStep;
+   TimeInterval OneStep    = ModelClock->getTimeStep();
+   TimeInstant NextTime    = CurrentTime + OneStep;
    ModelClock->advance();
-   
+
    // Call computeAll
    DefAnalysis->computeAll();
-      
+
    reportTest("Integration: computeAll executes without errors", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.6.2: Verify output fields are created
 void testOutputFieldsCreated() {
-   
-   LOG_INFO("Testing output field creation...");
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = true;
-   
+
    // Verify that all operator output fields exist in Field registry
    for (const auto *Node : OpNodes) {
       auto Outputs = Node->Op->getOutputFieldNames();
@@ -643,24 +596,22 @@ void testOutputFieldsCreated() {
          }
       }
    }
-   
+
    reportTest("Integration: Output fields created", Passed);
 }
 
 //------------------------------------------------------------------------------
 // Test 5.6.3: Verify stream output (basic check)
 void testStreamOutput() {
-   
-   LOG_INFO("Testing stream output...");
-   
+
    // This is a basic check that streams are configured
    // Full I/O testing would require writing and reading files
-   
+
    auto DefAnalysis = Analysis::getDefault();
-   auto OpNodes = DefAnalysis->getOpNodes();
-   
+   auto OpNodes     = DefAnalysis->getOpNodes();
+
    bool Passed = false;
-   
+
    // Check if any operators are associated with streams
    for (const auto *Node : OpNodes) {
       if (!Node->StreamNames.empty()) {
@@ -673,11 +624,12 @@ void testStreamOutput() {
             }
          }
       }
-      if (Passed) break;
+      if (Passed)
+         break;
    }
-   
+
    reportTest("Integration: Stream output configured", Passed);
-   
+
    if (!Passed) {
       LOG_ERROR("  No valid streams found for analysis output");
    }
@@ -688,9 +640,9 @@ void testStreamOutput() {
 //===----------------------------------------------------------------------===//
 
 int main(int argc, char *argv[]) {
-   
+
    int ErrCode = 0;
-   
+
    MPI_Init(&argc, &argv);
    Kokkos::initialize();
    Pacer::initialize(MPI_COMM_WORLD);
@@ -698,22 +650,18 @@ int main(int argc, char *argv[]) {
    {
       // Initialize full Omega infrastructure for integration tests
       MachEnv::init(MPI_COMM_WORLD);
-      MachEnv *DefEnv = MachEnv::getDefault();
+      MachEnv *DefEnv  = MachEnv::getDefault();
       MPI_Comm DefComm = DefEnv->getComm();
-      
+
       initLogging(DefEnv);
-      
-      LOG_INFO("=======================================================");
-      LOG_INFO("Analysis System Tests (5.2, 5.3, 5.4, 5.5, 5.6)");
-      LOG_INFO("=======================================================");
-      
+
       Config("Omega");
       Config::readAll("omega.yml");
-      
+
       TimeStepper::init1();
       TimeStepper *DefStepper = TimeStepper::getDefault();
-      Clock *ModelClock = DefStepper->getClock();
-      
+      Clock *ModelClock       = DefStepper->getClock();
+
       IO::init(DefComm);
       Decomp::init();
       IOStream::init(ModelClock);
@@ -729,69 +677,60 @@ int main(int argc, char *argv[]) {
       VertAdv::init();
       TimeStepper::init2();
       OceanState::init();
-      
+
       // Validate streams
       bool StreamsValid = IOStream::validateAll();
       if (!StreamsValid) {
          LOG_ERROR("Stream validation failed");
       }
-      
+
       // Read initial state
       Metadata ReqMeta;
       Error Err1 = IOStream::read("InitialState", ModelClock, ReqMeta);
       if (Err1.isFail()) {
          LOG_ERROR("Failed to read initial state");
       }
-      
-      // Initialize Analysis module (creates operators, resolves dependencies, sets alarms)
+
+      // Initialize Analysis module (creates operators, resolves dependencies,
+      // sets alarms)
       Analysis::init();
-      
-      LOG_INFO("");
-      LOG_INFO("--- Test 5.2: Dependency Resolution and Execution Order ---");
+
+      // Dependency Resolution and Execution Order
       testSharedIntermediates();
       testUpstreamDependencies();
       testCacheValidation();
-      
-      LOG_INFO("");
-      LOG_INFO("--- Test 5.3: Alarm System Verification ---");
+
+      // Alarm System Verification
       testTerminalOperatorAlarms();
       testTemporalOperatorAlarms();
       testAlarmPropagation();
-      
-      LOG_INFO("");
-      LOG_INFO("--- Test 5.4: Factory Registration and Type Dispatch ---");
-      auto Mesh = HorzMesh::getDefault();
+
+      // Factory Registration and Type Dispatch
+      auto Mesh   = HorzMesh::getDefault();
       auto VCoord = VertCoord::getDefault();
       testFactoryCreatesValidOperators();
       testFactoryTypeDispatch(DefEnv, Mesh, VCoord);
       testFactoryDifferentFieldTypes(Mesh, VCoord);
       testFactoryInstantiateAll(DefEnv, Mesh, VCoord);
-      
-      LOG_INFO("");
-      LOG_INFO("--- Test 5.5: Configuration Parsing and Validation ---");
+
+      // Configuration Parsing and Validation
       testOperatorChainParsing();
       testFieldReuseInChains();
       testStreamParameterApplication();
-      
-      LOG_INFO("");
-      LOG_INFO("--- Test 5.6: End-to-End Integration ---");
+
+      // End-to-End Integration
       testComputeAllExecution(ModelClock);
       testOutputFieldsCreated();
       testStreamOutput();
-      
-      // Report summary
-      LOG_INFO("");
-      LOG_INFO("=======================================================");
-      LOG_INFO("Test Summary:");
-      LOG_INFO("  Total tests: {}", NumTests);
-      LOG_INFO("  Passed: {}", NumPassed);
-      LOG_INFO("  Failed: {}", NumFailed);
-      LOG_INFO("=======================================================");
-      
+
       if (NumFailed > 0) {
          ErrCode = 1;
+         LOG_ERROR("AnalysisSystemTest Failure");
+         LOG_INFO("  Total tests: {}", NumTests);
+         LOG_INFO("  Passed: {}", NumPassed);
+         LOG_INFO("  Failed: {}", NumFailed);
       }
-      
+
       // Cleanup
       Analysis::finalize();
       IOStream::finalize();
@@ -813,6 +752,6 @@ int main(int argc, char *argv[]) {
    Pacer::finalize();
    Kokkos::finalize();
    MPI_Finalize();
-   
+
    return ErrCode;
 }
