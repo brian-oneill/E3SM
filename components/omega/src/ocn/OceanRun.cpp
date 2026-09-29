@@ -16,6 +16,8 @@
 #include "Tracers.h"
 #include "VertCoord.h"
 
+#include <chrono>
+
 namespace OMEGA {
 
 int ocnRun(TimeInstant &CurrTime ///< [inout] current sim time
@@ -47,6 +49,9 @@ int ocnRun(TimeInstant &CurrTime ///< [inout] current sim time
       // get step count
       const I8 IStep = DefTimeStepper->getStepCount();
 
+      // start timestep clock
+      auto StepStart = std::chrono::steady_clock::now();
+
       // placeholder: call needed pre-timestep compute here
       // (e.g. forcing routine)
 
@@ -74,8 +79,13 @@ int ocnRun(TimeInstant &CurrTime ///< [inout] current sim time
 
       IOStream::writeAll(OmegaClock);
 
-      LOG_INFO("ocnRun: Time step {} complete, clock time: {}", IStep,
-               SimTime.getString(4, 4, "-"));
+      // end timestep clock and convert duration to seconds
+      auto StepEnd      = std::chrono::steady_clock::now();
+      auto StepDuration = std::chrono::duration<double>(StepEnd - StepStart);
+
+      LOG_INFO("ocnRun: Time step {} complete, sim time: {}, "
+               "wall time: {:.3E} seconds",
+               IStep, SimTime.getString(4, 4, "-"), StepDuration.count());
    }
 
    return Err;
@@ -117,6 +127,9 @@ int ocnRun(TimeInstant &CurrTime, ///< [inout] current sim time
       // get step count, over the whole simulation
       const I8 IStep = DefTimeStepper->getStepCount();
 
+      // start timestep clock
+      auto StepStart = std::chrono::steady_clock::now();
+
       // do forward time step
       // first call to doStep can sometimes take very long
       // we want to time it separately and disable child timers
@@ -140,8 +153,13 @@ int ocnRun(TimeInstant &CurrTime, ///< [inout] current sim time
       // Write any IOStreams with their alarms ringing
       IOStream::writeAll(OmegaClock);
 
-      LOG_INFO("ocnRun: Time step {} complete, clock time: {}", IStep,
-               SimTime.getString(4, 4, "-"));
+      // end timestep clock and convert duration to seconds
+      auto StepEnd      = std::chrono::steady_clock::now();
+      auto StepDuration = std::chrono::duration<double>(StepEnd - StepStart);
+
+      LOG_INFO("ocnRun: Time step {} complete, sim time: {}, "
+               "wall time: {:.3E} seconds",
+               IStep, SimTime.getString(4, 4, "-"), StepDuration.count());
    }
 
    // Minus 1 because we want to print completed coupling interval
